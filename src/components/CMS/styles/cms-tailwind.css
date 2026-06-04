@@ -1,0 +1,33 @@
+
+.cms-card {
+  background-color: white;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.cms-text-primary {
+  color: #C05A34;
+}
+
+.cms-bg-primary {
+  background-color: #C05A34;
+}
+
+.cms-border-primary {
+  border-color: #C05A34;
+}
+
+.cms-sidebar-item {
+  border-radius: 0.5rem;
+}
+
+.cms-sidebar-item:hover {
+  background-color: rgb(243, 244, 246);
+}
+
+.cms-sidebar-item-active {
+  background-color: rgba(192, 90, 52, 0.1);
+  color: #C05A34;
+  font-weight: 600;
+}
