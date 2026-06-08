@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback,useRef } from "react";
 import {
   MapPin, Bed, Bath, Square, Building2, Flame, Calendar,
   Eye, Heart, CheckCircle2, Lock, ArrowLeft, Search,
   FileText, ChevronLeft, ChevronRight, Home, Sparkles,
   TrendingUp, Grid3X3, Plus, LayoutGrid, Layers,
-  X, Loader2, Copy, Mail
+  X, Loader2, Copy, Mail,
+   Key, Briefcase, ChevronDown  
 } from "lucide-react";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 
@@ -893,7 +894,8 @@ export default function PropertyCatalogue() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [page, setPage] = useState(1);
-
+const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+const typeDropdownRef = useRef(null);
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
@@ -919,14 +921,22 @@ export default function PropertyCatalogue() {
     const t = setTimeout(fetchProperties, search ? 400 : 0);
     return () => clearTimeout(t);
   }, [fetchProperties, search]);
-
-  const filters = [
-    { key: "all", label: "All" },
-    { key: "off_plan", label: "Off-Plan" },
-    { key: "secondary", label: "Secondary" },
-    { key: "rental", label: "Rental" },
-    { key: "commercial", label: "Commercial" },
-  ];
+useEffect(() => {
+  const handleClickOutside = (e) => {
+    if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target)) {
+      setTypeDropdownOpen(false);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
+ const typeFilters = [
+  { key: "all", label: "All Properties", icon: LayoutGrid },
+  { key: "off_plan", label: "Off-Plan", icon: Building2 },
+  { key: "secondary", label: "Secondary", icon: Home },
+  { key: "rental", label: "Rental", icon: Key },
+  { key: "commercial", label: "Commercial", icon: Briefcase },
+];
 
   if (selectedProp) {
     return (
@@ -990,23 +1000,54 @@ export default function PropertyCatalogue() {
         </div>
 
         {/* Filters */}
-        <div style={{ display: "flex", gap: 4, background: "#fff", padding: 4, borderRadius: 10, border: "1.5px solid rgba(109,40,217,0.1)" }}>
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => { setActiveFilter(f.key); setPage(1); }}
-              style={{
-                padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600,
-                border: "none",
-                background: activeFilter === f.key ? "#6d28d9" : "transparent",
-                color: activeFilter === f.key ? "#fff" : "#71717a",
-                transition: "all 0.15s",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {/* ✅ NEW: Icon dropdown */}
+<div ref={typeDropdownRef} style={{ position: "relative" }}>
+  <button
+    onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
+    style={{
+      display: "flex", alignItems: "center", gap: 8,
+      background: "#fff", border: "1.5px solid rgba(109,40,217,0.12)", borderRadius: 10,
+      padding: "9px 14px", fontSize: 12, fontWeight: 600, color: "#52525b",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {(() => {
+      const active = typeFilters.find((f) => f.key === activeFilter);
+      const Icon = active?.icon || LayoutGrid;
+      return <Icon size={14} />;
+    })()}
+    {typeFilters.find((f) => f.key === activeFilter)?.label || "All Properties"}
+    <ChevronDown size={13} style={{ marginLeft: 4 }} />
+  </button>
+
+  {typeDropdownOpen && (
+    <div style={{
+      position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20,
+      minWidth: 180, background: "#fff", border: "1.5px solid rgba(109,40,217,0.08)",
+      borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,0.12)", overflow: "hidden",
+    }}>
+      {typeFilters.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          onClick={() => {
+            setActiveFilter(key);
+            setPage(1);
+            setTypeDropdownOpen(false);
+          }}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 14px", border: "none", background: activeFilter === key ? "#faf5ff" : "#fff",
+            color: activeFilter === key ? "#6d28d9" : "#52525b",
+            fontSize: 12, fontWeight: activeFilter === key ? 700 : 500,
+            transition: "background 0.15s",
+          }}
+        >
+          <Icon size={14} /> {label}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
         {/* Sort */}
         <div style={{ position: "relative" }}>
@@ -1052,6 +1093,41 @@ export default function PropertyCatalogue() {
               onGeneratePresentation={setPresentationProp}
             />
           ))}
+          {/* QR Code Button – show on hover */}
+{property.qr_code && (
+  <div style={{ padding: '0 12px', marginBottom: 8 }}>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '6px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
+          background: '#fff', fontSize: 11, fontWeight: 600, color: '#374151',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          const img = e.currentTarget.nextSibling;
+          if (img) img.style.display = 'block';
+        }}
+        onMouseLeave={(e) => {
+          const img = e.currentTarget.nextSibling;
+          if (img) img.style.display = 'none';
+        }}
+      >
+        <QrcodeIcon size={14} /> QR
+      </button>
+      <div style={{
+        display: 'none', position: 'absolute', bottom: '100%', left: '50%',
+        transform: 'translateX(-50%)', marginBottom: 8, zIndex: 10,
+      }}>
+        <img
+          src={property.qr_code}
+          alt="QR"
+          style={{ width: 180, height: 180, borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+        />
+      </div>
+    </div>
+  </div>
+)}
         </div>
       )}
 

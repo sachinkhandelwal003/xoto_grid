@@ -150,21 +150,18 @@ const DeveloperList = () => {
       key: "actions",
       render: (value, record) => (
        <button
-  onClick={() => {
-    // Ye line automatically aapke current path (/dashboard/admin ya jo bhi ho) ko detect karegi
-    const currentPath = window.location.pathname; 
-    const newPath = currentPath.replace('developer-list', `developer/view/${record._id || record.id}`);
-    navigate(newPath);
-  }}
-  title="View Profile"
-  style={{
-    background: "#f3e8ff", border: "none", borderRadius: "8px",
-    padding: "8px 10px", cursor: "pointer", color: "#5c039b",
-    display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600"
-  }}
->
-  <EyeOutlined style={{ fontSize: "15px" }} /> View
-</button>
+      onClick={() => {
+        navigate(`/dashboard/admin/developers/${record._id || record.id}`);
+      }}
+      title="View Profile"
+      style={{
+        background: "#f3e8ff", border: "none", borderRadius: "8px",
+        padding: "8px 10px", cursor: "pointer", color: "#5c039b",
+        display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600"
+      }}
+    >
+      <EyeOutlined style={{ fontSize: "15px" }} /> View
+    </button>
       ),
     },
   ];

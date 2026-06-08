@@ -480,6 +480,8 @@ const handleSaveRental = async () => {
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
       isFeatured: values.isFeatured || false, 
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
+      trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",  // ✅ ADDED: listingStatus active
       status: "approved"
@@ -552,6 +554,8 @@ const handleSubmitSecondary = async () => {
       dldRegistrationNumber: values.dldRegistrationNumber || null,
       mainLogo: imageUrls[0] || "", 
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
+      trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",  // ✅ ADDED: listingStatus active
       status: "approved"
@@ -592,6 +596,8 @@ const handleSaveOffplan = async (saveType) => {
     unitType: values.unitTypes?.[0] || "apartment",
     propertySubType: "off_plan", 
     transactionType: "sell",
+    trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: collectUrls(values.qr_code || [])[0] || "",
     approvalStatus: "approved",      // Directly approved
     listingStatus: "active",          // ✅ ADDED: listingStatus active
     status: "approved",                 // Set as active/live
@@ -883,6 +889,47 @@ const handleSaveOffplan = async (saveType) => {
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {rentalImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
+<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
+<Row gutter={16}>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="trakheesi_permit_id"
+      label="Trakheesi Permit ID"
+      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
+    >
+      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="qr_code"
+      label="QR Code (Image)"
+      valuePropName="fileList"
+      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      rules={[{ required: true, message: 'Please upload a QR code image' }]}
+    >
+      <Upload
+        listType="picture-card"
+        maxCount={1}
+        customRequest={handleImageUpload}
+        onPreview={handlePreview}
+        beforeUpload={(file) => {
+          const isImage = file.type.startsWith('image/');
+          if (!isImage) {
+            message.error('Only image files are allowed');
+            return Upload.LIST_IGNORE;
+          }
+          return true;
+        }}
+      >
+        <div>
+          <PlusOutlined />
+          <div style={{ marginTop: 8 }}>Upload</div>
+        </div>
+      </Upload>
+    </Form.Item>
+  </Col>
+</Row>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
@@ -1100,7 +1147,48 @@ const handleSaveOffplan = async (saveType) => {
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {secondaryImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
-
+{/* ── New: Trakheesi Permit & QR Code ── */}
+<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
+<Row gutter={16}>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="trakheesi_permit_id"
+      label="Trakheesi Permit ID"
+      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
+    >
+      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="qr_code"
+      label="QR Code (Image)"
+      valuePropName="fileList"
+      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      rules={[{ required: true, message: 'Please upload a QR code image' }]}
+    >
+      <Upload
+        listType="picture-card"
+        maxCount={1}
+        customRequest={handleImageUpload}
+        onPreview={handlePreview}
+        beforeUpload={(file) => {
+          const isImage = file.type.startsWith('image/');
+          if (!isImage) {
+            message.error('Only image files are allowed');
+            return Upload.LIST_IGNORE;
+          }
+          return true;
+        }}
+      >
+        <div>
+          <PlusOutlined />
+          <div style={{ marginTop: 8 }}>Upload</div>
+        </div>
+      </Upload>
+    </Form.Item>
+  </Col>
+</Row>
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
@@ -1372,6 +1460,47 @@ const handleSaveOffplan = async (saveType) => {
         <Col xs={12} md={6}><Form.Item name="isFeatured" label="Featured Listing?" valuePropName="checked"><Switch /></Form.Item></Col>
         <Col xs={12} md={6}><Form.Item name="showContactOnlyVerified" label="Verified Users Only?" valuePropName="checked"><Switch /></Form.Item></Col>
       </Row>
+      <Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi Permit & QR Code</Divider>
+<Row gutter={16}>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="trakheesi_permit_id"
+      label="Trakheesi Permit ID"
+      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
+    >
+      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="qr_code"
+      label="QR Code (Image)"
+      valuePropName="fileList"
+      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      rules={[{ required: true, message: 'Please upload a QR code image' }]}
+    >
+      <Upload
+        listType="picture-card"
+        maxCount={1}
+        customRequest={customUploadRequest}
+        onPreview={handlePreview}
+        beforeUpload={(file) => {
+          const isImage = file.type.startsWith('image/');
+          if (!isImage) {
+            message.error('Only image files are allowed');
+            return Upload.LIST_IGNORE;
+          }
+          return true;
+        }}
+      >
+        <div>
+          <PlusOutlined />
+          <div style={{ marginTop: 8 }}>Upload</div>
+        </div>
+      </Upload>
+    </Form.Item>
+  </Col>
+</Row>
     </>
   );
 
@@ -1471,27 +1600,28 @@ const handleSaveOffplan = async (saveType) => {
             {isEditMode ? "Update the details of this listing." : "Fill in the details to list a new property."}
           </Text>
         </div>
-        <Segmented
-          options={[
-            { label: "Rental", value: "rental" },
-            { label: "Secondary", value: "secondary" },
-            { label: "Off‑Plan", value: "offplan" },
-          ]}
-          value={formMode}
-          onChange={val => {
-            setFormMode(val);
-            setRentalStep(0);
-            setSecondaryStep(0);
-          }}
-        />
+       <Segmented
+  options={[
+    { label: <strong>Rental</strong>, value: "rental" },
+    { label: <strong>Secondary</strong>, value: "secondary" },
+    { label: <strong>Off‑Plan</strong>, value: "offplan" },
+  ]}
+  value={formMode}
+  onChange={val => {
+    setFormMode(val);
+    setRentalStep(0);
+    setSecondaryStep(0);
+  }}
+/>
       </div>
 
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
+           <Title level={3} style={{ marginBottom: 16, color: "#111827" }}>Rental Property</Title>
           <Steps
             current={rentalStep}
-            items={RENTAL_STEPS.map(s => ({ title: s.title, icon: s.icon }))}
+            items={RENTAL_STEPS.map(s => ({ title: <strong>{s.title}</strong>, icon: s.icon }))}
             style={{ marginBottom: 28 }}
             size="small"
           />
@@ -1523,10 +1653,12 @@ const handleSaveOffplan = async (saveType) => {
       {/* ═══════════ SECONDARY ═══════════ */}
       {formMode === "secondary" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
+            <Title level={3} style={{ marginBottom: 16, color: "#111827" }}>Secondary Property</Title>
+
+          
           <Steps
             current={secondaryStep}
-            items={SECONDARY_STEPS.map(s => ({ title: s.title, icon: s.icon }))}
-            style={{ marginBottom: 28 }}
+            items={SECONDARY_STEPS.map(s => ({ title: <strong>{s.title}</strong>, icon: s.icon }))}            style={{ marginBottom: 28 }}
             size="small"
           />
         <Form
@@ -1558,6 +1690,7 @@ const handleSaveOffplan = async (saveType) => {
       {/* ═══════════ OFF-PLAN ═══════════ */}
       {formMode === "offplan" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
+           <Title level={3} style={{ marginBottom: 16, color: "#111827" }}>Off‑Plan Property</Title>
           <Steps current={currentStep} items={OFFPLAN_STEPS.map(title => ({ title }))} style={{ marginBottom: 28 }} size="small" />
           <Form form={offplanForm} layout="vertical" preserve
             initialValues={{ currency: "AED", builtUpAreaUnit: "sqft", unitType: "apartment", bedroomType: "1bed", bedrooms: 1, bathrooms: 1, propertyType: "Residential", furnishing: "unfurnished", parkingSpaces: 0, ownershipType: "freehold", projectStatus: "presale", developmentStatus: "Planned", saleStatus: "Available", isFeatured: false, readinessProgress: "0%", hasView: false, viewType: [], showContactOnlyVerified: false, shareCommission: false, shareCommissionPercentage: 0, constructionProgress: 0, commission: 0 }}>

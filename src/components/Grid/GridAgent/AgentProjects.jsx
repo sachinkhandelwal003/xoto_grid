@@ -21,6 +21,7 @@ import {
   DownOutlined,
   HomeOutlined,
   BuildOutlined,
+  KeyOutlined,            // <-- newly added
   ClockCircleOutlined,
   EnvironmentOutlined,
   CheckCircleOutlined,
@@ -47,6 +48,7 @@ function PropertyCard({ p, onClick }) {
     "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800";
 
   const isOffPlan  = p.propertySubType === "off_plan";
+  const isRental   = p.propertySubType === "rental";
   const approval   = p.approvalStatus;   // 'approved' | 'pending' | 'rejected'
   const isActive   = p.listingStatus === "active";
   const devLogo    = p.developer?.logo;
@@ -62,6 +64,13 @@ function PropertyCard({ p, onClick }) {
   };
 
   const paymentFirst = p.paymentPlan?.[0]?.stages?.[0]?.percentage;
+
+  // ── Badge icons & colors ──
+  const typeBadge = isOffPlan
+    ? { icon: <BuildOutlined />, label: "Off-Plan", bg: "rgba(124,58,237,0.92)" }
+    : isRental
+    ? { icon: <KeyOutlined />, label: "Rental", bg: "rgba(234,88,12,0.92)" }
+    : { icon: <HomeOutlined />, label: "Secondary", bg: "rgba(37,99,235,0.92)" };
 
   return (
     <div
@@ -109,16 +118,16 @@ function PropertyCard({ p, onClick }) {
             fontSize:     11,
             fontWeight:   700,
             letterSpacing: "0.3px",
-            background:   isOffPlan ? "rgba(124,58,237,0.92)" : "rgba(37,99,235,0.92)",
+            background:   typeBadge.bg,
             color:        "#fff",
             backdropFilter: "blur(4px)",
           }}>
-            {isOffPlan ? "🏗️ Off-Plan" : "🏠 Secondary"}
+            {typeBadge.icon} {typeBadge.label}
           </span>
         </div>
 
         {/* ── TOP-RIGHT: Approval status (secondary only) ── */}
-        {!isOffPlan && approval && (
+        {!isOffPlan && !isRental && approval && (
           <div style={{ position: "absolute", top: 10, right: 10 }}>
             <span style={{
               display:      "inline-flex",
@@ -139,7 +148,6 @@ function PropertyCard({ p, onClick }) {
 
         {/* ── BOTTOM ROW: Active Listing (left) + Dev Logo (right) ── */}
         <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Active Listing badge */}
           {isActive ? (
             <span style={{
               display:      "inline-flex",
@@ -156,7 +164,7 @@ function PropertyCard({ p, onClick }) {
               ● Active Listing
             </span>
           ) : (
-            <span /> /* spacer so dev logo stays right */
+            <span />
           )}
 
           {/* Developer Logo */}
@@ -201,12 +209,10 @@ function PropertyCard({ p, onClick }) {
       {/* ── BODY ── */}
       <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", flex: 1 }}>
 
-        {/* Title */}
         <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {p.propertyName}
         </div>
 
-        {/* Location + Developer */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#6b7280", marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           <EnvironmentOutlined style={{ fontSize: 11, flexShrink: 0 }} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -218,7 +224,6 @@ function PropertyCard({ p, onClick }) {
           </span>
         </div>
 
-        {/* Specs chips */}
         {(p.bedrooms > 0 || p.bathrooms > 0 || p.builtUpArea || p.builtUpArea_min) && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
             {p.bedrooms > 0 && (
@@ -239,18 +244,18 @@ function PropertyCard({ p, onClick }) {
           </div>
         )}
 
-        {/* Divider */}
         <div style={{ height: 1, background: "#f3f4f6", marginBottom: 12 }} />
 
-        {/* Price + Payment */}
         <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>Price from</div>
+            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+              {isRental ? "Rent from" : "Price from"}
+            </div>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>
-              {getPriceDisplay(p)} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>{p.currency || "AED"}</span>
+              {getPriceDisplay(p)} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>{p.currency || "AED"}{isRental ? "/yr" : ""}</span>
             </div>
           </div>
-          {paymentFirst && (
+          {paymentFirst && !isRental && (
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>Payment</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#5c039b" }}>
@@ -275,7 +280,7 @@ export default function AgentProjects() {
   const [stats,        setStats]        = useState({
     secondaryTotal: 0, secondaryPending: 0, secondaryApproved: 0,
     secondaryRejected: 0, secondaryActive: 0, offplanTotal: 0,
-    featuredSecondary: 0, featuredOffplan: 0
+    featuredSecondary: 0, featuredOffplan: 0, rentalTotal: 0
   });
 
   const [page,      setPage]      = useState(1);
@@ -283,7 +288,7 @@ export default function AgentProjects() {
   const [totalItems,setTotalItems]= useState(0);
 
   const [search,          setSearch]          = useState("");
-  const [propertyType,    setPropertyType]    = useState("all");
+  const [propertyType,    setPropertyType]    = useState("all");   // 'all' | 'off_plan' | 'secondary' | 'rental'
   const [approvalStatus,  setApprovalStatus]  = useState("all");
   const [listingStatus,   setListingStatus]   = useState("all");
 
@@ -488,28 +493,26 @@ export default function AgentProjects() {
   return (
     <div style={{ padding: "28px 32px", background: "#f8f9fa", minHeight: "100vh" }}>
 
-      {/* ── TYPE TABS ── */}
-      <div style={{ marginBottom: 20, display: 'flex', gap: 8, borderBottom: '1px solid #e8e8e8', paddingBottom: 14 }}>
-        {[
-          { key: 'all',       label: 'All Properties' },
-          { key: 'off_plan',  label: '🏗️ Off-Plan' },
-          { key: 'secondary', label: '🏠 Secondary' },
-        ].map(tab => (
-          <button key={tab.key} onClick={() => setPropertyType(tab.key)} style={{
-            padding:       "6px 18px",
-            borderRadius:  20,
-            border:        "1px solid",
-            cursor:        "pointer",
-            fontSize:      13,
-            fontWeight:    propertyType === tab.key ? 700 : 400,
-            background:    propertyType === tab.key ? "#111827" : "#fff",
-            color:         propertyType === tab.key ? "#fff" : "#6b7280",
-            borderColor:   propertyType === tab.key ? "#111827" : "#e5e7eb",
-            transition:    "all 0.15s",
-          }}>
-            {tab.label}
-          </button>
-        ))}
+      {/* ── PROPERTY TYPE DROPDOWN ── */}
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Text strong style={{ fontSize: 14, color: '#374151' }}>Property Type:</Text>
+        <Select
+          value={propertyType}
+          onChange={(val) => setPropertyType(val)}
+          style={{ width: 220, borderRadius: 8 }}
+          size="large"
+        >
+          <Option value="all">All Properties</Option>
+          <Option value="off_plan">
+            <BuildOutlined style={{ marginRight: 6 }} /> Off-Plan
+          </Option>
+          <Option value="secondary">
+            <HomeOutlined style={{ marginRight: 6 }} /> Secondary
+          </Option>
+          <Option value="rental">
+            <KeyOutlined style={{ marginRight: 6 }} /> Rental
+          </Option>
+        </Select>
       </div>
 
       {/* ── FILTER BAR ── */}
@@ -559,7 +562,6 @@ export default function AgentProjects() {
           </Button>
         </Popover>
 
-        {/* Total count */}
         <span style={{ marginLeft: 'auto', fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>
           {filtered.length} {filtered.length === 1 ? "property" : "properties"}
         </span>
@@ -577,6 +579,21 @@ export default function AgentProjects() {
               onClick={() => navigate(`/dashboard/agent/projects/${p._id}`)}
             />
           ))}
+          {p.qr_code && (
+  <Popover
+    content={<img src={p.qr_code} alt="QR Code" style={{ width: 200 }} />}
+    title="Scan QR Code"
+    trigger="hover"
+  >
+    <Button
+      size="small"
+      icon={<QrcodeOutlined />}
+      style={{ margin: '8px 0 0 auto', display: 'flex', alignItems: 'center', gap: 4 }}
+    >
+      QR
+    </Button>
+  </Popover>
+)}
         </div>
       )}
 

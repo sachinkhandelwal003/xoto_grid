@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Row, Col, Typography, Button, Tag, Spin, message,
-  Card, Divider, Avatar, Space, Modal, Image, Select, Checkbox, Input, Alert, Table, Tabs, Statistic
+  Card, Divider, Avatar, Space, Modal, Image, Select, Checkbox, Input, Alert, Table, Tabs, Statistic,Form ,
 } from "antd";
 import {
   EnvironmentOutlined, PictureOutlined, FilePdfOutlined,
@@ -11,7 +11,7 @@ import {
   AppstoreOutlined, ArrowLeftOutlined, EditOutlined, RobotOutlined, MoneyCollectOutlined,
   EyeOutlined, DownloadOutlined, RightOutlined, HomeOutlined, BuildOutlined,
   CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, UnorderedListOutlined, PieChartOutlined,
-  ThunderboltOutlined, FileTextOutlined,
+  ThunderboltOutlined, FileTextOutlined, UserOutlined, 
 } from "@ant-design/icons";
 import {
   FiX, FiLoader, FiCheckCircle, FiHome, FiMapPin, FiEdit3,
@@ -770,6 +770,180 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
   );
 };
 
+//new led modal
+
+// ── Lead Creation Modal (Add to Lead) ────────────────────────────────────
+const LeadCreationModal = ({ property, visible, onClose, onSuccess }) => {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+  const [inventoryUnits, setInventoryUnits] = useState([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !property) return;
+    // Load inventory only for off‑plan or if inventory array exists
+    if (property.propertySubType === "off_plan" || property.inventory?.length) {
+      setLoadingUnits(true);
+      apiService.get(`/properties/inventory?propertyId=${property._id || property.id}`)
+        .then(res => {
+          const data = Array.isArray(res?.data?.data) ? res.data.data : [];
+          setInventoryUnits(data);
+        })
+        .catch(() => setInventoryUnits([]))
+        .finally(() => setLoadingUnits(false));
+    } else {
+      setInventoryUnits([]);
+    }
+  }, [visible, property]);
+
+  const handleSubmit = async (values) => {
+    setSubmitting(true);
+    try {
+      const payload = {
+        first_name: values.first_name || "",
+        last_name: values.last_name || "",
+        phone_number: values.phone_number || "",
+        country_code: values.country_code || "+971",
+        email: values.email || "",
+        listing_id: property._id || property.id,   // automatically link this property
+        inventory_unit_id: values.inventory_unit_id || "",
+        transaction_type: property.propertySubType === "rental" ? "rent" : "buy",
+        enquiry_type: property.propertySubType === "rental" ? "rent" : "buy",
+        additional_notes: values.additional_notes || `Enquired about ${property.propertyName}`,
+      };
+
+      const res = await apiService.post("/gridlead/agent/create-lead", payload);
+      const result = res?.data?.success !== undefined ? res.data : res;
+
+      if (result?.success) {
+        message.success("Lead created and property linked!");
+        form.resetFields();
+        onSuccess?.();
+        onClose();
+      } else {
+        message.error(result?.message || "Could not create lead");
+      }
+    } catch (error) {
+      message.error(error?.response?.data?.message || error?.message || "Server error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Create Lead & Link Property"
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={600}
+      centered
+      destroyOnClose
+    >
+      <div style={{ marginBottom: 16, padding: 12, background: "#f9f5ff", borderRadius: 8 }}>
+        <Text strong style={{ color: "#5c039b" }}>{property?.propertyName}</Text>
+        <br />
+        <Text type="secondary" style={{ fontSize: 12 }}>will be automatically linked to this new lead.</Text>
+      </div>
+
+     <Form
+  form={form}
+  layout="vertical"
+  requiredMark="optional"
+  onFinish={handleSubmit}
+  initialValues={{ country_code: "+971" }}
+>
+  <Row gutter={16}>
+    <Col span={12}>
+      <Form.Item
+        name="first_name"
+        label="First Name"
+        rules={[{ required: true, message: 'Please enter first name' }]}
+      >
+        <Input placeholder="John" />
+      </Form.Item>
+    </Col>
+    <Col span={12}>
+      <Form.Item
+        name="last_name"
+        label="Last Name"
+        rules={[{ required: true, message: 'Please enter last name' }]}
+      >
+        <Input placeholder="Smith" />
+      </Form.Item>
+    </Col>
+  </Row>
+
+  <Form.Item label="Phone Number" required>
+    <Input.Group compact>
+      <Form.Item name="country_code" noStyle>
+        <Select style={{ width: 90 }}>
+          {["+971", "+91", "+1", "+44", "+966"].map(c => (
+            <Select.Option key={c} value={c}>{c}</Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
+      <Form.Item
+        name="phone_number"
+        noStyle
+        rules={[{ required: true, message: 'Please enter phone number' }]}
+      >
+        <Input style={{ width: "calc(100% - 90px)" }} placeholder="50 123 4567" />
+      </Form.Item>
+    </Input.Group>
+  </Form.Item>
+
+  <Form.Item
+    name="email"
+    label="Email"
+    rules={[
+      { required: true, message: 'Please enter client email' },
+      { type: 'email', message: 'Please enter a valid email address' },
+    ]}
+  >
+    <Input placeholder="client@example.com" />
+  </Form.Item>
+
+  {/* Inventory unit (optional, remains unchanged) */}
+  {inventoryUnits.length > 0 && (
+    <Form.Item name="inventory_unit_id" label="Interested Unit (optional)">
+      <Select placeholder="Select a unit" loading={loadingUnits} allowClear>
+        {inventoryUnits.map(unit => {
+          const label = [
+            unit.unitNumber ? `Unit ${unit.unitNumber}` : null,
+            unit.bedroomType || unit.bedrooms ? `${unit.bedrooms}BR` : null,
+            unit.area ? `${Number(unit.area).toLocaleString()} sqft` : null,
+            unit.price ? `AED ${Number(unit.price).toLocaleString()}` : null,
+          ].filter(Boolean).join(" | ");
+          return (
+            <Select.Option key={unit._id || unit.id} value={unit._id || unit.id}>
+              {label}
+            </Select.Option>
+          );
+        })}
+      </Select>
+    </Form.Item>
+  )}
+
+  <Form.Item name="additional_notes" label="Private Notes">
+    <Input.TextArea rows={2} placeholder="Any special remarks..." />
+  </Form.Item>
+
+  <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+    <Button onClick={onClose} style={{ borderRadius: 8 }}>Cancel</Button>
+    <Button
+      type="primary"
+      htmlType="submit"
+      loading={submitting}
+      style={{ borderRadius: 8, background: "#5c039b", borderColor: "#5c039b" }}
+    >
+      Create Lead
+    </Button>
+  </div>
+</Form> 
+    </Modal>
+  );
+};
 // ─────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────
@@ -788,6 +962,7 @@ export default function AgentProjectDetails() {
 
   // ✅ NEW: AI Presentation modal state
   const [showPresentation, setShowPresentation] = useState(false);
+const [showLeadModal, setShowLeadModal] = useState(false);
 
   const [customDescription, setCustomDescription] = useState("");
   const [isEditingDesc,     setIsEditingDesc]     = useState(false);
@@ -1211,7 +1386,19 @@ export default function AgentProjectDetails() {
                 Generate AI Presentation
               </Button>
             </div>
-
+<Button
+  icon={<UserOutlined />}
+  onClick={() => setShowLeadModal(true)}
+  style={{
+    width: "100%", height: 52, borderRadius: 10,
+    background: "#f3e8ff", color: "#5c039b",
+    border: "1px solid #c4b5fd", fontWeight: 600, fontSize: 14,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    marginBottom: 14,
+  }}
+>
+  Add to Lead
+</Button>
             <Button
               icon={<ShareAltOutlined />}
               style={{ width: "100%", height: 52, borderRadius: 10, background: "#111827", color: "#fff", border: "none", fontWeight: 600, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.12)", marginBottom: 16 }}
@@ -1342,6 +1529,12 @@ export default function AgentProjectDetails() {
           </div>
         </div>
       </Modal>
+        <LeadCreationModal
+        property={property}
+        visible={showLeadModal}
+        onClose={() => setShowLeadModal(false)}
+        onSuccess={() => message.success("Lead created and linked to this property!")}
+      />
     </div>
   );
 }
