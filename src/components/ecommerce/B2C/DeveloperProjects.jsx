@@ -64,6 +64,9 @@ export default function DeveloperProjects() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
+  // Listing Type Filter
+  const [listingType, setListingType] = useState("all");
+
   // Quick Filters
   const [postHandover, setPostHandover] = useState(false);
   const [quickLocation, setQuickLocation] = useState("All");
@@ -111,6 +114,7 @@ export default function DeveloperProjects() {
         
         return {
           key: p._id || `row-${i}`,
+          propertySubType: p.propertySubType || "",
           propertyName: p.projectName || p.propertyName || "Untitled Project",
           location: p.location?.address || p.locality || p.area || "Location not added",
           units: p.floorPlans?.length > 0
@@ -156,6 +160,10 @@ export default function DeveloperProjects() {
   useEffect(() => {
     const q = search.toLowerCase();
     let base = [...projects];
+
+    // Listing Type Filter
+    if (listingType !== "all")
+      base = base.filter(p => p.propertySubType === listingType);
 
     // Status Filter (Live/Pending/Rejected/Draft)
     if (statusFilter !== "All") {
@@ -212,7 +220,7 @@ export default function DeveloperProjects() {
       p.location?.toLowerCase().includes(q)
     ));
   }, [
-    search, projects, statusFilter, postHandover, quickLocation, quickSaleStatus,
+    search, projects, listingType, statusFilter, postHandover, quickLocation, quickSaleStatus,
     advDevelopmentStatus, advLocation, advUnitType, advCompletionBy, advSaleStatus, advPriceRange
   ]);
 
@@ -229,6 +237,32 @@ export default function DeveloperProjects() {
         <button style={S.addBtn} onClick={() => navigate("/dashboard/developer/developer-properties/add")}>
           <PlusOutlined style={{ fontSize: 13 }} /> Add Listing
         </button>
+      </div>
+
+      {/* LISTING TYPE TABS */}
+      <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", borderBottom: "1px solid #e2e8f0", paddingBottom: 14 }}>
+        {[
+          { key: "all",       label: "All Listings" },
+          { key: "off_plan",  label: "🏗️ Off-Plan" },
+          { key: "secondary", label: "🏠 Secondary" },
+          { key: "rental",    label: "🔑 Rental" },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setListingType(tab.key)}
+            style={{
+              padding: "7px 18px", borderRadius: 20, border: "1px solid", cursor: "pointer",
+              fontSize: 13, fontWeight: listingType === tab.key ? 700 : 400,
+              fontFamily: "inherit",
+              background: listingType === tab.key ? "#6d28d9" : "#fff",
+              color: listingType === tab.key ? "#fff" : "#64748b",
+              borderColor: listingType === tab.key ? "#6d28d9" : "#e2e8f0",
+              transition: "all 0.15s",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* STATUS FILTER TABS */}

@@ -109,7 +109,6 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: "Catalogs", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
     { title: "Leads", icon: "fas fa-calendar-check", to: "/dashboard/agent/GridAgent-lead" },
     { title: "My Presentations", icon: "fas fa-file-powerpoint", to: "/dashboard/agent/presentations" },
-    { title: "Catalogs", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
     { title: "My Agreements", icon: "fas fa-chalkboard-teacher", to: "/dashboard/agent/agent-agreement" },

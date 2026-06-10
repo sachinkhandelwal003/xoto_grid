@@ -1,48 +1,12 @@
 import {
-  Card,
-  Typography,
-  Row,
-  Col,
-  Tag,
-  Button,
-  Spin,
-  Descriptions,
-  Image,
-  Progress,
-  Alert,
-  Table,
-  Badge,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  message,
-  Space,
-  Tooltip,
-  Statistic,
+  Card, Typography, Row, Col, Tag, Button, Spin, Descriptions,
+  Image, Progress, Alert, Table, Badge, Modal, Form, Input,
+  InputNumber, Select, message, Space, Tooltip, Statistic, Divider,
 } from "antd";
 import {
-  ArrowLeftOutlined,
-  EnvironmentOutlined,
-  HomeOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  TeamOutlined,
-  CheckCircleFilled,
-  CloseCircleFilled,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  ShoppingOutlined,
-  BookOutlined,
-  UnlockOutlined,
-  ReloadOutlined,
-  ApartmentOutlined,
-  CarOutlined,
-  PercentageOutlined,
-  UnorderedListOutlined,
+  ArrowLeftOutlined, EnvironmentOutlined, CalendarOutlined,
+  PlusOutlined, EditOutlined, DeleteOutlined,
+  ReloadOutlined, FilePdfOutlined, PaperClipOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -52,855 +16,778 @@ import { apiService } from "../../../manageApi/utils/custom.apiservice";
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
-const THEME = { primary: "#6d28d9" }; // Purple theme
+const THEME = { primary: "#6d28d9", light: "#f3e8ff" };
 
-// Status helpers
-const APPROVAL_COLOR = {
-  pending: "orange",
-  approved: "green",
-  rejected: "red",
-};
-const PROJECT_STATUS_LABEL = {
-  presale: "Presale",
-  under_construction: "Under Construction",
-  ready: "Ready",
-  completed: "Completed",
-};
-const PROJECT_STATUS_COLOR = {
-  presale: "blue",
-  under_construction: "orange",
-  ready: "green",
-  completed: "green",
-};
+const APPROVAL_COLOR   = { pending: "orange", approved: "green", rejected: "red", changes_requested: "orange", draft: "default" };
+const PROJECT_STATUS_COLOR = { presale: "blue", under_construction: "orange", ready: "green", completed: "green", sold_out: "red", planned: "default" };
+const PROJECT_STATUS_LABEL = { presale: "Pre-Sale", under_construction: "Under Construction", ready: "Ready", completed: "Completed", sold_out: "Sold Out", planned: "Planned" };
 
-// Unit status config
 const UNIT_STATUS_CONFIG = {
-  available: { color: "success", label: "Available", status: "success" },
-  hold: { color: "default", label: "Hold", status: "default" },
-  reserved: { color: "warning", label: "Reserved", status: "warning" },
-  booked: { color: "processing", label: "Booked", status: "processing" },
-  spa_signed: { color: "purple", label: "SPA Signed", status: "processing" },
-  sold: { color: "error", label: "Sold", status: "error" },
-  handover: { color: "cyan", label: "Handover", status: "success" },
-  cancelled: { color: "error", label: "Cancelled", status: "error" },
+  available: { status: "success",    label: "Available" },
+  hold:      { status: "default",    label: "Hold"      },
+  reserved:  { status: "warning",    label: "Reserved"  },
+  booked:    { status: "processing", label: "Booked"    },
+  spa_signed:{ status: "processing", label: "SPA Signed"},
+  sold:      { status: "error",      label: "Sold"      },
+  handover:  { status: "success",    label: "Handover"  },
+  cancelled: { status: "error",      label: "Cancelled" },
 };
 
-// Facility label map
-const FACILITY_LABELS = {
-  swimmingPool: "Swimming Pool",
-  gym: "Gym & Fitness",
-  parking: "Parking",
-  childrenPlayArea: "Children's Play Area",
-  gardens: "Landscaped Gardens",
-  security: "24/7 Security",
-  concierge: "Concierge Services",
-  lounge: "Lounge",
-  smartHome: "Smart Home",
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmt = (n) => n ? `AED ${Number(n).toLocaleString()}` : "—";
+
+const completionLabel = (cd) => {
+  if (!cd) return "Not specified";
+  if (cd.quarter && cd.year) return `${cd.quarter} ${cd.year}`;
+  if (cd.fullDate && dayjs(cd.fullDate).isValid()) return dayjs(cd.fullDate).format("MMM YYYY");
+  return "Not specified";
 };
 
-const AMENITY_LABELS = {
-  "Swimming Pool": "Swimming Pool",
-  Gym: "Gym & Fitness",
-  Parking: "Parking",
-  "Children Play Area": "Children's Play Area",
-  Gardens: "Landscaped Gardens",
-  Security: "24/7 Security",
-  Concierge: "Concierge Services",
-  Lounge: "Lounge",
-  "Smart Home": "Smart Home",
-};
+const SectionTitle = ({ children }) => (
+  <div style={{ fontWeight: 700, fontSize: 15, color: THEME.primary, marginBottom: 16 }}>
+    {children}
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DeveloperProjectDetails() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id }     = useParams();
+  const navigate   = useNavigate();
 
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Inventory states (now from combined API)
-  const [inventory, setInventory] = useState([]);
-  const [inventoryStats, setInventoryStats] = useState({
-    total: 0,
-    available: 0,
-    hold: 0,
-    reserved: 0,
-    booked: 0,
-    spa_signed: 0,
-    sold: 0,
-    handover: 0,
-    cancelled: 0
+  const [project,          setProject]          = useState(null);
+  const [loading,          setLoading]          = useState(true);
+  const [inventory,        setInventory]        = useState([]);
+  const [inventoryStats,   setInventoryStats]   = useState({
+    total: 0, available: 0, hold: 0, reserved: 0,
+    booked: 0, spa_signed: 0, sold: 0, handover: 0, cancelled: 0,
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [inventoryLoading, setInventoryLoading] = useState(false);
-  
-  // Modal states
+
+  // Unit modal
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState("create");
+  const [modalMode,    setModalMode]    = useState("create");
   const [selectedUnit, setSelectedUnit] = useState(null);
-  const [form] = Form.useForm();
+  const [unitForm]   = Form.useForm();
 
-  // Fetch project details (now includes combined inventory data!)
-  useEffect(() => {
-    if (!id) return;
-    fetchProjectDetails();
-  }, [id]);
-
-  const fetchProjectDetails = async () => {
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const fetchProject = async () => {
     try {
       setLoading(true);
-      const res = await apiService.get(`/properties/${id}`);
+      const res  = await apiService.get(`/properties/${id}`);
       const data = res?.data?.data || res?.data;
       setProject(data);
-      
-      // Extract combined inventory data
-      if (data.inventory) {
+
+      if (Array.isArray(data?.inventory)) {
         setInventory(data.inventory);
-        setPagination(prev => ({
-          ...prev,
-          total: data.inventory.length
-        }));
+        setPagination((p) => ({ ...p, total: data.inventory.length }));
       }
-      if (data.inventoryStats) {
-        setInventoryStats(data.inventoryStats);
-      }
+      if (data?.inventoryStats) setInventoryStats(data.inventoryStats);
     } catch (err) {
-      console.error(err);
       message.error("Failed to load project details");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchInventory = async () => {
-    await fetchProjectDetails();
-  };
+  useEffect(() => { if (id) fetchProject(); }, [id]);
 
-  const handleCreateUnit = () => {
+  // ── Unit CRUD ──────────────────────────────────────────────────────────────
+  const openCreateUnit = () => {
     setModalMode("create");
     setSelectedUnit(null);
-    form.resetFields();
+    unitForm.resetFields();
     setModalVisible(true);
   };
 
-  const handleEditUnit = (unit) => {
+  const openEditUnit = (unit) => {
     setModalMode("edit");
     setSelectedUnit(unit);
-    form.setFieldsValue({
-      unitNumber: unit.unitNumber,
-      buildingName: unit.buildingName,
-      floorNumber: unit.floorNumber,
-      unitType: unit.unitType,
-      bedroomType: unit.bedroomType,
-      bedrooms: unit.bedrooms,
-      bathrooms: unit.bathrooms,
-      area: unit.area,
-      areaUnit: unit.areaUnit,
-      price: unit.price,
-      currency: unit.currency,
-      parkingSpaces: unit.parkingSpaces,
-      furnishing: unit.furnishing,
-      status: unit.status
-    });
+    unitForm.setFieldsValue(unit);
     setModalVisible(true);
   };
 
-  const handleDeleteUnit = async (unit) => {
+  const handleDeleteUnit = (unit) => {
     Modal.confirm({
       title: "Delete Unit",
-      content: `Are you sure you want to delete Unit ${unit.unitNumber}?`,
-      okText: "Delete",
+      content: `Delete Unit ${unit.unitNumber}?`,
       okType: "danger",
-      cancelText: "Cancel",
       onOk: async () => {
         try {
-          const res = await apiService.delete(`/properties/inventory/${unit._id}`);
-          if (res?.data?.success) {
-            message.success("Unit deleted successfully");
-            fetchInventory();
-            fetchProjectDetails();
-          }
-        } catch (err) {
-          message.error("Failed to delete unit");
-        }
-      }
+          await apiService.delete(`/properties/inventory/${unit._id}`);
+          message.success("Unit deleted");
+          fetchProject();
+        } catch { message.error("Failed to delete unit"); }
+      },
     });
   };
 
-  const handleFormSubmit = async () => {
+  const handleUnitSubmit = async () => {
     try {
-      const values = await form.validateFields();
-      
+      const values = await unitForm.validateFields();
       if (modalMode === "create") {
-        const payload = {
-          propertyId: project._id,
-          units: [values]
-        };
-        const res = await apiService.post('/properties/inventory', payload);
-        if (res?.data?.success) {
-          message.success("Unit added successfully");
-          setModalVisible(false);
-          fetchInventory();
-          fetchProjectDetails();
-        }
-      } else if (modalMode === "edit" && selectedUnit) {
-        const res = await apiService.patch(`/properties/inventory/${selectedUnit._id}`, values);
-        if (res?.data?.success) {
-          message.success("Unit updated successfully");
-          setModalVisible(false);
-          fetchInventory();
-        }
+        await apiService.post("/properties/inventory", { propertyId: project._id, units: [values] });
+        message.success("Unit added");
+      } else {
+        await apiService.patch(`/properties/inventory/${selectedUnit._id}`, values);
+        message.success("Unit updated");
       }
-    } catch (error) {
-      console.error("Form validation failed:", error);
-      message.error("Please check the form for errors");
+      setModalVisible(false);
+      fetchProject();
+    } catch (err) {
+      if (err?.errorFields) return; // validation error, already shown
+      message.error("Failed to save unit");
     }
   };
 
-  // Table columns for inventory
+  // ── Inventory table columns ────────────────────────────────────────────────
   const inventoryColumns = [
     {
-      title: "Unit #",
-      dataIndex: "unitNumber",
-      key: "unitNumber",
-      render: (text, record) => (
-        <Button type="link" className="p-0" onClick={() => {
-          setSelectedUnit(record);
-          setModalMode("view");
-          setModalVisible(true);
-        }}>
+      title: "Unit #", dataIndex: "unitNumber", key: "unitNumber",
+      render: (text, rec) => (
+        <Button type="link" style={{ padding: 0 }} onClick={() => { setSelectedUnit(rec); setModalMode("view"); setModalVisible(true); }}>
           {text}
         </Button>
-      )
+      ),
+    },
+    { title: "Building", dataIndex: "buildingName", key: "buildingName", render: (v) => v || "—" },
+    { title: "Floor",    dataIndex: "floorNumber",  key: "floorNumber",  render: (v) => v ?? "G" },
+    { title: "Type",     dataIndex: "unitType",     key: "unitType",     render: (v) => <Tag>{v}</Tag> },
+    { title: "Beds/Bath", key: "bb", render: (_, r) => `${r.bedrooms || 0} / ${r.bathrooms || 0}` },
+    { title: "Area",  key: "area", render: (_, r) => `${r.area?.toLocaleString() || 0} ${r.areaUnit || "sqft"}` },
+    {
+      title: "Price", dataIndex: "price", key: "price",
+      render: (v, r) => <Text strong>{r.currency || "AED"} {v?.toLocaleString() || 0}</Text>,
     },
     {
-      title: "Building",
-      dataIndex: "buildingName",
-      key: "buildingName",
-      render: (text) => text || "—"
+      title: "Status", dataIndex: "status", key: "status",
+      render: (s) => {
+        const cfg = UNIT_STATUS_CONFIG[s] || UNIT_STATUS_CONFIG.available;
+        return <Badge status={cfg.status} text={cfg.label} />;
+      },
     },
     {
-      title: "Floor",
-      dataIndex: "floorNumber",
-      key: "floorNumber",
-      render: (text) => text || "G"
-    },
-    {
-      title: "Type",
-      dataIndex: "unitType",
-      key: "unitType",
-      render: (text) => <Tag>{text}</Tag>
-    },
-    {
-      title: "Beds/Baths",
-      key: "beds",
-      render: (_, record) => `${record.bedrooms || 0} / ${record.bathrooms || 0}`
-    },
-    {
-      title: "Area",
-      key: "area",
-      render: (_, record) => `${record.area?.toLocaleString() || 0} ${record.areaUnit || 'sqft'}`
-    },
-    {
-      title: "Price",
-      dataIndex: "price",
-      key: "price",
-      render: (text, record) => (
-        <Text strong>
-          {record.currency || "AED"} {text?.toLocaleString() || 0}
-        </Text>
-      )
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => {
-        const config = UNIT_STATUS_CONFIG[status] || UNIT_STATUS_CONFIG.available;
-        return <Badge status={config.status} text={config.label} />;
-      }
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
+      title: "Actions", key: "actions",
+      render: (_, rec) => (
+        <Space size={4}>
           <Tooltip title="Edit">
-            <Button icon={<EditOutlined />} size="small" onClick={() => handleEditUnit(record)} />
+            <Button icon={<EditOutlined />} size="small" onClick={() => openEditUnit(rec)} />
           </Tooltip>
           <Tooltip title="Delete">
-            <Button icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteUnit(record)} />
+            <Button icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteUnit(rec)} />
           </Tooltip>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
+  // ── Loading / empty ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <Spin size="large" />
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+        <Spin size="large" tip="Loading project..." />
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <Alert type="error" message="Property not found." showIcon />
-        <Button className="mt-4 rounded-lg font-medium" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+      <div style={{ padding: 24 }}>
+        <Alert type="error" message="Project not found." showIcon />
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginTop: 16 }}>
           Go Back
         </Button>
       </div>
     );
   }
 
-  // Derived values
-  const allPhotos = [
-    ...(project.media?.architectureImages || []),
-    ...(project.media?.interiorImages || []),
-    ...(project.media?.lobbyImages || []),
-    ...(project.media?.otherImages || []),
-  ];
+  // ── Derived values ─────────────────────────────────────────────────────────
+  const projectName  = project.projectName || project.propertyName || "Untitled Project";
+  const mainLogo     = project.media?.mainLogo || project.mainLogo || null;
+  const archPhotos   = project.media?.architectureImages || project.photos?.architecture || [];
+  const interPhotos  = project.media?.interiorImages     || project.photos?.interior     || [];
+  const lobbyPhotos  = project.media?.lobbyImages        || project.photos?.lobby        || [];
+  const coverImg     = archPhotos[0] || interPhotos[0] || null;
 
-  const photoCategoryMap = [
-    { label: "Architecture", photos: project.media?.architectureImages || [] },
-    { label: "Interior", photos: project.media?.interiorImages || [] },
-    { label: "Lobby", photos: project.media?.lobbyImages || [] },
-    { label: "Other", photos: project.media?.otherImages || [] },
-  ].filter(c => c.photos.length > 0);
+  const photoCats = [
+    { label: "Architecture", photos: archPhotos },
+    { label: "Interior",     photos: interPhotos },
+    { label: "Lobby",        photos: lobbyPhotos },
+  ].filter((c) => c.photos.length > 0);
 
-  const locationStr = [project.area, project.city, project.country].filter(Boolean).join(", ");
+  const locality   = project.locality || project.area || "";
+  const address    = project.location?.address || "";
+  const lat        = project.location?.latitude  || project.coordinates?.lat || null;
+  const lng        = project.location?.longitude || project.coordinates?.lng || null;
+  const locationStr = [address || locality, project.city, project.country].filter(Boolean).join(", ");
 
-  const completionLabel = project.completionDate?.quarter && project.completionDate?.year
-    ? `${project.completionDate.quarter} ${project.completionDate.year}`
-    : project.completionDate?.fullDate
-      ? dayjs(project.completionDate.fullDate).isValid()
-        ? dayjs(project.completionDate.fullDate).format("MMM D, YYYY")
-        : String(project.completionDate.fullDate)
-      : "Not specified";
+  const unitTypes = Array.isArray(project.unitTypes) && project.unitTypes.length > 0
+    ? project.unitTypes
+    : (project.unitType ? [project.unitType] : []);
 
-  const readinessValue = parseInt(project.readinessProgress) || 0;
+  const overview   = project.overview || project.description || "";
+  const priceFrom  = project.priceRange?.from || project.price_min || 0;
+  const priceTo    = project.priceRange?.to   || project.price_max || 0;
+  const priceStr   = priceFrom && priceTo && priceFrom !== priceTo
+    ? `${fmt(priceFrom)} – ${fmt(priceTo)}`
+    : fmt(priceFrom);
 
-  const firstFloorPlan = project.floorPlans?.[0] || {};
-  const builtUpMin = project.builtUpArea_min ?? firstFloorPlan.areaFrom ?? 0;
-  const builtUpMax = project.builtUpArea_max ?? firstFloorPlan.areaTo ?? 0;
-  const builtUpUnit = project.builtUpAreaUnit || "sqft";
+  const constructProgress = project.constructionProgress ?? parseInt(project.readinessProgress) ?? 0;
+  const serviceCharge     = project.serviceCharge || project.serviceChargeInfo || "";
 
-  const developerDisplayName =
-    project.developerName ||
-    project.developerDetails?.companyName ||
-    project.developerDetails?.contactName ||
-    project.developerDetails?.primaryContactName ||
-    "—";
+  const completion = completionLabel(project.completionDate);
 
-  const selectedAmenities = Array.isArray(project.amenities) ? project.amenities : [];
-  const amenityRendered = selectedAmenities.map((a) => AMENITY_LABELS[a] || a).filter(Boolean);
+  const developerName = project.developerDetails?.companyName || project.developerName || "—";
+  const devContact    = project.developerDetails?.contactName  || project.developerDetails?.primaryContactName || "";
+  const devEmail      = project.developerDetails?.email  || "";
+  const devPhone      = project.developerDetails?.phone  || "";
+  const devLicense    = project.developerDetails?.developerLicenseNumber || "";
+  const devLogo       = project.developerDetails?.logo   || "";
 
-  const selectedFacilityKeys = project.facilities
-    ? Object.entries(project.facilities).filter(([, v]) => !!v).map(([k]) => k)
-    : [];
-  const facilityRendered = selectedFacilityKeys.map((k) => FACILITY_LABELS[k] || k).filter(Boolean);
+  const amenities = Array.isArray(project.amenities) ? project.amenities : [];
 
-  const amenitiesAndFacilitiesToShow = Array.from(new Set([...amenityRendered, ...facilityRendered]));
+  // Inventory stats
+  const inv = inventoryStats;
+  const totalUnits    = inv.total    || project.totalUnits || 0;
+  const availUnits    = inv.available || 0;
+  const holdUnits     = inv.hold      || 0;
+  const reservedUnits = inv.reserved  || project.reservedUnits || 0;
+  const bookedUnits   = inv.booked    || project.bookedUnits   || 0;
+  const spaUnits      = inv.spa_signed || 0;
+  const soldUnits     = inv.sold      || project.soldUnits     || 0;
+  const handoverUnits = inv.handover  || 0;
+  const cancelUnits   = inv.cancelled || 0;
+  const occupiedUnits = soldUnits + reservedUnits + bookedUnits + spaUnits + handoverUnits;
+  const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
-  const bedroomLabel = project.bedroomType
-    ? project.bedroomType.replace("bed", " Bedroom").replace("studio", "Studio")
-    : project.bedrooms
-    ? `${project.bedrooms} Bedroom`
-    : "—";
+  // Check if inventory is overview rows (not child unit listings)
+  const isInventoryOverview = inventory.length > 0 && !inventory[0]?.unitNumber;
 
-  // Use inventory stats from combined API
-  const displayTotalUnits = inventoryStats.total || project.totalUnits || 0;
-  const displaySoldUnits = inventoryStats.sold || project.soldUnits || 0;
-  const displayReservedUnits = inventoryStats.reserved || project.reservedUnits || 0;
-  const displayBookedUnits = inventoryStats.booked || project.bookedUnits || 0;
-  const displayAvailableUnits = inventoryStats.available || 0;
-  const displayHoldUnits = inventoryStats.hold || 0;
-  const displaySpaSignedUnits = inventoryStats.spa_signed || 0;
-  const displayHandoverUnits = inventoryStats.handover || 0;
-  const displayCancelledUnits = inventoryStats.cancelled || 0;
-  
-  // Calculate occupancy rate
-  const occupiedUnits = displaySoldUnits + displayReservedUnits + displayBookedUnits + displaySpaSignedUnits + displayHandoverUnits;
-  const occupancyRate = displayTotalUnits > 0 ? Math.round((occupiedUnits / displayTotalUnits) * 100) : 0;
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-6 bg-gray-50 min-h-screen max-w-[1600px] mx-auto">
+    <div style={{ padding: "24px", background: "#f5f3ff", minHeight: "100vh" }}>
 
-      {/* Back Button */}
-      <div className="flex justify-between items-center mb-5">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          className="rounded-lg font-medium"
-        >
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/dashboard/developer/developer-properties")}>
           Back to My Properties
         </Button>
-        
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleCreateUnit}
-          style={{ backgroundColor: THEME.primary }}
-          className="rounded-lg font-medium"
-        >
-          Add Unit
-        </Button>
+        <Space>
+          <Tooltip title="Refresh">
+            <Button icon={<ReloadOutlined />} onClick={fetchProject} />
+          </Tooltip>
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/dashboard/developer/edit-property/${id}`)}
+            style={{ background: THEME.primary, borderColor: THEME.primary }}
+          >
+            Edit Project
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={openCreateUnit}
+          >
+            Add Unit
+          </Button>
+        </Space>
       </div>
 
-      {/* Hero Card */}
-      <Card className="mb-6 rounded-2xl overflow-hidden shadow-sm border-0" bodyStyle={{ padding: 0 }}>
-        {allPhotos.length > 0 ? (
-          <div className="h-56 md:h-72 w-full relative bg-gray-100">
-            <img src={allPhotos[0]} alt="cover" className="w-full h-full object-contain" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            
-            <div className="absolute top-4 right-4 flex gap-2">
-              <Tag color={APPROVAL_COLOR[project.approvalStatus]} className="font-bold text-xs px-3 py-1 rounded-full border-0 shadow-sm m-0">
-                {project.approvalStatus?.toUpperCase()}
+      {/* Admin feedback banners */}
+      {project.approvalStatus === "changes_requested" && project.adminComments && (
+        <Alert
+          type="warning" showIcon
+          message="Admin Requested Changes"
+          description={project.adminComments}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {project.approvalStatus === "rejected" && project.rejectionReason && (
+        <Alert
+          type="error" showIcon
+          message="Listing Rejected"
+          description={project.rejectionReason}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {project.approvalStatus === "draft" && (
+        <Alert
+          type="info" showIcon
+          message="This listing is saved as a draft. Submit it for admin approval when ready."
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {/* ── Hero Card ─────────────────────────────────────────── */}
+      <Card style={{ borderRadius: 16, overflow: "hidden", marginBottom: 20, border: "none" }} styles={{ body: { padding: 0 } }}>
+        {coverImg ? (
+          <div style={{ position: "relative", height: 240, background: "#f0ebff" }}>
+            <img src={coverImg} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)",
+            }} />
+            <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6 }}>
+              <Tag color={APPROVAL_COLOR[project.approvalStatus] || "default"} style={{ margin: 0, fontWeight: 700 }}>
+                {project.approvalStatus === "changes_requested" ? "CHANGES REQUESTED" : project.approvalStatus?.toUpperCase()}
               </Tag>
-              <Tag color={PROJECT_STATUS_COLOR[project.projectStatus] || "default"} className="font-bold text-xs px-3 py-1 rounded-full border-0 shadow-sm m-0">
+              <Tag color={PROJECT_STATUS_COLOR[project.projectStatus] || "default"} style={{ margin: 0, fontWeight: 700 }}>
                 {PROJECT_STATUS_LABEL[project.projectStatus] || project.projectStatus}
               </Tag>
             </div>
           </div>
         ) : (
-          <div className="h-32 w-full bg-gradient-to-r from-purple-100 to-indigo-50" />
+          <div style={{ height: 80, background: "linear-gradient(135deg, #e9d5ff, #dbeafe)" }} />
         )}
 
-        <div className="px-6 pb-6 pt-4 relative flex flex-col md:flex-row md:items-start gap-4">
-          {project.mainLogo && (
+        <div style={{ padding: "16px 24px 24px", display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {mainLogo && (
             <img
-              src={project.mainLogo}
-              alt="logo"
-              className="w-20 h-20 rounded-xl object-contain border-4 border-white shadow-md bg-white -mt-12 flex-shrink-0 z-10 relative"
+              src={mainLogo} alt="logo"
+              style={{
+                width: 80, height: 80, objectFit: "contain",
+                borderRadius: 12, border: "3px solid #fff",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                background: "#fff", flexShrink: 0,
+                marginTop: coverImg ? -40 : 0,
+              }}
             />
           )}
-          <div className="flex-1 mt-2 md:mt-0">
-            <Title level={3} className="!mb-1">{project.propertyName || "Untitled Property"}</Title>
-            <Text className="text-gray-500 text-sm flex items-center gap-1 mb-3">
-              <EnvironmentOutlined />
-              {locationStr || "Location not specified"}
-            </Text>
-            
-            <div className="flex flex-wrap gap-2">
-              <Tag color="purple" className="rounded-md px-2 py-0.5 m-0">{project.unitType?.replace("_", " ")}</Tag>
-              <Tag color="blue" className="rounded-md px-2 py-0.5 m-0">{bedroomLabel}</Tag>
-              {project.furnishing && (
-                <Tag className="rounded-md px-2 py-0.5 m-0">{project.furnishing.charAt(0).toUpperCase() + project.furnishing.slice(1)}</Tag>
-              )}
-              {project.ownershipType && (
-                <Tag color="geekblue" className="rounded-md px-2 py-0.5 m-0">{project.ownershipType}</Tag>
-              )}
-              {project.hasView && project.viewType?.length > 0 && (
-                project.viewType.map(v => (
-                  <Tag key={v} color="cyan" className="rounded-md px-2 py-0.5 m-0">{v.charAt(0).toUpperCase() + v.slice(1)} View</Tag>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="md:text-right mt-4 md:mt-0 bg-gray-50 p-4 rounded-xl border border-gray-100 shrink-0 min-w-[200px]">
-            <Text className="text-gray-500 text-xs uppercase font-semibold tracking-wider">Price Range</Text>
-            <div className="my-1">
-              <span className="text-xl font-bold" style={{ color: THEME.primary }}>
-                {project.currency} {Number(project.price_min || 0).toLocaleString()}
-              </span>
-              <span className="text-gray-400 mx-2">–</span>
-              <span className="text-xl font-bold" style={{ color: THEME.primary }}>
-                {Number(project.price_max || 0).toLocaleString()}
-              </span>
-            </div>
-            <Text className="text-gray-500 text-sm">
-              {Number(project.builtUpArea_min || 0).toLocaleString()} –{" "}
-              {Number(project.builtUpArea_max || 0).toLocaleString()} {project.builtUpAreaUnit}
-            </Text>
-          </div>
-        </div>
-
-        {project.approvalStatus === "rejected" && project.rejectionReason && (
-          <div className="px-6 pb-6">
-            <Alert type="error" showIcon message={<span className="font-semibold">Rejection Reason</span>} description={project.rejectionReason} className="rounded-lg" />
-          </div>
-        )}
-      </Card>
-
-      {/* Inventory Dashboard */}
-      <Card className="mb-6 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <UnorderedListOutlined className="text-xl" style={{ color: THEME.primary }} />
-                <Title level={5} className="!mb-0">Inventory Overview</Title>
-              </div>
-              <Tooltip title="Refresh">
-                <Button icon={<ReloadOutlined />} onClick={fetchProjectDetails} size="small" />
-              </Tooltip>
-            </div>
-
-          <Row gutter={[16, 16]}>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <Statistic value={displayAvailableUnits} valueStyle={{ color: '#10b981', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">Available</Text>
-              </div>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <Statistic value={displayHoldUnits} valueStyle={{ color: '#6b7280', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">Hold</Text>
-              </div>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-orange-50 rounded-lg">
-                <Statistic value={displayReservedUnits} valueStyle={{ color: '#f59e0b', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">Reserved</Text>
-              </div>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <Statistic value={displayBookedUnits} valueStyle={{ color: '#3b82f6', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">Booked</Text>
-              </div>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <Statistic value={displaySpaSignedUnits} valueStyle={{ color: '#8b5cf6', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">SPA Signed</Text>
-              </div>
-            </Col>
-            <Col xs={12} sm={6} md={4}>
-              <div className="text-center p-3 bg-red-50 rounded-lg">
-                <Statistic value={displaySoldUnits} valueStyle={{ color: '#ef4444', fontSize: '24px' }} />
-                <Text className="text-xs text-gray-500">Sold</Text>
-              </div>
-            </Col>
-            {displayHandoverUnits > 0 && (
-              <Col xs={12} sm={6} md={4}>
-                <div className="text-center p-3 bg-cyan-50 rounded-lg">
-                  <Statistic value={displayHandoverUnits} valueStyle={{ color: '#06b6d4', fontSize: '24px' }} />
-                  <Text className="text-xs text-gray-500">Handover</Text>
-                </div>
-              </Col>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Title level={3} style={{ margin: "0 0 4px" }}>{projectName}</Title>
+            {locationStr && (
+              <Text style={{ color: "#6b7280", fontSize: 13 }}>
+                <EnvironmentOutlined style={{ marginRight: 4 }} />
+                {locationStr}
+              </Text>
             )}
-            {displayCancelledUnits > 0 && (
-              <Col xs={12} sm={6} md={4}>
-                <div className="text-center p-3 bg-rose-50 rounded-lg">
-                  <Statistic value={displayCancelledUnits} valueStyle={{ color: '#f43f5e', fontSize: '24px' }} />
-                  <Text className="text-xs text-gray-500">Cancelled</Text>
-                </div>
-              </Col>
-            )}
-          </Row>
-
-          {displayTotalUnits > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Occupancy Rate</span>
-                <span>{occupancyRate}%</span>
-              </div>
-              <Progress 
-                percent={occupancyRate}
-                strokeColor={THEME.primary}
-                showInfo={false}
-              />
+            <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {unitTypes.map((ut) => (
+                <Tag key={ut} color="purple" style={{ margin: 0 }}>
+                  {ut.charAt(0).toUpperCase() + ut.slice(1).replace("_", " ")}
+                </Tag>
+              ))}
+              {project.furnishingStatus && (
+                <Tag style={{ margin: 0 }}>{project.furnishingStatus}</Tag>
+              )}
+              {project.developmentStatus && (
+                <Tag color="geekblue" style={{ margin: 0 }}>{project.developmentStatus}</Tag>
+              )}
+              {project.saleStatus && project.saleStatus !== "Available" && (
+                <Tag color="volcano" style={{ margin: 0 }}>{project.saleStatus}</Tag>
+              )}
             </div>
-          )}
+          </div>
+
+          <div style={{
+            background: THEME.light,
+            border: `1px solid #ddd6fe`,
+            borderRadius: 12,
+            padding: "16px 20px",
+            textAlign: "right",
+            minWidth: 200,
+            flexShrink: 0,
+          }}>
+            <Text style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", display: "block" }}>
+              Price Range
+            </Text>
+            <div style={{ fontSize: 18, fontWeight: 800, color: THEME.primary, marginTop: 4 }}>
+              {priceStr}
+            </div>
+            {completion !== "Not specified" && (
+              <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 4, display: "block" }}>
+                <CalendarOutlined style={{ marginRight: 4 }} />
+                Completion: {completion}
+              </Text>
+            )}
+          </div>
         </div>
       </Card>
 
-      {/* Inventory Table */}
-      <Card 
-        title={<span className="text-lg font-bold">Unit Inventory</span>}
-        className="mb-6 shadow-sm rounded-2xl border border-gray-100"
-        extra={<Text className="text-xs text-gray-400">Total: {displayTotalUnits} units</Text>}
-      >
-        <Table
-          columns={inventoryColumns}
-          dataSource={inventory}
-          rowKey="key"
-          loading={inventoryLoading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} units`,
-            onChange: (page, pageSize) => setPagination(prev => ({ ...prev, current: page, pageSize }))
-          }}
-          scroll={{ x: 1000 }}
-          locale={{ emptyText: inventoryLoading ? "Loading..." : "No inventory units added yet. Click 'Add Unit' to get started." }}
-        />
-      </Card>
-
-      {/* Quick Stats Row */}
-      <Row gutter={[16, 16]} className="mb-6">
+      {/* ── Quick Stats Row ────────────────────────────────────── */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
         {[
-          { icon: <HomeOutlined className="text-[#6d28d9] text-xl" />, label: "Total Units", value: displayTotalUnits || "—" },
-          { icon: <TeamOutlined className="text-[#0ea5e9] text-xl" />, label: "Bedrooms", value: project.bedrooms || "—" },
-          { icon: <CalendarOutlined className="text-[#f59e0b] text-xl" />, label: "Completion", value: completionLabel },
-          { icon: <DollarOutlined className="text-[#10b981] text-xl" />, label: "Floors", value: project.floors || "—" },
-          { icon: <CarOutlined className="text-[#8b5cf6] text-xl" />, label: "Parking Spaces", value: project.parkingSpaces ?? "—" },
-        ].map(({ icon, label, value }) => (
-          <Col xs={12} sm={8} md={4} key={label} className="flex-1">
-            <Card className="shadow-sm border border-gray-100 rounded-2xl text-center transition-all hover:-translate-y-1 hover:shadow-md cursor-default h-full" bodyStyle={{ padding: "16px 12px" }}>
-              <div className="mb-2 bg-gray-50 inline-flex p-3 rounded-full">{icon}</div>
-              <div className="text-lg font-bold text-gray-800 leading-tight">{value}</div>
-              <div className="text-xs text-gray-400 font-medium mt-1">{label}</div>
+          { label: "Total Units",    value: totalUnits || "—",         color: "#6d28d9" },
+          { label: "Floors",         value: project.numberOfFloors || project.floors || "—", color: "#0ea5e9" },
+          { label: "Completion",     value: completion,                color: "#f59e0b" },
+          { label: "Progress",       value: `${constructProgress}%`,  color: "#10b981" },
+          { label: "Service Charge", value: serviceCharge || "—",     color: "#8b5cf6" },
+        ].map(({ label, value, color }) => (
+          <Col xs={12} sm={8} md={4} key={label}>
+            <Card
+              style={{ borderRadius: 12, border: "1px solid #e5e7eb", textAlign: "center" }}
+              styles={{ body: { padding: "14px 10px" } }}
+            >
+              <div style={{ fontSize: 17, fontWeight: 700, color }}>{value}</div>
+              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>{label}</div>
             </Card>
           </Col>
         ))}
       </Row>
 
-      {/* Rest of your existing content (Photos, Property Details, Description, Proximity, Payment Plan, Bottom Cards) */}
-      <div className="space-y-6 mb-6">
-        {/* Photos by category */}
-        {photoCategoryMap.length > 0 && (
-          <Card title={<span className="text-lg font-bold">Property Photos</span>} className="shadow-sm rounded-2xl border border-gray-100">
-            {photoCategoryMap.map(cat => (
-              <div key={cat.label} className="mb-6 last:mb-0">
-                <Text className="block mb-3 text-xs text-gray-400 uppercase tracking-widest font-bold">{cat.label}</Text>
-                <Image.PreviewGroup>
-                  <div className="flex gap-3 flex-wrap">
-                    {cat.photos.map((url, i) => (
-                      <div key={i} className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                        <Image width={160} height={110} className="object-contain hover:scale-105 transition-transform duration-300 bg-gray-50" src={url} />
-                      </div>
-                    ))}
-                  </div>
-                </Image.PreviewGroup>
-              </div>
-            ))}
-          </Card>
+      {/* ── Construction Progress ──────────────────────────────── */}
+      <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+        <SectionTitle>Construction Progress</SectionTitle>
+        <Progress
+          percent={constructProgress}
+          strokeColor={THEME.primary}
+          trailColor="#f3f4f6"
+          format={(p) => <span style={{ fontWeight: 700 }}>{p}%</span>}
+        />
+        {project.developmentStatus && (
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
+            Status: {project.developmentStatus}
+          </Text>
         )}
+      </Card>
 
-        {/* Property Details */}
-        <Card title={<span className="text-lg font-bold">Property Details</span>} className="shadow-sm rounded-2xl border border-gray-100 overflow-hidden" bodyStyle={{ padding: 0 }}>
-          <div className="overflow-x-auto p-1">
-            <Descriptions bordered column={{ xs: 1, sm: 2, md: 3, lg: 4 }} size="middle" className="min-w-[700px] w-full" 
-              labelStyle={{ backgroundColor: '#f8fafc', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap', width: 'auto', minWidth: '130px' }}
-              contentStyle={{ color: '#1e293b', fontWeight: 500, minWidth: '130px' }}
-            >
-              <Descriptions.Item label="Property Name">{project.propertyName || "—"}</Descriptions.Item>
-              <Descriptions.Item label="Developer Name">{developerDisplayName}</Descriptions.Item>
-              <Descriptions.Item label="Unit Type">
-                <Tag color="purple" className="m-0 bg-purple-50 text-purple-700 border-purple-200">
-                  {project.unitType?.charAt(0).toUpperCase() + project.unitType?.slice(1)}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Bedroom Type">{bedroomLabel}</Descriptions.Item>
-              <Descriptions.Item label="Bathrooms">{project.bathrooms ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Total Units">{displayTotalUnits || "—"}</Descriptions.Item>
-              <Descriptions.Item label="Floors">{project.floors || "—"}</Descriptions.Item>
-              <Descriptions.Item label="Parking Spaces">{project.parkingSpaces ?? "—"}</Descriptions.Item>
-              <Descriptions.Item label="Built-Up Area">{Number(builtUpMin).toLocaleString()} – {Number(builtUpMax).toLocaleString()} {builtUpUnit}</Descriptions.Item>
-              <Descriptions.Item label="Price Range">
-                <Text strong style={{ color: THEME.primary }}>{project.currency} {project.price_min?.toLocaleString()} – {project.price_max?.toLocaleString()}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Ownership Type">{project.ownershipType || "—"}</Descriptions.Item>
-              <Descriptions.Item label="Furnishing">{project.furnishing ? project.furnishing.charAt(0).toUpperCase() + project.furnishing.slice(1) : "—"}</Descriptions.Item>
-              <Descriptions.Item label="Project Status">
-                <Tag color={PROJECT_STATUS_COLOR[project.projectStatus] || "default"} className="m-0">
-                  {PROJECT_STATUS_LABEL[project.projectStatus] || project.projectStatus}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Completion Date">{completionLabel}</Descriptions.Item>
-              <Descriptions.Item label="Transaction Type">{project.transactionType || "—"}</Descriptions.Item>
-              {project.hasView && (
-                <Descriptions.Item label="View Type">
-                  <div className="flex gap-2 flex-wrap">{project.viewType?.map(v => (<Tag key={v} color="cyan" className="m-0">{v}</Tag>))}</div>
-                </Descriptions.Item>
-              )}
-            </Descriptions>
+      {/* ── Inventory Dashboard ───────────────────────────────── */}
+      <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <SectionTitle>Inventory Overview</SectionTitle>
+          <Tooltip title="Refresh">
+            <Button icon={<ReloadOutlined />} onClick={fetchProject} size="small" />
+          </Tooltip>
+        </div>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: "Available", value: availUnits,    bg: "#f0fdf4", color: "#10b981" },
+            { label: "Hold",      value: holdUnits,     bg: "#f9fafb", color: "#6b7280" },
+            { label: "Reserved",  value: reservedUnits, bg: "#fffbeb", color: "#f59e0b" },
+            { label: "Booked",    value: bookedUnits,   bg: "#eff6ff", color: "#3b82f6" },
+            { label: "SPA Signed",value: spaUnits,      bg: "#f5f3ff", color: "#7c3aed" },
+            { label: "Sold",      value: soldUnits,     bg: "#fef2f2", color: "#ef4444" },
+            ...(handoverUnits > 0 ? [{ label: "Handover", value: handoverUnits, bg: "#ecfeff", color: "#06b6d4" }] : []),
+            ...(cancelUnits   > 0 ? [{ label: "Cancelled",value: cancelUnits,  bg: "#fff1f2", color: "#f43f5e" }] : []),
+          ].map(({ label, value, bg, color }) => (
+            <Col xs={8} sm={6} md={4} key={label}>
+              <div style={{ textAlign: "center", background: bg, borderRadius: 10, padding: "10px 8px" }}>
+                <Statistic value={value} valueStyle={{ color, fontSize: 22 }} />
+                <Text style={{ fontSize: 11, color: "#6b7280" }}>{label}</Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
+        {totalUnits > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+              <span>Occupancy Rate</span>
+              <span>{occupancyRate}%</span>
+            </div>
+            <Progress percent={occupancyRate} strokeColor={THEME.primary} showInfo={false} />
+          </div>
+        )}
+      </Card>
+
+      {/* ── Inventory Table (child units) or Inventory Overview (summary rows) */}
+      {inventory.length > 0 && (
+        <Card
+          title={<span style={{ fontWeight: 700 }}>{isInventoryOverview ? "Inventory Summary" : "Unit Inventory"}</span>}
+          style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}
+          extra={<Text style={{ color: "#9ca3af", fontSize: 12 }}>Total: {totalUnits} units</Text>}
+        >
+          {isInventoryOverview ? (
+            <Table
+              size="small"
+              dataSource={inventory}
+              rowKey={(r, i) => r._id || i}
+              pagination={false}
+              columns={[
+                { title: "Unit Type", dataIndex: "unitType", key: "unitType", render: (v) => <Tag>{v}</Tag> },
+                { title: "Units",     dataIndex: "units",    key: "units"    },
+                { title: "Sq Ft (from)", dataIndex: "sqft", key: "sqft", render: (v) => v?.toLocaleString() || "—" },
+                { title: "Sq M (from)",  dataIndex: "sqm",  key: "sqm",  render: (v) => v?.toLocaleString() || "—" },
+              ]}
+            />
+          ) : (
+            <Table
+              columns={inventoryColumns}
+              dataSource={inventory}
+              rowKey={(r, i) => r._id || i}
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                showSizeChanger: true,
+                showTotal: (t) => `Total ${t} units`,
+                onChange: (page, pageSize) => setPagination((p) => ({ ...p, current: page, pageSize })),
+              }}
+              scroll={{ x: 900 }}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ── Floor Plans Summary ────────────────────────────────── */}
+      {project.floorPlans?.length > 0 && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Floor Plan & Unit Details</SectionTitle>
+          <Table
+            size="small"
+            dataSource={project.floorPlans}
+            rowKey={(_, i) => i}
+            pagination={false}
+            columns={[
+              { title: "Unit Type",     dataIndex: "unitType", key: "unitType" },
+              { title: "Area From (sq ft)", dataIndex: "areaFrom", key: "areaFrom", render: (v) => v?.toLocaleString() || "—" },
+              { title: "Area To (sq ft)",   dataIndex: "areaTo",   key: "areaTo",   render: (v) => v?.toLocaleString() || "—" },
+            ]}
+          />
+        </Card>
+      )}
+
+      {/* ── Overview & Property Details ───────────────────────── */}
+      <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+        <SectionTitle>Project Overview</SectionTitle>
+        {overview ? (
+          <Paragraph style={{ color: "#4b5563", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+            {overview}
+          </Paragraph>
+        ) : (
+          <Text type="secondary">No overview provided.</Text>
+        )}
+        <Divider />
+        <SectionTitle>Property Details</SectionTitle>
+        <Descriptions
+          bordered
+          column={{ xs: 1, sm: 2, md: 3 }}
+          size="small"
+          labelStyle={{ background: "#f8fafc", color: "#64748b", fontWeight: 500 }}
+          contentStyle={{ color: "#1e293b", fontWeight: 500 }}
+        >
+          <Descriptions.Item label="Project Name">{projectName}</Descriptions.Item>
+          <Descriptions.Item label="Developer">{developerName}</Descriptions.Item>
+          <Descriptions.Item label="Locality">{locality || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Property Type">{project.propertyType || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Unit Types">
+            <Space size={4} wrap>
+              {unitTypes.map((u) => <Tag key={u} color="purple" style={{ margin: 0 }}>{u}</Tag>)}
+            </Space>
+          </Descriptions.Item>
+          <Descriptions.Item label="Completion">{completion}</Descriptions.Item>
+          <Descriptions.Item label="Price Range">
+            <Text strong style={{ color: THEME.primary }}>{priceStr}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Floors">{project.numberOfFloors || project.floors || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Furnishing">{project.furnishingStatus || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Parking">{project.parkingAllocation || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Service Charge">{serviceCharge || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Project Status">
+            <Tag color={PROJECT_STATUS_COLOR[project.projectStatus] || "default"} style={{ margin: 0 }}>
+              {PROJECT_STATUS_LABEL[project.projectStatus] || project.projectStatus || "—"}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="Development Status">{project.developmentStatus || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Sale Status">{project.saleStatus || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Approval">
+            <Tag color={APPROVAL_COLOR[project.approvalStatus] || "default"} style={{ margin: 0 }}>
+              {project.approvalStatus === "changes_requested" ? "Changes Requested" : project.approvalStatus?.toUpperCase()}
+            </Tag>
+          </Descriptions.Item>
+          {project.resubmissionCount > 0 && (
+            <Descriptions.Item label="Resubmissions">{project.resubmissionCount}</Descriptions.Item>
+          )}
+        </Descriptions>
+      </Card>
+
+      {/* ── Location & Map ────────────────────────────────────── */}
+      {(address || locality || lat) && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Location</SectionTitle>
+          {(address || locality) && (
+            <Text style={{ display: "block", marginBottom: lat ? 12 : 0, color: "#4b5563" }}>
+              <EnvironmentOutlined style={{ marginRight: 6 }} />
+              {address || locality}
+            </Text>
+          )}
+          {lat && lng && (
+            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+              <iframe
+                title="map"
+                src={`https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`}
+                width="100%" height="280"
+                style={{ border: 0, display: "block" }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── Photos ────────────────────────────────────────────── */}
+      {photoCats.length > 0 && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Property Photos</SectionTitle>
+          {photoCats.map((cat) => (
+            <div key={cat.label} style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 10 }}>
+                {cat.label}
+              </Text>
+              <Image.PreviewGroup>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {cat.photos.map((url, i) => (
+                    <div key={i} style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                      <Image width={150} height={105} src={url} style={{ objectFit: "cover" }} />
+                    </div>
+                  ))}
+                </div>
+              </Image.PreviewGroup>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* ── Buildings ─────────────────────────────────────────── */}
+      {project.buildings?.length > 0 && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Buildings in the Project</SectionTitle>
+          <Row gutter={[16, 16]}>
+            {project.buildings.map((b, i) => (
+              <Col xs={24} sm={12} md={8} key={i}>
+                <Card size="small" style={{ borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                  {b.image && (
+                    <img src={b.image} alt={b.title || `building-${i}`}
+                      style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 8, marginBottom: 8 }} />
+                  )}
+                  <Text strong style={{ display: "block" }}>{b.title || `Building ${i + 1}`}</Text>
+                  {b.description && <Text type="secondary" style={{ fontSize: 12 }}>{b.description}</Text>}
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
+
+      {/* ── Amenities ─────────────────────────────────────────── */}
+      {amenities.length > 0 && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Facilities & Amenities</SectionTitle>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {amenities.map((a) => (
+              <Tag key={a} color="blue" style={{ margin: 0, padding: "4px 10px" }}>{a}</Tag>
+            ))}
           </div>
         </Card>
+      )}
 
-        {/* Description */}
-        <Card title={<span className="text-lg font-bold">Description</span>} className="shadow-sm rounded-2xl border border-gray-100">
-          <Paragraph className="text-gray-600 leading-relaxed text-sm m-0 whitespace-pre-line">
-            {project.description || "No description provided."}
-          </Paragraph>
-        </Card>
-
-        {/* Proximity */}
-        {Object.values(project.proximity || {}).some(Boolean) && (
-          <Card title={<span className="text-lg font-bold">Proximity</span>} className="shadow-sm rounded-2xl border border-gray-100">
-            <Row gutter={[16, 16]}>
-              {Object.entries(project.proximity).map(([key, val]) => val ? (
-                <Col xs={12} sm={8} md={4} key={key}>
-                  <div className="text-center p-4 bg-indigo-50 rounded-xl border border-indigo-100 h-full flex flex-col justify-center">
-                    <div className="text-xl font-extrabold" style={{ color: THEME.primary }}>{val} min</div>
-                    <div className="text-xs text-gray-500 mt-1 capitalize font-medium">{key}</div>
-                  </div>
-                </Col>
-              ) : null)}
-            </Row>
-          </Card>
-        )}
-
-        {/* Payment Plan */}
-        {project.paymentPlan?.length > 0 && (
-          <Card title={<span className="text-lg font-bold">Payment Plan</span>} className="shadow-sm rounded-2xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {project.paymentPlan.map((plan, i) => (
-                <div key={plan._id || i} className="p-5 bg-purple-50 rounded-xl border border-purple-100">
-                  <Text strong className="text-purple-700 text-[15px] block mb-3 border-b border-purple-200 pb-2">
+      {/* ── Payment Plan ──────────────────────────────────────── */}
+      {project.paymentPlan?.length > 0 && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Payment Plan</SectionTitle>
+          <Row gutter={[16, 16]}>
+            {project.paymentPlan.map((plan, i) => (
+              <Col xs={24} md={12} lg={8} key={plan._id || i}>
+                <div style={{
+                  background: "#f5f3ff", borderRadius: 12,
+                  border: "1px solid #ddd6fe", padding: 16,
+                }}>
+                  <Text strong style={{ color: THEME.primary, fontSize: 14, display: "block", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid #ddd6fe" }}>
                     {plan.title || `Plan ${i + 1}`}
                   </Text>
                   {plan.stages?.length > 0 ? (
-                    <div className="space-y-3">
-                      {plan.stages.map((stage, j) => (
-                        <div key={j} className="flex justify-between items-center text-sm">
-                          <Text className="text-gray-600">{stage.label || stage.name}</Text>
-                          <Text strong className="text-gray-800">{stage.percentage ?? stage.value}%</Text>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {plan.stages.map((s, j) => (
+                        <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                          <Text style={{ color: "#4b5563", flex: 1 }}>
+                            {/* support both milestoneTitle (new) and stage/label/name (legacy) */}
+                            {s.milestoneTitle || s.label || s.stage?.replace("_", " ") || `Stage ${j + 1}`}
+                          </Text>
+                          <Text strong style={{ color: "#1e1b4b", marginLeft: 12 }}>
+                            {s.percentage ?? s.value}%
+                          </Text>
                         </div>
                       ))}
+                      {/* Total check */}
+                      {(() => {
+                        const total = plan.stages.reduce((s, st) => s + (st.percentage ?? st.value ?? 0), 0);
+                        return (
+                          <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #c4b5fd", paddingTop: 8, marginTop: 4 }}>
+                            <Text style={{ fontSize: 12, color: "#7c3aed", fontWeight: 600 }}>Total</Text>
+                            <Text style={{ fontSize: 12, color: total === 100 ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+                              {total}%
+                            </Text>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
-                    <Text type="secondary" className="text-sm">No stages defined yet.</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>No stages defined.</Text>
                   )}
                 </div>
-              ))}
-            </div>
-            {project.eoiAmount > 0 && (
-              <div className="mt-5 p-4 bg-green-50 rounded-xl border border-green-200 flex flex-col md:flex-row md:items-center justify-between">
-                <div>
-                  <Text strong className="text-green-700 text-base">EOI Amount</Text>
-                  <Text type="secondary" className="text-xs block mt-1">Expression of Interest — refundable token amount</Text>
-                </div>
-                <Text strong className="text-green-700 text-xl mt-2 md:mt-0">
-                  {project.currency} {Number(project.eoiAmount).toLocaleString()}
-                </Text>
-              </div>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
+
+      {/* ── Developer Details ─────────────────────────────────── */}
+      <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+        <SectionTitle>Developer Details</SectionTitle>
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+          {devLogo && (
+            <img src={devLogo} alt="dev-logo"
+              style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 10, border: "1px solid #e5e7eb", background: "#fff" }} />
+          )}
+          <Descriptions column={{ xs: 1, sm: 2 }} size="small" style={{ flex: 1 }}>
+            <Descriptions.Item label="Company">{developerName}</Descriptions.Item>
+            {devContact  && <Descriptions.Item label="Contact">{devContact}</Descriptions.Item>}
+            {devEmail    && <Descriptions.Item label="Email">{devEmail}</Descriptions.Item>}
+            {devPhone    && <Descriptions.Item label="Phone">{devPhone}</Descriptions.Item>}
+            {devLicense  && <Descriptions.Item label="Licence No.">{devLicense}</Descriptions.Item>}
+          </Descriptions>
+        </div>
+      </Card>
+
+      {/* ── Documents ─────────────────────────────────────────── */}
+      {(project.brochure || project.projectPlan) && (
+        <Card style={{ borderRadius: 16, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <SectionTitle>Documents</SectionTitle>
+          <Space size={12} wrap>
+            {project.brochure && (
+              <Button
+                icon={<FilePdfOutlined />}
+                href={project.brochure}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ borderColor: THEME.primary, color: THEME.primary }}
+              >
+                Download Brochure
+              </Button>
             )}
-          </Card>
-        )}
-      </div>
-
-      {/* Bottom Cards */}
-      <Title level={4} className="!mb-4 !mt-8 text-gray-700">Project Status & Details</Title>
-      <Row gutter={[24, 24]}>
-        <Col xs={24} md={12} lg={8}>
-          <Card title={<span className="text-base font-bold">Listing Status</span>} className="shadow-sm rounded-2xl border border-gray-100 h-full">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <Text className="text-gray-500 font-medium text-sm">Approval</Text>
-                <Tag color={APPROVAL_COLOR[project.approvalStatus]} className="m-0 font-semibold rounded-md">{project.approvalStatus?.toUpperCase()}</Tag>
-              </div>
-              <div className="flex justify-between items-center">
-                <Text className="text-gray-500 font-medium text-sm">Listing</Text>
-                <Tag className="m-0 rounded-md bg-gray-100 border-gray-200 text-gray-700">{project.listingStatus?.toUpperCase()}</Tag>
-              </div>
-              <div className="flex justify-between items-center">
-                <Text className="text-gray-500 font-medium text-sm">Available</Text>
-                <Tag color={project.isAvailable ? "green" : "red"} className="m-0 rounded-md font-medium">{project.isAvailable ? "Yes" : "No"}</Tag>
-              </div>
-              <div className="flex justify-between items-center">
-                <Text className="text-gray-500 font-medium text-sm">Featured</Text>
-                <Tag color={project.isFeatured ? "gold" : "default"} className="m-0 rounded-md font-medium">{project.isFeatured ? "Featured" : "Standard"}</Tag>
-              </div>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} md={12} lg={8}>
-          <Card title={<span className="text-base font-bold">Construction Progress</span>} className="shadow-sm rounded-2xl border border-gray-100 h-full">
-            <Progress percent={readinessValue} strokeColor={THEME.primary} trailColor="#f3f4f6" size={["100%", 14]} format={p => <span className="font-bold text-gray-700">{p}%</span>} />
-            {project.serviceChargeInfo && (
-              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
-                <Text className="text-gray-500 text-sm font-medium">Service Charge</Text>
-                <Text className="text-gray-800 text-sm font-semibold bg-gray-50 px-3 py-1 rounded-md">{project.serviceChargeInfo}</Text>
-              </div>
+            {project.projectPlan && (
+              <Button
+                icon={<PaperClipOutlined />}
+                href={project.projectPlan}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ borderColor: "#0ea5e9", color: "#0ea5e9" }}
+              >
+                View Site Plan
+              </Button>
             )}
-          </Card>
-        </Col>
+          </Space>
+        </Card>
+      )}
 
-        <Col xs={24} md={12} lg={8}>
-          <Card title={<span className="text-base font-bold text-white">Inventory Summary</span>} className="shadow-sm rounded-2xl border-0 bg-gray-900 h-full">
-            <Row gutter={[12, 12]}>
-              {[
-                { label: "Total", value: displayTotalUnits, color: "text-white", bg: "bg-white/10" },
-                { label: "Available", value: displayAvailableUnits, color: "text-green-400", bg: "bg-green-400/10" },
-                { label: "Hold", value: displayHoldUnits, color: "text-gray-300", bg: "bg-gray-500/10" },
-                { label: "Reserved", value: displayReservedUnits, color: "text-amber-400", bg: "bg-amber-400/10" },
-                { label: "Booked", value: displayBookedUnits, color: "text-blue-400", bg: "bg-blue-400/10" },
-                { label: "SPA Signed", value: displaySpaSignedUnits, color: "text-purple-400", bg: "bg-purple-400/10" },
-                { label: "Sold", value: displaySoldUnits, color: "text-red-400", bg: "bg-red-400/10" },
-                { label: "Handover", value: displayHandoverUnits, color: "text-cyan-400", bg: "bg-cyan-400/10" },
-                { label: "Cancelled", value: displayCancelledUnits, color: "text-rose-400", bg: "bg-rose-400/10" },
-              ].filter(s => s.value > 0 || s.label === "Total").map(({ label, value, color, bg }) => (
-                <Col xs={12} sm={8} md={6} key={label}>
-                  <div className={`text-center p-3 rounded-xl border border-white/5 ${bg}`}>
-                    <div className={`text-2xl font-black ${color}`}>{value}</div>
-                    <div className="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wider">{label}</div>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={12}>
-          <Card title={<span className="text-base font-bold">Facilities & Amenities</span>} className="shadow-sm rounded-2xl border border-gray-100 h-full">
-            {amenitiesAndFacilitiesToShow.length > 0 ? (
-              <div className="flex flex-wrap gap-2 p-1">
-                {amenitiesAndFacilitiesToShow.map((label, i) => (
-                  <Tag key={`${label}-${i}`} color="blue" className="m-0 bg-blue-50 text-blue-700 border-blue-100">{label}</Tag>
-                ))}
-              </div>
-            ) : (
-              <Text type="secondary" className="italic">No facilities/amenities listed</Text>
-            )}
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={12}>
-          <Card className="shadow-sm rounded-2xl border border-gray-100 h-full flex flex-col" bodyStyle={{ padding: 0, display: 'flex', flex: 1, flexDirection: 'column' }}>
-            <div className="p-6 border-b border-gray-100 flex-1">
-              <Title level={5} className="!mb-5 !text-base !font-bold">Commission</Title>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Text className="text-gray-500 text-sm font-medium">Share Commission</Text>
-                  <Tag color={project.shareCommission ? "green" : "default"} className="m-0 px-3 py-1 rounded-md text-sm">
-                    {project.shareCommission ? "Yes" : "No"}
-                  </Tag>
-                </div>
-                {project.shareCommission && (
-                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
-                    <Text className="text-purple-800 text-sm font-semibold">Commission Percentage</Text>
-                    <Text strong className="text-xl text-purple-700">{project.shareCommissionPercentage || project.commission || 0}%</Text>
-                  </div>
-                )}
-              </div>
-            </div>
-            {project.resaleConditions && project.resaleConditions !== "Not specified" && (
-              <div className="p-6 bg-orange-50/50 rounded-b-2xl">
-                <Title level={5} className="!mb-2 !text-sm !text-orange-800 !font-bold">Resale Conditions</Title>
-                <Text className="text-sm text-gray-600 leading-relaxed">{project.resaleConditions}</Text>
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Add/Edit Unit Modal */}
+      {/* ── Add / Edit Unit Modal ─────────────────────────────── */}
       <Modal
         title={modalMode === "create" ? "Add New Unit" : modalMode === "edit" ? "Edit Unit" : "Unit Details"}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={modalMode === "view" ? [
           <Button key="close" onClick={() => setModalVisible(false)}>Close</Button>,
-          <Button key="edit" type="primary" onClick={() => {
-            setModalMode("edit");
-            form.setFieldsValue(selectedUnit);
-          }}>Edit</Button>
+          <Button key="edit" type="primary" onClick={() => { setModalMode("edit"); unitForm.setFieldsValue(selectedUnit); }}>
+            Edit
+          </Button>,
         ] : [
           <Button key="cancel" onClick={() => setModalVisible(false)}>Cancel</Button>,
-          <Button key="submit" type="primary" onClick={handleFormSubmit}>Save</Button>
+          <Button key="submit" type="primary" onClick={handleUnitSubmit}>Save</Button>,
         ]}
-        width={700}
+        width={680}
       >
-        <Form form={form} layout="vertical" disabled={modalMode === "view"}>
+        <Form form={unitForm} layout="vertical" disabled={modalMode === "view"}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="unitNumber" label="Unit Number" rules={[{ required: true, message: "Required" }]}>
@@ -913,89 +800,81 @@ export default function DeveloperProjectDetails() {
               </Form.Item>
             </Col>
           </Row>
-
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="floorNumber" label="Floor Number">
-                <InputNumber placeholder="0 for Ground" className="w-full" />
+              <Form.Item name="floorNumber" label="Floor">
+                <InputNumber className="w-full" style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="unitType" label="Unit Type" rules={[{ required: true }]}>
                 <Select>
-                  <Option value="apartment">Apartment</Option>
-                  <Option value="villa">Villa</Option>
-                  <Option value="townhouse">Townhouse</Option>
-                  <Option value="duplex">Duplex</Option>
-                  <Option value="penthouse">Penthouse</Option>
+                  {["apartment","villa","townhouse","duplex","penthouse","office","retail","warehouse","plot"].map((v) => (
+                    <Option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="bedroomType" label="Bedroom Type" rules={[{ required: true }]}>
+              <Form.Item name="bedroomType" label="Bedroom Type">
                 <Select>
-                  <Option value="studio">Studio</Option>
-                  <Option value="1bed">1 Bedroom</Option>
-                  <Option value="2bed">2 Bedroom</Option>
-                  <Option value="3bed">3 Bedroom</Option>
-                  <Option value="4bed">4 Bedroom+</Option>
+                  {["studio","1bed","2bed","3bed","4bed","5bed","6bed","7bed","8plus"].map((v) => (
+                    <Option key={v} value={v}>{v === "studio" ? "Studio" : v.replace("bed", " Bed")}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="bedrooms" label="Bedrooms">
-                <InputNumber min={0} className="w-full" />
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="bathrooms" label="Bathrooms">
-                <InputNumber min={0} className="w-full" />
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="parkingSpaces" label="Parking Spaces">
-                <InputNumber min={0} className="w-full" />
+              <Form.Item name="parkingSpaces" label="Parking">
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
           </Row>
-
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="area" label="Area" rules={[{ required: true }]}>
-                <InputNumber placeholder="Area" className="w-full" />
+                <InputNumber style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="areaUnit" label="Area Unit">
+              <Form.Item name="areaUnit" label="Unit">
                 <Select>
-                  <Option value="sqft">Square Feet (sqft)</Option>
-                  <Option value="sqm">Square Meters (sqm)</Option>
+                  <Option value="sqft">Sq Ft</Option>
+                  <Option value="sqm">Sq M</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="price" label="Price" rules={[{ required: true }]}>
-                <InputNumber placeholder="Price" className="w-full" prefix="AED" />
+              <Form.Item name="price" label="Price (AED)" rules={[{ required: true }]}>
+                <InputNumber style={{ width: "100%" }} min={0}
+                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(v) => v.replace(/,/g, "")} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="currency" label="Currency">
+              <Form.Item name="status" label="Status">
                 <Select>
-                  <Option value="AED">AED</Option>
-                  <Option value="USD">USD</Option>
-                  <Option value="EUR">EUR</Option>
-                  <Option value="GBP">GBP</Option>
+                  {Object.entries(UNIT_STATUS_CONFIG).map(([val, cfg]) => (
+                    <Option key={val} value={val}>{cfg.label}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-
           <Form.Item name="furnishing" label="Furnishing">
             <Select>
               <Option value="unfurnished">Unfurnished</Option>
@@ -1003,17 +882,9 @@ export default function DeveloperProjectDetails() {
               <Option value="furnished">Furnished</Option>
             </Select>
           </Form.Item>
-
-          <Form.Item name="status" label="Status">
-            <Select>
-              <Option value="available">Available</Option>
-              <Option value="reserved">Reserved</Option>
-              <Option value="booked">Booked</Option>
-              <Option value="sold">Sold</Option>
-            </Select>
-          </Form.Item>
         </Form>
       </Modal>
+
     </div>
   );
 }

@@ -20,11 +20,6 @@ import {
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { Buffer } from 'buffer';
-
-if (typeof window !== 'undefined') {
-  window.Buffer = window.Buffer || Buffer;
-}
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;

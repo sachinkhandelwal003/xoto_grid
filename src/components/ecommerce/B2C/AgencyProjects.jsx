@@ -333,6 +333,7 @@ export default function AgencyProjects() {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [listingType, setListingType] = useState("all");
 
   // ── API ──────────────────────────────────────────────────────────────────
   const fetchProjects = async () => {
@@ -356,23 +357,23 @@ export default function AgencyProjects() {
     fetchProjects();
   }, []);
 
-  // ── Search filter ────────────────────────────────────────────────────────
+  // ── Search + listing type filter ─────────────────────────────────────────
   useEffect(() => {
-    if (!search) {
-      setFiltered(properties);
-      return;
-    }
-    const q = search.toLowerCase();
-    setFiltered(
-      properties.filter(
+    let result = [...properties];
+    if (listingType !== "all")
+      result = result.filter(p => p.propertySubType === listingType || p.propertyType === listingType);
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
         (p) =>
           p.propertyName?.toLowerCase().includes(q) ||
           p.city?.toLowerCase().includes(q) ||
           p.area?.toLowerCase().includes(q) ||
           (p.developer?.name || p.developerName || "").toLowerCase().includes(q)
-      )
-    );
-  }, [search, properties]);
+      );
+    }
+    setFiltered(result);
+  }, [search, listingType, properties]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const formatDate = (dateString) => {
@@ -408,15 +409,41 @@ export default function AgencyProjects() {
           </div>
         </div>
 
+        {/* LISTING TYPE TABS */}
+        <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", borderBottom: "1.5px solid var(--border)", paddingBottom: 14 }}>
+          {[
+            { key: "all",       label: "All Properties" },
+            { key: "off_plan",  label: "🏗️ Off-Plan" },
+            { key: "secondary", label: "🏠 Secondary" },
+            { key: "rental",    label: "🔑 Rental" },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setListingType(tab.key)}
+              style={{
+                padding: "7px 18px", borderRadius: 20, border: "1px solid", cursor: "pointer",
+                fontSize: 13, fontWeight: listingType === tab.key ? 700 : 400,
+                fontFamily: "'Inter', sans-serif",
+                background: listingType === tab.key ? "#1E0A3C" : "var(--surface)",
+                color: listingType === tab.key ? "#fff" : "var(--tx-sub)",
+                borderColor: listingType === tab.key ? "#1E0A3C" : "var(--border2)",
+                transition: "all 0.15s",
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* FILTER BAR */}
         <div className="xp-filterbar">
           <div className="xp-search">
-            <Input 
-              prefix={<SearchOutlined />} 
-              placeholder="Search by name, area, city…" 
+            <Input
+              prefix={<SearchOutlined />}
+              placeholder="Search by name, area, city…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)} 
-              allowClear 
+              onChange={(e) => setSearch(e.target.value)}
+              allowClear
               style={{ width: 300 }}
             />
           </div>

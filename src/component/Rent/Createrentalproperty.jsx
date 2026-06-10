@@ -1,17 +1,16 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
 import { apiService } from "../../manageApi/utils/custom.apiservice";
 import {
   Button, Form, Input, Card, Select, Typography, Row, Col,
   Divider, message, notification, Switch, Upload, InputNumber,
-  DatePicker, Modal, Checkbox, Segmented, Steps, Alert, Spin, Tag,
+  DatePicker, Modal, Checkbox, Segmented, Alert, Spin,
 } from "antd";
 import {
-  PlusOutlined, EnvironmentOutlined, ArrowLeftOutlined,
-  HomeOutlined, DollarOutlined, CalendarOutlined, SearchOutlined,
+  PlusOutlined, EnvironmentOutlined,
+  HomeOutlined, DollarOutlined, SearchOutlined,
   MinusCircleOutlined, DeleteOutlined, VideoCameraOutlined,
-  UserOutlined, FileTextOutlined, CheckCircleOutlined,
+  FileTextOutlined, CheckCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { showToast } from "../../manageApi/utils/toast";
@@ -137,29 +136,6 @@ const OFFPLAN_AMENITIES = [
   "Infinity Pool", "Sky Garden", "Water Feature",
 ];
 
-/* ── Step definitions ── */
-const RENTAL_STEPS = [
-  { title: "Basic Details",    icon: <HomeOutlined /> },
-  { title: "Pricing & Terms",  icon: <DollarOutlined /> },
-  { title: "Location",         icon: <EnvironmentOutlined /> },
-  { title: "Amenities",        icon: <CheckCircleOutlined /> },
-  { title: "Media & Submit",   icon: <FileTextOutlined /> },
-];
-
-const SECONDARY_STEPS = [
-  { title: "Basic Details",    icon: <HomeOutlined /> },
-  { title: "Pricing",          icon: <DollarOutlined /> },
-  { title: "Location",         icon: <EnvironmentOutlined /> },
-  { title: "Amenities",        icon: <CheckCircleOutlined /> },
-  { title: "Media & Submit",   icon: <FileTextOutlined /> },
-];
-
-const OFFPLAN_STEPS = [
-  "Select Developer", "Property Overview", "Property Details",
-  "Inventory Overview", "Other Details", "Payment Plan",
-  "Developer Details", "Submission",
-];
-
 /* ── Helpers ── */
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -168,17 +144,6 @@ const getBase64 = (file) =>
     reader.onload = () => resolve(reader.result);
     reader.onerror = (err) => reject(err);
   });
-
-const SectionLabel = ({ icon, label }) => (
-  <div style={{
-    display: "flex", alignItems: "center", gap: 7,
-    fontSize: 11, fontWeight: 700, color: "#6b7280",
-    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 14,
-  }}>
-    {icon && <span style={{ color: THEME.primary, fontSize: 13 }}>{icon}</span>}
-    {label}
-  </div>
-);
 
 const customUploadRequest = async ({ file, onSuccess, onError }) => {
   try {
@@ -215,32 +180,6 @@ const UploadBox = ({ label, fileList, onChange, maxCount = 20, hint }) => (
   </div>
 );
 
-/* ── Step Nav Footer ── */
-const StepFooter = ({ currentStep, totalSteps, onPrev, onNext, onSubmit, loading, submitLabel }) => (
-  <div style={{
-    display: "flex", justifyContent: "space-between",
-    marginTop: 32, paddingTop: 20, borderTop: "1px solid #f0f0f0",
-  }}>
-    <div>
-      {currentStep > 0 && (
-        <Button size="large" onClick={onPrev} style={{ borderRadius: 8 }}>← Previous</Button>
-      )}
-    </div>
-    <div style={{ display: "flex", gap: 10 }}>
-      {currentStep < totalSteps - 1 ? (
-        <Button type="primary" size="large" onClick={onNext}
-          style={{ backgroundColor: THEME.primary, borderColor: THEME.primary, borderRadius: 8, minWidth: 120 }}>
-          Next →
-        </Button>
-      ) : (
-        <Button type="primary" size="large" onClick={onSubmit} loading={loading}
-          style={{ backgroundColor: THEME.primary, borderColor: THEME.primary, borderRadius: 8, minWidth: 180 }}>
-          {submitLabel || "Submit "}
-        </Button>
-      )}
-    </div>
-  </div>
-);
 
 /* ════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -249,30 +188,25 @@ const CreateProperty = () => {
   const navigate  = useNavigate();
   const { id }    = useParams();
   const isEditMode = Boolean(id);
-  const { user }  = useSelector((s) => s.auth);
-  const ROLE_SLUG_MAP = { 0: "superadmin", 1: "admin", 15: "agency", 16: "agent", 17: "developer", 18: "vault-admin" };
-  const roleSlug  = ROLE_SLUG_MAP[user?.role?.code] ?? "superadmin";
-
   const [formMode, setFormMode] = useState("rental");
 
   /* ── Rental ── */
   const [rentalForm]    = Form.useForm();
-  const [rentalStep,    setRentalStep]    = useState(0);
   const [rentalLoading, setRentalLoading] = useState(false);
   const [rentalEmirate, setRentalEmirate] = useState("");
   const [rentalImages,  setRentalImages]  = useState([]);
+  const [rentalQrFile,  setRentalQrFile]  = useState([]);
 
   /* ── Secondary ── */
   const [secondaryForm]    = Form.useForm();
-  const [secondaryStep,    setSecondaryStep]    = useState(0);
   const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [secondaryEmirate, setSecondaryEmirate] = useState("");
   const [secondaryImages,  setSecondaryImages]  = useState([]);
+  const [secondaryQrFile,  setSecondaryQrFile]  = useState([]);
 
   /* ── Off-Plan ── */
   const [offplanForm]              = Form.useForm();
   const [offplanLoading,           setOffplanLoading]           = useState(false);
-  const [currentStep,              setCurrentStep]              = useState(0);
   const [selectedDeveloperId,      setSelectedDeveloperId]      = useState(null);
   const [developers,               setDevelopers]               = useState([]);
   const [loadingDevelopers,        setLoadingDevelopers]        = useState(false);
@@ -284,6 +218,7 @@ const CreateProperty = () => {
   const [photosLobby,        setPhotosLobby]        = useState([]);
   const [photosOther,        setPhotosOther]        = useState([]);
   const [brochureFileList,   setBrochureFileList]   = useState([]);
+  const [offplanQrFile,      setOffplanQrFile]      = useState([]);
 
   /* ── Shared preview ── */
   const [previewOpen,  setPreviewOpen]  = useState(false);
@@ -378,7 +313,7 @@ const CreateProperty = () => {
   }, [selectedDeveloperId, offplanForm, formMode]);
 
   useEffect(() => {
-    if (formMode !== "offplan") { setCurrentStep(0); setSelectedDeveloperId(null); setSelectedDeveloperProfile(null); }
+    if (formMode !== "offplan") { setSelectedDeveloperId(null); setSelectedDeveloperProfile(null); }
   }, [formMode]);
 
   const collectUrls = (fileList) => fileList.filter(f => f.status === "done").map(f => f.url || extractPhotoUrl(f)).filter(Boolean);
@@ -393,38 +328,7 @@ const CreateProperty = () => {
     [mainLogoFileList, photosArchitecture, photosInterior, photosLobby, photosOther, brochureFileList]
       .some(l => l.some(f => f.status === "uploading"));
 
-  /* ── Step validation helpers ── */
-  const RENTAL_STEP_FIELDS = [
-    ["propertyName", "unitType", "description", "bathrooms", "builtUpArea"],
-    ["price", "rentalFrequency", "reraPermitNumber"],
-    ["emirate", "area", "city"],
-    [],  // amenities optional
-    [],  // images checked separately
-  ];
 
-  const SECONDARY_STEP_FIELDS = [
-    ["propertyName", "unitType", "description", "bathrooms", "builtUpArea"],
-    ["price"],
-    ["emirate", "area", "city"],
-    [],
-    [],
-  ];
-
-  const handleRentalNext = async () => {
-    const fields = RENTAL_STEP_FIELDS[rentalStep];
-    try {
-      if (fields.length) await rentalForm.validateFields(fields);
-      setRentalStep(s => s + 1);
-    } catch {}
-  };
-
-  const handleSecondaryNext = async () => {
-    const fields = SECONDARY_STEP_FIELDS[secondaryStep];
-    try {
-      if (fields.length) await secondaryForm.validateFields(fields);
-      setSecondaryStep(s => s + 1);
-    } catch {}
-  };
 
   /* ── Rental submit ── */
   /* ── Rental submit ── */
@@ -433,6 +337,7 @@ const handleSaveRental = async () => {
   if (rentalImages.length === 0) { message.error("Please upload at least one image."); return; }
   let values;
   try { values = await rentalForm.validateFields(); } catch { return; }
+  const rentalQrUrl = rentalQrFile.map(extractUrl).filter(Boolean)[0] || null;
   setRentalLoading(true);
   try {
     const imageUrls = rentalImages.map(extractUrl).filter(Boolean);
@@ -475,17 +380,24 @@ const handleSaveRental = async () => {
       hasView: values.hasView || false, 
       viewType: values.viewType || [], 
       amenities: values.amenities || [],
+      locationHighlights: values.locationHighlights || "",
+      investmentPoints: values.investmentPoints || "",
+      socialMedia: values.socialMedia || {},
+      purpose: values.purpose || null,
+      listingEndDate: values.listingEndDate ? values.listingEndDate.toISOString() : null,
       dldRegistrationNumber: values.dldRegistrationNumber || null,
-      mainLogo: imageUrls[0] || "", 
+      trakheesiPermitId: values.trakheesiPermitId || null,
+      qrCode: rentalQrUrl,
+      mainLogo: imageUrls[0] || "",
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
-      isFeatured: values.isFeatured || false, 
+      isFeatured: values.isFeatured || false,
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
       approvalStatus: "approved",
-      listingStatus: "active",  // ✅ ADDED: listingStatus active
+      listingStatus: "active",
       status: "approved"
     };
-    const response = isEditMode 
-      ? await apiService.put(`/properties/${id}`, payload) 
+    const response = isEditMode
+      ? await apiService.put(`/properties/${id}`, payload)
       : await apiService.post("/properties", payload);
     
     if (response) {
@@ -507,6 +419,7 @@ const handleSubmitSecondary = async () => {
   if (secondaryImages.length === 0) { message.error("Please upload at least one image."); return; }
   let values;
   try { values = await secondaryForm.validateFields(); } catch { return; }
+  const secondaryQrUrl = secondaryQrFile.map(extractUrl).filter(Boolean)[0] || null;
   setSecondaryLoading(true);
   try {
     const imageUrls = secondaryImages.map(extractUrl).filter(Boolean);
@@ -544,16 +457,32 @@ const handleSubmitSecondary = async () => {
       hasView: values.hasView || false, 
       viewType: values.viewType || [], 
       amenities: values.amenities || [],
-      furnishing: values.furnishing || "unfurnished", 
+      locationHighlights: values.locationHighlights || "",
+      investmentPoints: values.investmentPoints || "",
+      socialMedia: values.socialMedia || {},
+      purpose: values.purpose || null,
+      listingEndDate: values.listingEndDate ? values.listingEndDate.toISOString() : null,
+      furnishing: values.furnishing || "unfurnished",
       parkingSpaces: Number(values.parkingSpaces || 0),
-      commission: Number(values.commission || 0), 
+      commission: Number(values.commission || 0),
       shareCommission: values.shareCommission || false,
       shareCommissionPercentage: values.shareCommissionPercentage || 0,
       dldRegistrationNumber: values.dldRegistrationNumber || null,
-      mainLogo: imageUrls[0] || "", 
+      trakheesiPermitId: values.trakheesiPermitId || null,
+      qrCode: secondaryQrUrl,
+      inventory: (values.secondaryInventory || []).map(u => ({
+        unitNumber:  u.unitNumber  || "",
+        floorNumber: Number(u.floor || 0),
+        unitType:    u.unitType    || "",
+        bedrooms:    Number(u.bedrooms || 0),
+        builtUpArea: Number(u.builtUpArea || 0),
+        price:       Number(u.price || 0),
+        status:      u.status || "available",
+      })),
+      mainLogo: imageUrls[0] || "",
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
       approvalStatus: "approved",
-      listingStatus: "active",  // ✅ ADDED: listingStatus active
+      listingStatus: "active",
       status: "approved"
     };
     await apiService.post("/properties", payload);
@@ -562,9 +491,8 @@ const handleSubmitSecondary = async () => {
       description: `"${values.propertyName}" is now LIVE on the platform!`, 
       placement: "topRight" 
     });
-    secondaryForm.resetFields(); 
-    setSecondaryImages([]); 
-    setSecondaryStep(0);
+    secondaryForm.resetFields();
+    setSecondaryImages([]);
   } catch (err) {
     message.error(err?.response?.data?.message || err?.message || "Failed to save property.");
   } finally { setSecondaryLoading(false); }
@@ -572,7 +500,7 @@ const handleSubmitSecondary = async () => {
 
   /* ── Off-Plan submit ── */
  /* ── Off-Plan submit ── */
-const handleSaveOffplan = async (saveType) => {
+const handleSaveOffplan = async () => {
   if (!selectedDeveloperId) return showToast("Please select a developer first", "error");
   const values = offplanForm.getFieldsValue(true);
   if (!values.propertyName?.trim()) return showToast("Project Name is required", "error");
@@ -580,6 +508,9 @@ const handleSaveOffplan = async (saveType) => {
   if (!values.overview?.trim()) return showToast("Project Overview is required", "error");
   if (!values.priceRangeFrom || !values.priceRangeTo) return showToast("Price range is required", "error");
   if (isAnyOffplanUploading()) return showToast("Please wait for uploads to finish.", "error");
+  const offplanQrUrl = offplanQrFile.map(extractUrl).filter(Boolean)[0] || null;
+  if (!offplanQrUrl) return showToast("QR Code is required before publishing.", "error");
+  if (!values.trakheesiPermitId?.trim()) return showToast("Trakheesi Permit ID is required before publishing.", "error");
   const mainLogoUrls = collectUrls(mainLogoFileList);
   if (mainLogoUrls.length === 0) return showToast("Please upload a main logo image.", "error");
   const brochureUrl = brochureFileList.length > 0 && brochureFileList[0].status === "done" 
@@ -624,8 +555,10 @@ const handleSaveOffplan = async (saveType) => {
       other: collectUrls(photosOther) 
     },
     location: { address: values.address || "", latitude: values.latitude || null, longitude: values.longitude || null },
-    brochure: brochureUrl, 
-    buildings: values.buildings || [], 
+    brochure: brochureUrl,
+    trakheesiPermitId: values.trakheesiPermitId || null,
+    qrCode: offplanQrUrl,
+    buildings: values.buildings || [],
     amenities: values.amenities || [],
     floorPlans: values.floorPlans || [], 
     inventory: values.inventory || [],
@@ -658,8 +591,7 @@ const handleSaveOffplan = async (saveType) => {
     const savedProperty = res?.data?.data || res?.data;
     if (savedProperty) {
       showToast("Property created and LIVE on the platform!", "success");
-      offplanForm.resetFields(); 
-      setCurrentStep(0); 
+      offplanForm.resetFields();
       setSelectedDeveloperId(null); 
       setSelectedDeveloperProfile(null);
       setMainLogoFileList([]); 
@@ -678,11 +610,6 @@ const handleSaveOffplan = async (saveType) => {
   }
 };
 
-  const handleNextOffplan = async () => {
-    if (currentStep === 0 && !selectedDeveloperId) { showToast("Please select a developer", "error"); return; }
-    if (currentStep === OFFPLAN_STEPS.length - 1) { setCurrentStep(p => p + 1); return; }
-    try { await offplanForm.validateFields(); setCurrentStep(p => p + 1); } catch {}
-  };
 
   /* ═══════════════════════════════════════════════════════════
      RENTAL STEP RENDERERS
@@ -795,16 +722,30 @@ const handleSaveOffplan = async (saveType) => {
               <Form.Item name="isShortTerm" label="Short Term?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="availableFrom" label="Available From">
+              <Form.Item name="availableFrom" label="Listing Start Date">
                 <DatePicker size="large" style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="listingEndDate" label="Listing End Date">
+                <DatePicker size="large" style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="purpose" label="Purpose">
+                <Select size="large" placeholder="Select purpose">
+                  <Option value="residential">Residential</Option>
+                  <Option value="commercial">Commercial</Option>
+                  <Option value="mixed_use">Mixed Use</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance</Divider>
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>— optional, admin requires before publishing</span></Divider>
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="reraPermitNumber" label="RERA Permit Number" rules={[{ required: true }]}>
+              <Form.Item name="reraPermitNumber" label="RERA Permit Number">
                 <Input size="large" placeholder="e.g. 7123456789" />
               </Form.Item>
             </Col>
@@ -812,6 +753,27 @@ const handleSaveOffplan = async (saveType) => {
               <Form.Item name="dldRegistrationNumber" label="DLD Registration Number">
                 <Input size="large" placeholder="Optional" />
               </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="trakheesiPermitId" label="Trakheesi Permit ID">
+                <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <div style={{ marginBottom: 4, fontWeight: 600 }}>
+                QR Code
+                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
+              </div>
+              <Upload
+                listType="picture-card"
+                fileList={rentalQrFile}
+                onChange={({ fileList }) => setRentalQrFile(fileList)}
+                customRequest={customUploadRequest}
+                accept="image/*"
+                maxCount={1}
+              >
+                {rentalQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
+              </Upload>
             </Col>
           </Row>
 
@@ -870,6 +832,49 @@ const handleSaveOffplan = async (saveType) => {
               </Row>
             </Checkbox.Group>
           </Form.Item>
+
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Additional Details</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="locationHighlights" label="Location Highlights">
+                <TextArea rows={3} placeholder="e.g. 5 mins to Dubai Mall, Metro access, Waterfront views..." style={{ borderRadius: 8 }} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="investmentPoints" label="Investment Points">
+                <TextArea rows={3} placeholder="e.g. High ROI area, Freehold, Strong rental demand..." style={{ borderRadius: 8 }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Social Media Links</Divider>
+          <Row gutter={16}>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "instagram"]} label="Instagram">
+                <Input size="large" placeholder="https://instagram.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "facebook"]} label="Facebook">
+                <Input size="large" placeholder="https://facebook.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "youtube"]} label="YouTube">
+                <Input size="large" placeholder="https://youtube.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "tiktok"]} label="TikTok">
+                <Input size="large" placeholder="https://tiktok.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "linkedin"]} label="LinkedIn">
+                <Input size="large" placeholder="https://linkedin.com/..." />
+              </Form.Item>
+            </Col>
+          </Row>
         </>
       );
 
@@ -1004,8 +1009,22 @@ const handleSaveOffplan = async (saveType) => {
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="availableFrom" label="Available From">
+              <Form.Item name="availableFrom" label="Listing Start Date">
                 <DatePicker size="large" style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="listingEndDate" label="Listing End Date">
+                <DatePicker size="large" style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="purpose" label="Purpose">
+                <Select size="large" placeholder="Select purpose">
+                  <Option value="residential">Residential</Option>
+                  <Option value="commercial">Commercial</Option>
+                  <Option value="mixed_use">Mixed Use</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -1027,12 +1046,33 @@ const handleSaveOffplan = async (saveType) => {
             </Col>
           </Row>
 
-          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance & Settings</Divider>
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance & Settings <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>— optional, admin requires before publishing</span></Divider>
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item name="dldRegistrationNumber" label="DLD Registration Number">
                 <Input size="large" placeholder="Optional" />
               </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="trakheesiPermitId" label="Trakheesi Permit ID">
+                <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <div style={{ marginBottom: 4, fontWeight: 600 }}>
+                QR Code
+                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
+              </div>
+              <Upload
+                listType="picture-card"
+                fileList={secondaryQrFile}
+                onChange={({ fileList }) => setSecondaryQrFile(fileList)}
+                customRequest={customUploadRequest}
+                accept="image/*"
+                maxCount={1}
+              >
+                {secondaryQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
+              </Upload>
             </Col>
             <Col xs={12} md={6}>
               <Form.Item name="isFeatured" label="Featured?" valuePropName="checked"><Switch /></Form.Item>
@@ -1087,6 +1127,49 @@ const handleSaveOffplan = async (saveType) => {
               </Row>
             </Checkbox.Group>
           </Form.Item>
+
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Additional Details</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="locationHighlights" label="Location Highlights">
+                <TextArea rows={3} placeholder="e.g. 5 mins to Dubai Mall, Metro access, Waterfront views..." style={{ borderRadius: 8 }} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="investmentPoints" label="Investment Points">
+                <TextArea rows={3} placeholder="e.g. High ROI area, Freehold, Strong rental demand..." style={{ borderRadius: 8 }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Social Media Links</Divider>
+          <Row gutter={16}>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "instagram"]} label="Instagram">
+                <Input size="large" placeholder="https://instagram.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "facebook"]} label="Facebook">
+                <Input size="large" placeholder="https://facebook.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "youtube"]} label="YouTube">
+                <Input size="large" placeholder="https://youtube.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "tiktok"]} label="TikTok">
+                <Input size="large" placeholder="https://tiktok.com/..." />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name={["socialMedia", "linkedin"]} label="LinkedIn">
+                <Input size="large" placeholder="https://linkedin.com/..." />
+              </Form.Item>
+            </Col>
+          </Row>
         </>
       );
 
@@ -1125,22 +1208,94 @@ const handleSaveOffplan = async (saveType) => {
     }
   };
 
+  const renderSecondaryInventory = () => (
+    <>
+      <Divider orientation="left" style={{ borderColor: THEME.primary }}>Inventory / Units</Divider>
+      <Alert
+        type="info" showIcon
+        message="Add individual units available in this property. Each unit can have its own price and status."
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      />
+      <Form.List name="secondaryInventory">
+        {(fields, { add, remove }) => (
+          <>
+            {fields.map(({ key, name }) => (
+              <div key={key} style={{ background: "#fafafa", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                <Row gutter={[12, 0]} align="middle">
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "unitNumber"]} label="Unit No." style={{ marginBottom: 0 }}>
+                      <Input placeholder="e.g. A-1201" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "floor"]} label="Floor" style={{ marginBottom: 0 }}>
+                      <InputNumber style={{ width: "100%" }} min={0} placeholder="12" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "unitType"]} label="Type" style={{ marginBottom: 0 }}>
+                      <Select placeholder="Type" allowClear>
+                        {UNIT_TYPES.map(t => <Option key={t.value} value={t.value}>{t.label}</Option>)}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={3}>
+                    <Form.Item name={[name, "bedrooms"]} label="Beds" style={{ marginBottom: 0 }}>
+                      <InputNumber style={{ width: "100%" }} min={0} placeholder="2" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "builtUpArea"]} label="Area (sqft)" style={{ marginBottom: 0 }}>
+                      <InputNumber style={{ width: "100%" }} min={0} placeholder="1200" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "price"]} label="Price (AED)" style={{ marginBottom: 0 }}>
+                      <InputNumber
+                        style={{ width: "100%" }} min={0}
+                        formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                        parser={v => v.replace(/,/g, "")}
+                        placeholder="1,200,000"
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={4}>
+                    <Form.Item name={[name, "status"]} label="Status" style={{ marginBottom: 0 }}>
+                      <Select placeholder="Status" defaultValue="available">
+                        <Option value="available">Available</Option>
+                        <Option value="reserved">Reserved</Option>
+                        <Option value="booked">Booked</Option>
+                        <Option value="sold">Sold</Option>
+                        <Option value="hold">Hold</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={12} sm={8} md={1} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 1 }}>
+                    <Button
+                      danger type="text" icon={<DeleteOutlined />}
+                      style={{ marginTop: 22 }}
+                      onClick={() => remove(name)}
+                    />
+                  </Col>
+                </Row>
+              </div>
+            ))}
+            <Button
+              type="dashed" block icon={<PlusOutlined />}
+              onClick={() => add({ status: "available" })}
+              style={{ borderColor: THEME.primary, color: THEME.primary, borderRadius: 8, height: 42 }}
+            >
+              Add Unit
+            </Button>
+          </>
+        )}
+      </Form.List>
+    </>
+  );
+
   /* ═══════════════════════════════════════════════════════════
      OFF-PLAN RENDERERS (unchanged from original)
      ═══════════════════════════════════════════════════════════ */
-  const renderOffplanStep = (stepIndex) => {
-    switch (stepIndex) {
-      case 0: return renderDeveloperSelection();
-      case 1: return renderPropertyOverview();
-      case 2: return renderPropertyDetails();
-      case 3: return renderInventoryOverview();
-      case 4: return renderOtherDetails();
-      case 5: return renderPaymentPlanStep();
-      case 6: return renderDeveloperDetails();
-      case 7: return renderSubmissionStep();
-      default: return null;
-    }
-  };
 
   const renderDeveloperSelection = () => (
     <>
@@ -1372,6 +1527,34 @@ const handleSaveOffplan = async (saveType) => {
         <Col xs={12} md={6}><Form.Item name="isFeatured" label="Featured Listing?" valuePropName="checked"><Switch /></Form.Item></Col>
         <Col xs={12} md={6}><Form.Item name="showContactOnlyVerified" label="Verified Users Only?" valuePropName="checked"><Switch /></Form.Item></Col>
       </Row>
+
+      <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance</Divider>
+      <Row gutter={16}>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="trakheesiPermitId"
+            label={<span style={{ fontWeight: 600 }}>Trakheesi Permit ID <span style={{ color: "#ef4444" }}>*</span></span>}
+          >
+            <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <div style={{ marginBottom: 4, fontWeight: 600 }}>
+            QR Code <span style={{ color: "#ef4444" }}>*</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
+          </div>
+          <Upload
+            listType="picture-card"
+            fileList={offplanQrFile}
+            onChange={({ fileList }) => setOffplanQrFile(fileList)}
+            customRequest={customUploadRequest}
+            accept="image/*"
+            maxCount={1}
+          >
+            {offplanQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
+          </Upload>
+        </Col>
+      </Row>
     </>
   );
 
@@ -1428,152 +1611,112 @@ const handleSaveOffplan = async (saveType) => {
     </>
   );
 
-  const renderSubmissionStep = () => {
-    const values = offplanForm.getFieldsValue(true);
-    return (
-      <>
-        <Divider orientation="left" style={{ borderColor: THEME.primary }}>Review & Submit</Divider>
-        <Alert message="Ready to submit?" description="You can save as draft to continue editing later, or submit for admin approval." type="info" showIcon style={{ marginBottom: 24, borderRadius: 8 }} />
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          {[
-            { label: "Developer",       value: selectedDeveloperProfile?.companyName || selectedDeveloperProfile?.name || "—" },
-            { label: "Project Name",    value: values.propertyName || "—" },
-            { label: "Locality",        value: values.locality || "—" },
-            { label: "Property Type",   value: values.propertyType || "—" },
-            { label: "Price Range",     value: values.priceRangeFrom && values.priceRangeTo ? `AED ${Number(values.priceRangeFrom).toLocaleString()} – ${Number(values.priceRangeTo).toLocaleString()}` : "—" },
-            { label: "Project Status",  value: values.projectStatus || "—" },
-            { label: "Main Logo",       value: mainLogoFileList.filter(f => f.status === "done").length > 0 ? `${mainLogoFileList.filter(f => f.status === "done").length} uploaded` : "Not uploaded ⚠️" },
-            { label: "Inventory Items", value: (values.inventory || []).length > 0 ? `${values.inventory.length} unit type(s)` : "None added" },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, border: "1px solid #e5e7eb", minWidth: 180 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{value}</div>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  };
 
   /* ═══════════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════════ */
+
+  const MODE_META = {
+    rental:    { label: "Rental Listing",       color: "#10b981", bg: "#ecfdf5", border: "#6ee7b7" },
+    secondary: { label: "Secondary / Resale",   color: "#3b82f6", bg: "#eff6ff", border: "#93c5fd" },
+    offplan:   { label: "Off-Plan Project",     color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
+  };
+  const meta = MODE_META[formMode];
+
   return (
     <div style={{ padding: "24px 28px", background: "#f8f9fb", minHeight: "100vh" }}>
+
       {/* PAGE HEADER */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-        
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
           <Title level={4} style={{ margin: 0, color: "#111827" }}>
             {isEditMode ? "Edit Property" : "Create Property"}
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            {isEditMode ? "Update the details of this listing." : "Fill in the details to list a new property."}
+            {isEditMode ? "Update the details of this listing." : "Fill in the details and submit at the bottom."}
           </Text>
         </div>
         <Segmented
           options={[
-            { label: "Rental", value: "rental" },
+            { label: "Rental",    value: "rental"    },
             { label: "Secondary", value: "secondary" },
-            { label: "Off‑Plan", value: "offplan" },
+            { label: "Off-Plan",  value: "offplan"   },
           ]}
           value={formMode}
-          onChange={val => {
-            setFormMode(val);
-            setRentalStep(0);
-            setSecondaryStep(0);
-          }}
+          onChange={val => setFormMode(val)}
+          size="large"
         />
+      </div>
+
+      {/* PROPERTY TYPE LABEL */}
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 10,
+        background: meta.bg, border: `1px solid ${meta.border}`,
+        borderRadius: 10, padding: "8px 18px", marginBottom: 20,
+      }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+        <Text strong style={{ fontSize: 15, color: meta.color }}>{meta.label}</Text>
       </div>
 
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (
-        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
-          <Steps
-            current={rentalStep}
-            items={RENTAL_STEPS.map(s => ({ title: s.title, icon: s.icon }))}
-            style={{ marginBottom: 28 }}
-            size="small"
-          />
-          <Form
-   form={rentalForm}
-   layout="vertical"
->
-  {[0, 1, 2, 3, 4].map(stepIndex => (
-  <div
-    key={stepIndex}
-    style={{ display: rentalStep === stepIndex ? 'block' : 'none' }}
-  >
-    {renderRentalStep(stepIndex)}
-  </div>
-))}
-
-   <StepFooter
-      currentStep={rentalStep}
-      totalSteps={RENTAL_STEPS.length}
-      onPrev={() => setRentalStep(s => s - 1)}
-      onNext={handleRentalNext}
-      onSubmit={handleSaveRental}
-      loading={rentalLoading}
-   />
-</Form>
+        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
+          <Form form={rentalForm} layout="vertical">
+            {renderRentalStep(0)}
+            {renderRentalStep(1)}
+            {renderRentalStep(2)}
+            {renderRentalStep(3)}
+            {renderRentalStep(4)}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 32, paddingTop: 20, borderTop: "1px solid #f0f0f0" }}>
+              <Button size="large" onClick={() => navigate(-1)}>Cancel</Button>
+              <Button type="primary" size="large" onClick={handleSaveRental} loading={rentalLoading}
+                style={{ backgroundColor: THEME.primary, borderColor: THEME.primary, minWidth: 180 }}>
+                {isEditMode ? "Update Rental" : "Create Rental Property"}
+              </Button>
+            </div>
+          </Form>
         </Card>
       )}
 
       {/* ═══════════ SECONDARY ═══════════ */}
       {formMode === "secondary" && (
-        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
-          <Steps
-            current={secondaryStep}
-            items={SECONDARY_STEPS.map(s => ({ title: s.title, icon: s.icon }))}
-            style={{ marginBottom: 28 }}
-            size="small"
-          />
-        <Form
-   form={secondaryForm}
-   layout="vertical"
->
-  {[0, 1, 2, 3, 4].map(stepIndex => (
-  <div
-    key={stepIndex}
-    style={{ display: secondaryStep === stepIndex ? 'block' : 'none' }}
-  >
-    {renderSecondaryStep(stepIndex)}
-  </div>
-))}
-
-   <StepFooter
-      currentStep={secondaryStep}
-      totalSteps={SECONDARY_STEPS.length}
-      onPrev={() => setSecondaryStep(s => s - 1)}
-      onNext={handleSecondaryNext}
-      onSubmit={handleSubmitSecondary}
-      loading={secondaryLoading}
-      submitLabel="Submit Secondary Property"
-   />
-</Form>
+        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
+          <Form form={secondaryForm} layout="vertical">
+            {renderSecondaryStep(0)}
+            {renderSecondaryStep(1)}
+            {renderSecondaryStep(2)}
+            {renderSecondaryStep(3)}
+            {renderSecondaryInventory()}
+            {renderSecondaryStep(4)}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 32, paddingTop: 20, borderTop: "1px solid #f0f0f0" }}>
+              <Button size="large" onClick={() => navigate(-1)}>Cancel</Button>
+              <Button type="primary" size="large" onClick={handleSubmitSecondary} loading={secondaryLoading}
+                style={{ backgroundColor: THEME.primary, borderColor: THEME.primary, minWidth: 180 }}>
+                {isEditMode ? "Update Secondary" : "Create Secondary Property"}
+              </Button>
+            </div>
+          </Form>
         </Card>
       )}
 
       {/* ═══════════ OFF-PLAN ═══════════ */}
       {formMode === "offplan" && (
-        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "28px 32px" }}>
-          <Steps current={currentStep} items={OFFPLAN_STEPS.map(title => ({ title }))} style={{ marginBottom: 28 }} size="small" />
+        <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
           <Form form={offplanForm} layout="vertical" preserve
             initialValues={{ currency: "AED", builtUpAreaUnit: "sqft", unitType: "apartment", bedroomType: "1bed", bedrooms: 1, bathrooms: 1, propertyType: "Residential", furnishing: "unfurnished", parkingSpaces: 0, ownershipType: "freehold", projectStatus: "presale", developmentStatus: "Planned", saleStatus: "Available", isFeatured: false, readinessProgress: "0%", hasView: false, viewType: [], showContactOnlyVerified: false, shareCommission: false, shareCommissionPercentage: 0, constructionProgress: 0, commission: 0 }}>
-            {renderOffplanStep(currentStep)}
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32, paddingTop: 20, borderTop: "1px solid #f0f0f0" }}>
-              <div>{currentStep > 0 && <Button size="large" onClick={() => setCurrentStep(p => p - 1)} style={{ borderRadius: 8 }}>← Previous</Button>}</div>
-              <div style={{ display: "flex", gap: 10 }}>
-                {currentStep < OFFPLAN_STEPS.length - 1 ? (
-                  <Button type="primary" size="large" onClick={handleNextOffplan} style={{ backgroundColor: THEME.primary, borderRadius: 8, minWidth: 120 }}>Next →</Button>
-                ) : (
-                  <>
-                    <Button size="large" onClick={() => handleSaveOffplan("draft")} loading={offplanLoading} style={{ borderRadius: 8, minWidth: 130 }}>Save as Draft</Button>
-                    <Button type="primary" size="large" onClick={() => handleSaveOffplan("submit")} loading={offplanLoading} style={{ backgroundColor: THEME.primary, borderRadius: 8, minWidth: 180 }}>Submit</Button>
-                  </>
-                )}
-              </div>
+            {renderDeveloperSelection()}
+            {renderPropertyOverview()}
+            {renderPropertyDetails()}
+            {renderInventoryOverview()}
+            {renderOtherDetails()}
+            {renderPaymentPlanStep()}
+            {renderDeveloperDetails()}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 32, paddingTop: 20, borderTop: "1px solid #f0f0f0" }}>
+              <Button size="large" onClick={() => navigate(-1)}>Cancel</Button>
+              <Button type="primary" size="large" onClick={() => handleSaveOffplan("submit")} loading={offplanLoading}
+                style={{ backgroundColor: THEME.primary, borderColor: THEME.primary, minWidth: 180 }}>
+                Create Off-Plan Property
+              </Button>
             </div>
           </Form>
         </Card>

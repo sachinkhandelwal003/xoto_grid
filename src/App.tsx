@@ -95,6 +95,8 @@ const DeveloperBookingDetails = lazy(() => import('./components/ecommerce/B2C/De
 const DeveloperRevenue = lazy(() => import('./components/ecommerce/B2C/DeveloperRevenue'));
 const DeveloperAnalytics = lazy(() => import('./components/ecommerce/B2C/DeveloperAnalytics'));
 const DeveloperCommissionScheme = lazy(() => import('./components/ecommerce/B2C/DeveloperCommisionScheme'));
+const DeveloperAddProperty = lazy(() => import('./components/ecommerce/B2C/DeveloperAddProperty'));
+const DeveloperEditProperty = lazy(() => import('./components/ecommerce/B2C/DeveloperEditProperty'));
 const Agreementdeveloper = lazy(() => import('./components/Grid/DeveloperGrid/Agreementdeveloper'));
 
 // Role 24 - Grid Advisor
@@ -265,7 +267,9 @@ const App: React.FC = () => (
         element={<PrivateRoute allowedRoleCodes={['17']}><DashboardLayout /></PrivateRoute>}>
         <Route index element={<DeveloperDashboard />} />
         <Route path="developer-properties" element={<DeveloperProjects />} />
+        <Route path="developer-properties/add" element={<DeveloperAddProperty />} />
         <Route path="developer-properties/:id" element={<DeveloperProjectDetails />} />
+        <Route path="edit-property/:id" element={<DeveloperEditProperty />} />
         <Route path="property/:id" element={<PropertyDetailPage />} />
         <Route path="developer-inventory" element={<DeveloperInventory />} />
         <Route path="developer-leads" element={<DeveloperLeads />} />
