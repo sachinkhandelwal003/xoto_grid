@@ -196,6 +196,7 @@ const CreateProperty = () => {
   const [rentalEmirate, setRentalEmirate] = useState("");
   const [rentalImages,  setRentalImages]  = useState([]);
   const [rentalQrFile,  setRentalQrFile]  = useState([]);
+  const [rentalPermitOnly, setRentalPermitOnly] = useState(false);
 
   /* ── Secondary ── */
   const [secondaryForm]    = Form.useForm();
@@ -239,6 +240,7 @@ const CreateProperty = () => {
       if (!data) return;
       const emirate = Object.keys(EMIRATE_CITY).find(k => EMIRATE_CITY[k] === data.city) || data.city || "";
       setRentalEmirate(emirate);
+      setRentalPermitOnly(Boolean(data.permitAvailable));
       rentalForm.setFieldsValue({
         propertyName: data.propertyName || "", description: data.description || "",
         emirate, area: data.area || undefined, city: data.city || "",
@@ -251,6 +253,7 @@ const CreateProperty = () => {
         furnishing: data.furnishing || "unfurnished", parkingSpaces: data.parkingSpaces || 0,
         hasView: data.hasView || false, viewType: data.viewType || [],
         availableFrom: data.availableFrom ? dayjs(data.availableFrom) : null,
+        permitAvailable: data.permitAvailable || false,
         reraPermitNumber: data.reraPermitNumber || "", dldRegistrationNumber: data.dldRegistrationNumber || "",
         amenities: data.amenities || [], unitNumber: data.unitNumber || "",
         floorNumber: data.floorNumber || 0, isFeatured: data.isFeatured || false,
@@ -338,6 +341,7 @@ const handleSaveRental = async () => {
   let values;
   try { values = await rentalForm.validateFields(); } catch { return; }
   const rentalQrUrl = rentalQrFile.map(extractUrl).filter(Boolean)[0] || null;
+  const permitAvailable = Boolean(values.permitAvailable);
   setRentalLoading(true);
   try {
     const imageUrls = rentalImages.map(extractUrl).filter(Boolean);
@@ -369,7 +373,8 @@ const handleSaveRental = async () => {
       currency: "AED",
       transactionType: "rent", 
       rentalFrequency: values.rentalFrequency,
-      reraPermitNumber: values.reraPermitNumber, 
+      permitAvailable,
+      reraPermitNumber: permitAvailable ? null : values.reraPermitNumber, 
       minimumContract: values.minimumContract || null,
       cheques: values.cheques || null, 
       isImmediate: values.isImmediate ?? true,
@@ -386,14 +391,12 @@ const handleSaveRental = async () => {
       purpose: values.purpose || null,
       listingEndDate: values.listingEndDate ? values.listingEndDate.toISOString() : null,
       dldRegistrationNumber: values.dldRegistrationNumber || null,
-      trakheesiPermitId: values.trakheesiPermitId || null,
-      qrCode: rentalQrUrl,
+      trakheesiPermitId: permitAvailable ? null : (values.trakheesiPermitId || null),
+      qrCode: permitAvailable ? null : rentalQrUrl,
       mainLogo: imageUrls[0] || "",
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
       isFeatured: values.isFeatured || false,
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
-      trakheesi_permit_id: values.trakheesi_permit_id,
-qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
@@ -483,8 +486,6 @@ const handleSubmitSecondary = async () => {
       })),
       mainLogo: imageUrls[0] || "",
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
-      trakheesi_permit_id: values.trakheesi_permit_id,
-qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
@@ -527,8 +528,6 @@ const handleSaveOffplan = async () => {
     unitType: values.unitTypes?.[0] || "apartment",
     propertySubType: "off_plan", 
     transactionType: "sell",
-    trakheesi_permit_id: values.trakheesi_permit_id,
-qr_code: collectUrls(values.qr_code || [])[0] || "",
     approvalStatus: "approved",      // Directly approved
     listingStatus: "active",          // ✅ ADDED: listingStatus active
     status: "approved",                 // Set as active/live
@@ -751,6 +750,43 @@ qr_code: collectUrls(values.qr_code || [])[0] || "",
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>— optional, admin requires before publishing</span></Divider>
           <Row gutter={16}>
             <Col xs={24} md={12}>
+              <Form.Item name="permitAvailable" label="Permit Available?" valuePropName="checked">
+                <Switch
+                  checkedChildren="ON"
+                  unCheckedChildren="OFF"
+                  onChange={(checked) => {
+                    setRentalPermitOnly(checked);
+                    if (checked) {
+                      rentalForm.setFieldsValue({
+                        reraPermitNumber: "",
+                        trakheesiPermitId: "",
+                      });
+                      setRentalQrFile([]);
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            {rentalPermitOnly && (
+                <Col span={24}>
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="This property will be visible only to the GRID userbase and will not be published on the website."
+                    style={{ marginBottom: 16, borderRadius: 8 }}
+                  />
+                </Col>
+            )}
+            {rentalPermitOnly && (
+              <Col xs={24} md={12}>
+                <Form.Item name="dldRegistrationNumber" label="DLD Registration Number">
+                  <Input size="large" placeholder="Optional" />
+                </Form.Item>
+              </Col>
+            )}
+            {!rentalPermitOnly && (
+              <>
+            <Col xs={24} md={12}>
               <Form.Item name="reraPermitNumber" label="RERA Permit Number">
                 <Input size="large" placeholder="e.g. 7123456789" />
               </Form.Item>
@@ -781,6 +817,8 @@ qr_code: collectUrls(values.qr_code || [])[0] || "",
                 {rentalQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
               </Upload>
             </Col>
+              </>
+            )}
           </Row>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Settings</Divider>
@@ -894,47 +932,6 @@ qr_code: collectUrls(values.qr_code || [])[0] || "",
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {rentalImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
-<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
-<Row gutter={16}>
-  <Col xs={24} md={12}>
-    <Form.Item
-      name="trakheesi_permit_id"
-      label="Trakheesi Permit ID"
-      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
-    >
-      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
-    </Form.Item>
-  </Col>
-  <Col xs={24} md={12}>
-    <Form.Item
-      name="qr_code"
-      label="QR Code (Image)"
-      valuePropName="fileList"
-      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-      rules={[{ required: true, message: 'Please upload a QR code image' }]}
-    >
-      <Upload
-        listType="picture-card"
-        maxCount={1}
-        customRequest={handleImageUpload}
-        onPreview={handlePreview}
-        beforeUpload={(file) => {
-          const isImage = file.type.startsWith('image/');
-          if (!isImage) {
-            message.error('Only image files are allowed');
-            return Upload.LIST_IGNORE;
-          }
-          return true;
-        }}
-      >
-        <div>
-          <PlusOutlined />
-          <div style={{ marginTop: 8 }}>Upload</div>
-        </div>
-      </Upload>
-    </Form.Item>
-  </Col>
-</Row>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
@@ -1230,48 +1227,7 @@ qr_code: collectUrls(values.qr_code || [])[0] || "",
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {secondaryImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
-{/* ── New: Trakheesi Permit & QR Code ── */}
-<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
-<Row gutter={16}>
-  <Col xs={24} md={12}>
-    <Form.Item
-      name="trakheesi_permit_id"
-      label="Trakheesi Permit ID"
-      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
-    >
-      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
-    </Form.Item>
-  </Col>
-  <Col xs={24} md={12}>
-    <Form.Item
-      name="qr_code"
-      label="QR Code (Image)"
-      valuePropName="fileList"
-      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-      rules={[{ required: true, message: 'Please upload a QR code image' }]}
-    >
-      <Upload
-        listType="picture-card"
-        maxCount={1}
-        customRequest={handleImageUpload}
-        onPreview={handlePreview}
-        beforeUpload={(file) => {
-          const isImage = file.type.startsWith('image/');
-          if (!isImage) {
-            message.error('Only image files are allowed');
-            return Upload.LIST_IGNORE;
-          }
-          return true;
-        }}
-      >
-        <div>
-          <PlusOutlined />
-          <div style={{ marginTop: 8 }}>Upload</div>
-        </div>
-      </Upload>
-    </Form.Item>
-  </Col>
-</Row>
+
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
@@ -1749,7 +1705,7 @@ qr_code: collectUrls(values.qr_code || [])[0] || "",
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
-          <Form form={rentalForm} layout="vertical">
+          <Form form={rentalForm} layout="vertical" initialValues={{ permitAvailable: false }}>
             {renderRentalStep(0)}
             {renderRentalStep(1)}
             {renderRentalStep(2)}
