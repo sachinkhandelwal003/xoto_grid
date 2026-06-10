@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Row, Col, Typography, Button, Spin, message,
-  Divider, Popover, Modal, Image
+  Row,
+  Col,
+  Typography,
+  Button,
+  Spin,
+  message,
+  Divider,
+  Popover,
+  Modal,
+  Image,
+  Card,
+  Empty,
+  Tag
 } from "antd";
 import {
   EnvironmentOutlined, PictureOutlined, FilePdfOutlined,
@@ -53,16 +64,19 @@ export default function AgentProjectDetails() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [customDescription, setCustomDescription] = useState("");
   const [allPhotos, setAllPhotos] = useState([]);
+  const [documents, setDocuments] = useState([]);
 
-  useEffect(() => {
-    fetchPropertyDetails();
-  }, [id]);
+useEffect(() => {
+  fetchPropertyDetails();
+  fetchDocuments();
+}, [id]);
 
   const fetchPropertyDetails = async () => {
     try {
       setLoading(true);
       let res = await apiService.get(`/properties/${id}`);
       let responseData = res?.data?.data || res?.data || res;
+       console.log("PROPERTY DETAILS:", responseData);
       if (responseData) {
         setProperty(responseData);
         setCustomDescription(responseData.description || responseData.overview || "Detailed description for this property is not available yet.");
@@ -79,6 +93,22 @@ export default function AgentProjectDetails() {
       setLoading(false);
     }
   };
+
+  const fetchDocuments = async () => {
+  try {
+    const res = await apiService.get(
+      `/property-documents/${id}`
+    );
+
+    const docs =
+      res?.data?.data ||
+      [];
+
+    setDocuments(docs);
+  } catch (err) {
+    console.error("Documents Error:", err);
+  }
+};
 
   const fetchInventoryUnits = async (propertyId) => {
     try {
@@ -281,6 +311,55 @@ export default function AgentProjectDetails() {
             )}
 
             <Divider className="my-10 border-gray-100" />
+
+            <div className="mb-12">
+  <h2 className="text-2xl font-extrabold text-gray-900 mb-6 tracking-tight">
+    Document Library
+  </h2>
+
+  {documents.length === 0 ? (
+    <Empty description="No documents available" />
+  ) : (
+    <div className="grid md:grid-cols-2 gap-4">
+      {documents.map((doc) => (
+        <Card
+          key={doc._id}
+          className="rounded-2xl border border-gray-200"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <FilePdfOutlined
+              style={{
+                fontSize: 28,
+                color: "#dc2626",
+              }}
+            />
+
+            <div>
+              <div className="font-bold">
+                {doc.title}
+              </div>
+
+              <Tag color="purple">
+                {doc.documentCategory}
+              </Tag>
+            </div>
+          </div>
+
+          <Button
+            type="primary"
+            block
+            href={doc.fileUrl}
+            target="_blank"
+          >
+            View Document
+          </Button>
+        </Card>
+      ))}
+    </div>
+  )}
+</div>
+
+<Divider className="my-10 border-gray-100" />
 
             {/* Location Map - Exact Pinning */}
             <div>
