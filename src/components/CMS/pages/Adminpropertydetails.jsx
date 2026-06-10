@@ -43,7 +43,11 @@ import { showToast } from "../../../manageApi/utils/toast";
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const THEME = { primary: "#6d28d9" };
+const THEME = {
+  primary: "#5c039b",      // deep purple
+  secondary: "#7c3aed",    // lighter purple
+  gradient: "linear-gradient(135deg, #4A027C 0%, #7C3AED 100%)",
+};
 
 const STATUS_COLOR = {
   pending:           "orange",
@@ -187,7 +191,6 @@ export default function AdminPropertyDetail() {
       showToast("success", "Property approved and published.");
       fetchProperty();
     } catch (err) {
-      console.error(err);
       showToast("error", "Failed to approve property.");
     } finally {
       setActionLoading(false);
@@ -203,7 +206,6 @@ export default function AdminPropertyDetail() {
       rejectForm.resetFields();
       fetchProperty();
     } catch (err) {
-      console.error(err);
       showToast("error", "Failed to reject property.");
     } finally {
       setActionLoading(false);
@@ -873,7 +875,7 @@ export default function AdminPropertyDetail() {
           <Card title="Commission" style={{ borderRadius: 12, marginBottom: 16 }}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Share Commission">
-                <Tag color={property.shareCommission ? "green" : "default"}>
+                <Tag color={property.shareCommission ? "green" : "default"} style={{ borderRadius: 20 }}>
                   {property.shareCommission ? "Yes" : "No"}
                 </Tag>
               </Descriptions.Item>
@@ -1106,6 +1108,38 @@ export default function AdminPropertyDetail() {
               htmlType="submit"
               loading={actionLoading}
               style={{ background: "#f97316", borderColor: "#f97316" }}
+            >
+              Send Request
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* ── Request Changes Modal ── */}
+      <Modal
+        title="Request Changes"
+        open={requestChangesModal}
+        onCancel={() => { setRequestChangesModal(false); requestChangesForm.resetFields(); }}
+        footer={null}
+        destroyOnClose
+        centered
+        bodyStyle={{ padding: "24px" }}
+      >
+        <Form form={requestChangesForm} layout="vertical" onFinish={handleRequestChanges}>
+          <Form.Item
+            name="adminComments"
+            label="What needs to be changed?"
+            rules={[{ required: true, message: "Please describe the required changes." }]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="Describe the changes the developer needs to make..."
+            />
+          </Form.Item>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <Button onClick={() => { setRequestChangesModal(false); requestChangesForm.resetFields(); }}>Cancel</Button>
+            <Button type="primary" htmlType="submit" loading={actionLoading}
+              style={{ background: THEME.primary, borderColor: THEME.primary }}
             >
               Send Request
             </Button>

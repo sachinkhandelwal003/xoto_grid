@@ -1276,9 +1276,7 @@ export default function AgentProjectDetails() {
               )}
             </div>
 
-            {/* <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", padding: "8px", borderRadius: "8px 8px 0 0", textAlign: "center" }}>
-              <Text strong style={{ fontSize: 13 }}>🔑 Your customised personal offer. Try it!</Text>
-            </div> */}
+
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%", marginTop: 12, marginBottom: 14 }}>
               {/* Generate Sales Offer */}

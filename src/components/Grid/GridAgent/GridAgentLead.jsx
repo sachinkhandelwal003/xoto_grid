@@ -360,9 +360,9 @@ const GridAgentLead = () => {
     fetchLeads(1, pagination.limit, merged);
   };
 
-  // Navigate to Detail Page instead of opening drawer
+  // Navigate to the correct Grid Agent lead detail page
   const handleViewLead = (row) => {
-    navigate(`/dashboard/agent/lead-detail/${row._id}`); 
+    navigate(`/dashboard/agent/GridAgent-lead/${row._id}`);
   };
 
   const statCards = [

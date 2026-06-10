@@ -7,7 +7,7 @@ import { VAULT_ROLE_SLUG_MAP } from '../../../../types/auth';
 import {
   Button, Input, Select, Tag, Spin, Empty,
   Pagination, Tooltip, Badge, Drawer, Form, Space,
-  Popconfirm, message, InputNumber,
+  Popconfirm, message, InputNumber,Popover
 } from 'antd';
 import {
   SearchOutlined, FilterOutlined,
@@ -15,7 +15,7 @@ import {
   AppstoreOutlined, UnorderedListOutlined,
   CheckCircleFilled, ClockCircleFilled, CloseCircleFilled,
   EyeOutlined, DeleteOutlined, ReloadOutlined,
-  HomeOutlined, UserOutlined, ColumnWidthOutlined,
+  HomeOutlined, UserOutlined, ColumnWidthOutlined,QrcodeOutlined,
 } from '@ant-design/icons';
 
 const { Option } = Select;
@@ -334,7 +334,27 @@ const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeat
             onClick={() => onToggleFeatured(_id)}
           />
         </Tooltip>
-
+   {/* ⭐ INSERT QR BUTTON HERE */}
+        {property.qr_code && (
+          <Popover
+            content={<img src={property.qr_code} alt="QR Code" style={{ width: 200 }} />}
+            title="Scan QR Code"
+            trigger="hover"
+          >
+            <Tooltip title="">
+              <Button
+                size="small"
+                icon={<QrcodeOutlined />}
+                style={{
+                  borderColor: '#d1d5db',
+                  color: C.muted,
+                }}
+              >
+                QR
+              </Button>
+            </Tooltip>
+          </Popover>
+        )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <Popconfirm title="Delete this property?" onConfirm={() => onDelete(_id)} okButtonProps={{ danger: true }}>
             <Button size="small" type="text" danger icon={<DeleteOutlined />} style={{ fontSize: 11 }} />

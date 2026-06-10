@@ -156,14 +156,7 @@ const AgentDashboard = () => {
       color: "#5C039B",
       bg: "#f4e8ff",
     },
-    {
-      title: "Active Listings",
-      value: active_listings,
-      icon: <HomeOutlined />,
-      color: "#2563eb",
-      bg: "#eff6ff",
-    },
-    {
+   {
       title: "Presentations Generated",
       value: presentations_generated,
       icon: <FileTextOutlined />,

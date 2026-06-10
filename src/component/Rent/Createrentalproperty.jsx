@@ -392,6 +392,8 @@ const handleSaveRental = async () => {
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
       isFeatured: values.isFeatured || false,
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
+      trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
@@ -481,6 +483,8 @@ const handleSubmitSecondary = async () => {
       })),
       mainLogo: imageUrls[0] || "",
       photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
+      trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: extractUrl(values.qr_code?.[0] || {}),
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
@@ -523,6 +527,8 @@ const handleSaveOffplan = async () => {
     unitType: values.unitTypes?.[0] || "apartment",
     propertySubType: "off_plan", 
     transactionType: "sell",
+    trakheesi_permit_id: values.trakheesi_permit_id,
+qr_code: collectUrls(values.qr_code || [])[0] || "",
     approvalStatus: "approved",      // Directly approved
     listingStatus: "active",          // ✅ ADDED: listingStatus active
     status: "approved",                 // Set as active/live
@@ -888,6 +894,47 @@ const handleSaveOffplan = async () => {
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {rentalImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
+<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
+<Row gutter={16}>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="trakheesi_permit_id"
+      label="Trakheesi Permit ID"
+      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
+    >
+      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="qr_code"
+      label="QR Code (Image)"
+      valuePropName="fileList"
+      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      rules={[{ required: true, message: 'Please upload a QR code image' }]}
+    >
+      <Upload
+        listType="picture-card"
+        maxCount={1}
+        customRequest={handleImageUpload}
+        onPreview={handlePreview}
+        beforeUpload={(file) => {
+          const isImage = file.type.startsWith('image/');
+          if (!isImage) {
+            message.error('Only image files are allowed');
+            return Upload.LIST_IGNORE;
+          }
+          return true;
+        }}
+      >
+        <div>
+          <PlusOutlined />
+          <div style={{ marginTop: 8 }}>Upload</div>
+        </div>
+      </Upload>
+    </Form.Item>
+  </Col>
+</Row>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
@@ -1183,7 +1230,48 @@ const handleSaveOffplan = async () => {
             customRequest={handleImageUpload} onPreview={handlePreview}>
             {secondaryImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
           </Upload>
-
+{/* ── New: Trakheesi Permit & QR Code ── */}
+<Divider orientation="left" style={{ borderColor: THEME.primary }}>Trakheesi & QR Code (Required)</Divider>
+<Row gutter={16}>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="trakheesi_permit_id"
+      label="Trakheesi Permit ID"
+      rules={[{ required: true, message: 'Please enter the Trakheesi permit ID' }]}
+    >
+      <Input placeholder="e.g. TRK-2025-0012345" size="large" />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={12}>
+    <Form.Item
+      name="qr_code"
+      label="QR Code (Image)"
+      valuePropName="fileList"
+      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+      rules={[{ required: true, message: 'Please upload a QR code image' }]}
+    >
+      <Upload
+        listType="picture-card"
+        maxCount={1}
+        customRequest={handleImageUpload}
+        onPreview={handlePreview}
+        beforeUpload={(file) => {
+          const isImage = file.type.startsWith('image/');
+          if (!isImage) {
+            message.error('Only image files are allowed');
+            return Upload.LIST_IGNORE;
+          }
+          return true;
+        }}
+      >
+        <div>
+          <PlusOutlined />
+          <div style={{ marginTop: 8 }}>Upload</div>
+        </div>
+      </Upload>
+    </Form.Item>
+  </Col>
+</Row>
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[

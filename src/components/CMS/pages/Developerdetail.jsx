@@ -24,7 +24,9 @@ const DeveloperDetail = () => {
   // ✅ Main States
   const [selectedDev, setSelectedDev] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
-
+const [developerProperties, setDeveloperProperties] = useState([]);
+const [descriptionModalVisible, setDescriptionModalVisible] = useState(false);
+const [description, setDescription] = useState("");
   // Verification states
   const [kycActionLoading, setKycActionLoading] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
@@ -94,6 +96,8 @@ const DeveloperDetail = () => {
       const resData = await apiService.get(`/property/get-developer-by-id`, { id: devId });
       const dev = resData?.data || resData;
       setSelectedDev(dev);
+      fetchDeveloperProperties(dev._id);
+      setDescription(dev?.description || "");
     } catch (err) {
       message.error("Failed to load developer details.");
     } finally {
@@ -106,7 +110,18 @@ const DeveloperDetail = () => {
       fetchDeveloperById(id);
     }
   }, [id]);
+const fetchDeveloperProperties = async (developerId) => {
+  try {
+    const res = await apiService.get(`/properties?developerId=${developerId}`);
+    console.log('Properties response:', res); // temporary debug
 
+    const body = res?.data;
+    const list = Array.isArray(body) ? body : (body?.data || []);
+    setDeveloperProperties(list);
+  } catch (error) {
+    console.error('Failed to fetch developer properties:', error);
+  }
+};
   // ✅ ACTION HANDLERS
   const handleKycApprove = async () => {
     if (!selectedDev) return;
@@ -199,7 +214,24 @@ const DeveloperDetail = () => {
       setAgreementLoading(false);
     }
   };
+const handleUpdateDescription = async () => {
+  try {
+    await apiService.post(
+  `/developer/edit-developer/${selectedDev._id}`,
+  {
+    description,
+  }
+);
+    message.success("Description updated successfully");
 
+    setDescriptionModalVisible(false);
+
+    fetchDeveloperById(selectedDev._id);
+  } catch (error) {
+    console.error(error);
+    message.error("Failed to update description");
+  }
+};
   const addAgreementDoc = () => setAgreementDocs([...agreementDocs, { type: 'addendum', name: '', url: '' }]);
   const removeAgreementDoc = (index) => setAgreementDocs(agreementDocs.filter((_, i) => i !== index));
   const updateAgreementDoc = (index, field, value) => {
@@ -326,7 +358,26 @@ const DeveloperDetail = () => {
         </div>
 
         {/* BASIC INFO */}
-        <Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}><Space><UserOutlined /> Basic Information</Space></Divider>
+        <Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}>
+  <Space>
+    <UserOutlined /> Basic Information
+
+    <Button
+      size="small"
+      type="primary"
+      icon={<EditOutlined />}
+      onClick={() => setDescriptionModalVisible(true)}
+      style={{
+        background: "#5c039b",
+        borderColor: "#5c039b",
+        borderRadius: "6px",
+        fontSize: "12px"
+      }}
+    >
+      Edit Description
+    </Button>
+  </Space>
+</Divider>
         <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }} size="middle"
           labelStyle={{ fontWeight: "600", color: "#4b5563", background: "#faf5ff", width: "160px" }} style={{ marginBottom: "24px" }}
         >
@@ -389,7 +440,72 @@ const DeveloperDetail = () => {
             </Col>
           ))}
         </Row>
+<Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}>
+  Developer Properties
+</Divider>
 
+{developerProperties.length === 0 ? (
+  <Text type="secondary" style={{ fontSize: 13 }}>No properties found for this developer.</Text>
+) : (
+  <Row gutter={[16, 16]}>
+    {developerProperties.map((property) => (
+      <Col xs={24} sm={12} md={8} key={property._id}>
+        <Card
+          hoverable
+          onClick={() => navigate(`/dashboard/admin/properties/${property._id}`)
+}
+          style={{
+            borderRadius: "12px",
+            border: "1px solid #e9d5ff",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            height: "100%",
+          }}
+          bodyStyle={{ padding: "16px" }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <Text strong style={{ fontSize: "15px", color: "#111827" }}>
+                {property.propertyName}
+              </Text>
+              <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: "13px" }}>
+                {[property.area, property.city].filter(Boolean).join(", ")}
+              </p>
+            </div>
+            <Tag
+              color="purple"
+              style={{ borderRadius: "20px", marginLeft: 8, flexShrink: 0 }}
+            >
+              {property.propertySubType?.replace(/_/g, " ") || "Property"}
+            </Tag>
+          </div>
+
+          <Divider style={{ margin: "12px 0" }} />
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Tag color="green" style={{ borderRadius: "20px" }}>
+              AED {property.price?.toLocaleString() || "N/A"}
+            </Tag>
+            {property.approvalStatus && (
+              <Tag
+                color={
+                  property.approvalStatus === "approved" ? "green" :
+                  property.approvalStatus === "pending" ? "orange" :
+                  "red"
+                }
+                style={{ borderRadius: "20px", textTransform: "capitalize" }}
+              >
+                {property.approvalStatus}
+              </Tag>
+            )}
+            {property.listingStatus === "active" && (
+              <Tag color="blue" style={{ borderRadius: "20px" }}>Active</Tag>
+            )}
+          </div>
+        </Card>
+      </Col>
+    ))}
+  </Row>
+)}
         {/* DOCUMENTS SECTION */}
         <Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}>
           <Space>
@@ -520,7 +636,19 @@ const DeveloperDetail = () => {
           <Button type="dashed" block icon={<PlusOutlined />} onClick={addAgreementDoc}>Add Another</Button>
         </div>
       </Modal>
-
+<Modal
+  title="Edit Developer Description"
+  open={descriptionModalVisible}
+  onCancel={() => setDescriptionModalVisible(false)}
+  onOk={handleUpdateDescription}
+>
+  <TextArea
+    rows={6}
+    value={description}
+    onChange={(e) => setDescription(e.target.value)}
+    placeholder="Enter developer description"
+  />
+</Modal>
     </div>
   );
 };
