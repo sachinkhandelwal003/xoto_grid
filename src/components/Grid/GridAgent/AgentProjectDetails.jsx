@@ -1126,16 +1126,20 @@ const [showLeadModal, setShowLeadModal] = useState(false);
   );
 
   const getImage        = () => allPhotos[0] || "https://xotostaging.s3.me-central-1.amazonaws.com/properties/1773392643245-15.jpg";
-  const getPaymentPlan  = () => {
-    if (property.paymentPlan?.length > 0) {
-      const plan = property.paymentPlan[0];
-      if (plan.stages?.length > 0)
-        return plan.stages.map(s => `${s.percentage}% ${s.stage.replace('_', ' ')}`).join(' • ');
+ const getPaymentPlan = () => {
+  if (property.paymentPlan?.length > 0) {
+    const plan = property.paymentPlan[0];
+    if (plan.stages?.length > 0) {
+      return plan.stages
+        .filter(s => s != null)
+        .map(s => `${s.percentage ?? 0}% ${s.stage?.replace(/_/g, ' ') || ''}`)
+        .join(' • ');
     }
-    if (property.paymentPlan_initialPercentage && property.paymentPlan_laterPercentage)
-      return `${property.paymentPlan_initialPercentage}/${property.paymentPlan_laterPercentage}%`;
-    return "Contact us for payment plan";
-  };
+  }
+  if (property.paymentPlan_initialPercentage && property.paymentPlan_laterPercentage)
+    return `${property.paymentPlan_initialPercentage}/${property.paymentPlan_laterPercentage}%`;
+  return "Contact us for payment plan";
+};
   const getCommissionText = () => {
     if (property.shareCommission && property.shareCommissionPercentage) return `${property.shareCommissionPercentage}% Commission Shared`;
     if (property.commission)     return `${property.commission}% Commission`;
@@ -1399,14 +1403,14 @@ const [showLeadModal, setShowLeadModal] = useState(false);
 >
   Add to Lead
 </Button>
-            <Button
+            {/* <Button
               icon={<ShareAltOutlined />}
               style={{ width: "100%", height: 52, borderRadius: 10, background: "#111827", color: "#fff", border: "none", fontWeight: 600, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.12)", marginBottom: 16 }}
             >
               Transfer Client
-            </Button>
+            </Button> */}
 
-            <Card style={{ borderRadius: 12, border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "16px 20px" }}>
+            {/* <Card style={{ borderRadius: 12, border: "1px solid #e5e7eb" }} bodyStyle={{ padding: "16px 20px" }}>
               <div style={{ textAlign: "center", marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #f3f4f6" }}>
                 <Text strong>Sales Office</Text>
               </div>
@@ -1424,7 +1428,7 @@ const [showLeadModal, setShowLeadModal] = useState(false);
                   Support
                 </Button>
               </div>
-            </Card>
+            </Card> */}
           </div>
         </Col>
       </Row>

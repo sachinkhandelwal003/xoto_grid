@@ -98,7 +98,7 @@ const MATCH_CONFIG = {
   none:    { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', badge: '#dc2626', label: 'No Matches',    icon: FiXCircle },
 };
 
-const PropertyMatchCard = ({ property, matchType }) => {
+const PropertyMatchCard = ({ property, matchType, onSelect }) => {
   const price = property.price_min || property.price || 0;
   const loc   = [property.area, property.city].filter(Boolean).join(', ');
   const mc    = MATCH_CONFIG[matchType] || MATCH_CONFIG.broad;
@@ -106,8 +106,10 @@ const PropertyMatchCard = ({ property, matchType }) => {
   const selectedUnit = property.interested_inventory_unit || null;
 
   return (
-    <div className="border border-gray-100 rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow duration-200 group">
-      <div className="h-20 bg-slate-100 relative overflow-hidden flex items-center justify-center">
+<div
+  onClick={() => onSelect?.(property)}
+  className="border border-gray-100 rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow duration-200 group cursor-pointer"
+>      <div className="h-20 bg-slate-100 relative overflow-hidden flex items-center justify-center">
         {property.mainLogo ? (
           <img src={property.mainLogo} alt={property.propertyName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
@@ -147,7 +149,14 @@ const PropertyMatchCard = ({ property, matchType }) => {
   );
 };
 
-const LiveMatchPanel = ({ matches, loading, matchType, matchNote, hasFiltered }) => {
+const LiveMatchPanel = ({
+  matches,
+  loading,
+  matchType,
+  matchNote,
+  hasFiltered,
+  onSelectProperty
+}) => {
   const mc = MATCH_CONFIG[matchType] || null;
   const McIcon = mc?.icon;
 
@@ -257,10 +266,11 @@ scrollbar-track-transparent
 ">
 
 {matches.map((p,i)=>(
-<PropertyMatchCard
-key={p._id || i}
-property={p}
-matchType={matchType}
+ <PropertyMatchCard
+  key={p._id || i}
+  property={p}
+  matchType={matchType}
+  onSelect={onSelectProperty}
 />
 ))}
 
@@ -364,6 +374,7 @@ const CreateAgentLead = ({ navigate }) => {
   const [locationInputs, setLocationInputs] = useState(['']);
   const [properties, setProperties]         = useState([]);
   const [propertyInventory, setPropertyInventory] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [errors, setErrors]       = useState({});
@@ -734,13 +745,23 @@ const CreateAgentLead = ({ navigate }) => {
 
               {/* Mobile — live match panel */}
               <div className="xl:hidden mt-2">
-                <LiveMatchPanel
-                  matches={liveMatches}
-                  loading={matchLoading}
-                  matchType={matchType}
-                  matchNote={matchNote}
-                  hasFiltered={hasFiltered}
-                />
+               <LiveMatchPanel
+  matches={liveMatches}
+  loading={matchLoading}
+  matchType={matchType}
+  matchNote={matchNote}
+  hasFiltered={hasFiltered}
+  onSelectProperty={(property) => {
+    console.log("Selected Property:", property);
+
+    setSelectedProperty(property);
+
+    setForm(prev => ({
+      ...prev,
+      listing_id: property._id
+    }));
+  }}
+/>
               </div>
 
               {/* Section 4: Additional Info */}
@@ -753,33 +774,29 @@ const CreateAgentLead = ({ navigate }) => {
                     <option value="general_enquiry">General Enquiry</option>
                     <option value="consultation">Consultation</option>
                   </SelectField>
-                  <div>
-                    <Label>Interested Property</Label>
-                    <div className="relative">
-                      <select
-                        value={form.listing_id}
-                        onChange={(e) => set('listing_id', e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-gray-50/50 outline-none appearance-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 transition-all"
-                      >
-                        <option value="">
-                          {loadingProperties ? 'Loading properties…' : 'Select listed property (optional)'}
-                        </option>
-                        {properties.map((p) => {
-                          const id   = getPropertyId(p);
-                          const meta = getPropertyMeta(p);
-                          return (
-                            <option key={id} value={id}>
-                              {getPropertyName(p)}{meta ? ` (${meta})` : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      {loadingProperties
-                        ? <FiLoader size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 animate-spin pointer-events-none" />
-                        : <FiChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                      }
-                    </div>
-                  </div>
+                  {selectedProperty && (
+  <div className="md:col-span-2">
+    <Label>Selected Property</Label>
+
+    <div className="p-4 rounded-xl border border-green-200 bg-green-50">
+      <div className="font-bold text-green-800">
+        {selectedProperty.propertyName}
+      </div>
+
+      <div className="text-sm text-green-700 mt-1">
+        {selectedProperty.area}, {selectedProperty.city}
+      </div>
+
+      <div className="text-sm font-semibold mt-2">
+        AED {Number(
+          selectedProperty.price_min ||
+          selectedProperty.price ||
+          0
+        ).toLocaleString()}
+      </div>
+    </div>
+  </div>
+)}
                   {form.listing_id && (
                     <div>
                       <Label>Interested Inventory Unit</Label>
@@ -838,13 +855,23 @@ const CreateAgentLead = ({ navigate }) => {
 
           {/* ── RIGHT: Live Match Panel (desktop only, sticky) ── */}
           <div className="w-[340px] flex-shrink-0 sticky top-28 hidden xl:block">
-            <LiveMatchPanel
-              matches={liveMatches}
-              loading={matchLoading}
-              matchType={matchType}
-              matchNote={matchNote}
-              hasFiltered={hasFiltered}
-            />
+        <LiveMatchPanel
+  matches={liveMatches}
+  loading={matchLoading}
+  matchType={matchType}
+  matchNote={matchNote}
+  hasFiltered={hasFiltered}
+  onSelectProperty={(property) => {
+    console.log("Selected Property:", property);
+
+    setSelectedProperty(property);
+
+    setForm(prev => ({
+      ...prev,
+      listing_id: property._id
+    }));
+  }}
+/>
           </div>
         </div>
       </div>

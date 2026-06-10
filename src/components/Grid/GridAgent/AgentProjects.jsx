@@ -26,6 +26,7 @@ import {
   EnvironmentOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+   QrcodeOutlined, 
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +35,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 // ─── PROPERTY CARD ─────────────────────────────────────────────────────────────
-function PropertyCard({ p, onClick }) {
+function PropertyCard({ p, onClick, qrCode }) {
   const getPriceDisplay = (property) => {
     if (property.price_min && property.price_max)
       return `${Number(property.price_min).toLocaleString()} – ${Number(property.price_max).toLocaleString()}`;
@@ -264,6 +265,21 @@ function PropertyCard({ p, onClick }) {
             </div>
           )}
         </div>
+               {p.qr_code && (
+  <Popover
+    content={<img src={p.qr_code} alt="QR Code" style={{ width: 200 }} />}
+    title="Scan QR Code"
+    trigger="hover"
+  >
+    <Button
+      size="small"
+      icon={<QrcodeOutlined />}
+      style={{ margin: '8px 0 0 auto', display: 'flex', alignItems: 'center', gap: 4 }}
+    >
+      QR
+    </Button>
+  </Popover>
+)}
       </div>
     </div>
   );
@@ -514,6 +530,7 @@ export default function AgentProjects() {
           </Option>
         </Select>
       </div>
+      
 
       {/* ── FILTER BAR ── */}
       <div style={{ marginBottom: 24, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -579,21 +596,6 @@ export default function AgentProjects() {
               onClick={() => navigate(`/dashboard/agent/projects/${p._id}`)}
             />
           ))}
-          {p.qr_code && (
-  <Popover
-    content={<img src={p.qr_code} alt="QR Code" style={{ width: 200 }} />}
-    title="Scan QR Code"
-    trigger="hover"
-  >
-    <Button
-      size="small"
-      icon={<QrcodeOutlined />}
-      style={{ margin: '8px 0 0 auto', display: 'flex', alignItems: 'center', gap: 4 }}
-    >
-      QR
-    </Button>
-  </Popover>
-)}
         </div>
       )}
 
