@@ -304,6 +304,7 @@ import AllUsers from "../Grid/GridAdmin/AllUsers";
 import GridOverview from "../Grid/GridAdmin/GridOverview";
 import GridLeadreports from "../Grid/GridAdmin/GridLeadreports";
 import GridListingreports from "../Grid/GridAdmin/GridListingreports";
+import GridSetting from "../Grid/GridAdmin/Gridsetting";
 
 
 
@@ -690,6 +691,7 @@ const CmsRoutes = () => {
     <Route path="/overview" element={<GridOverview/>} />
     <Route path="/leadreports" element={<GridLeadreports/>}/>
     <Route path="/listingreports" element={<GridListingreports/>}/>
+    <Route path="/setting" element={<GridSetting/>}/>
 
       
       

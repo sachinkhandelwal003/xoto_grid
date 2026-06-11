@@ -98,7 +98,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   {
     title: 'Platform Configuration', icon: 'fas fa-sliders',
     submenus: [
-      { title: 'Settings',          to: '/dashboard/admin/settings' },
+      { title: 'Settings',          to: '/dashboard/admin/setting' },
       { title: 'Roles & Permissions', to: '/dashboard/admin/roles' },
     ],
   },
