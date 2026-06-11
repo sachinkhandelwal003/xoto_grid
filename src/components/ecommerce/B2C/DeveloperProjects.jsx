@@ -105,7 +105,9 @@ export default function DeveloperProjects() {
         projectStatus: p.projectStatus || "",
         developmentStatus: p.developmentStatus || "Planned",
         isFeatured: p.isFeatured || false,
-        bedroomType: p.inventory?.[0]?.unitType || "",
+        bedroomType: p.bedroomType || "",
+        bedrooms: p.bedrooms ?? null,
+        bathrooms: p.bathrooms ?? null,
         unitType: p.propertyType || "Apartment",
         completionDate: p.completionDate,
         constructionProgress: p.constructionProgress || 0,
@@ -337,7 +339,18 @@ export default function DeveloperProjects() {
 
                   <div style={S.tagsRow}>
                     {item.unitType && <span style={S.tag}>{item.unitType}</span>}
-                    {item.bedroomType && <span style={S.tag}>{item.bedroomType}</span>}
+                    {(item.bedroomType === "studio" || item.bedrooms > 0) && (
+                      <span style={S.tag}>
+                        {item.bedroomType === "studio"
+                          ? "Studio"
+                          : `${item.bedrooms} ${item.bedrooms === 1 ? "Bed" : "Beds"}`}
+                      </span>
+                    )}
+                    {item.bathrooms > 0 && (
+                      <span style={S.tag}>
+                        {item.bathrooms} {item.bathrooms === 1 ? "Bath" : "Baths"}
+                      </span>
+                    )}
                     {item.saleStatus && (
                       <span style={{
                         ...S.tag,

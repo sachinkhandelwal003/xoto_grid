@@ -85,13 +85,24 @@ const UNIT_TYPES = [
   { label: "Retail", value: "retail" }, { label: "Warehouse", value: "warehouse" },
 ];
 
-const BEDROOM_TYPES = [
-  { label: "Studio", value: "studio" }, { label: "1 Bedroom", value: "1bed" },
-  { label: "2 Bedrooms", value: "2bed" }, { label: "3 Bedrooms", value: "3bed" },
-  { label: "4 Bedrooms", value: "4bed" }, { label: "5 Bedrooms", value: "5bed" },
-  { label: "6 Bedrooms", value: "6bed" }, { label: "7 Bedrooms", value: "7bed" },
-  { label: "8+ Bedrooms", value: "8plus" },
+const BEDROOM_OPTIONS = [
+  { label: "Studio", value: 0 },
+  { label: "1 Bed", value: 1 },
+  { label: "2 Beds", value: 2 },
+  { label: "3 Beds", value: 3 },
+  { label: "4 Beds", value: 4 },
+  { label: "5 Beds", value: 5 },
+  { label: "6 Beds", value: 6 },
+  { label: "7 Beds", value: 7 },
+  { label: "8+ Beds", value: 8 },
 ];
+
+const getBedroomType = (bedrooms) => {
+  const count = Number(bedrooms || 0);
+  if (count === 0) return "studio";
+  if (count >= 8) return "8plus";
+  return `${count}bed`;
+};
 
 const FURNISHING_OPTIONS = [
   { label: "Furnished", value: "furnished" },
@@ -361,7 +372,7 @@ const handleSaveRental = async () => {
         longitude: null
       },
       unitType: values.unitType || "apartment", 
-      bedroomType: values.bedroomType || "1bed",
+      bedroomType: getBedroomType(values.bedrooms),
       bedrooms: Number(values.bedrooms || 0), 
       bathrooms: Number(values.bathrooms || 0),
       builtUpArea: Number(values.builtUpArea || 0), 
@@ -444,7 +455,7 @@ const handleSubmitSecondary = async () => {
         longitude: null
       },
       unitType: values.unitType || "apartment", 
-      bedroomType: values.bedroomType || "1bed",
+      bedroomType: getBedroomType(values.bedrooms),
       bedrooms: Number(values.bedrooms || 0), 
       bathrooms: Number(values.bathrooms || 0),
       builtUpArea: Number(values.builtUpArea || 0), 
@@ -526,6 +537,9 @@ const handleSaveOffplan = async () => {
     propertyType: values.propertyType || "Residential",
     unitTypes: values.unitTypes || [], 
     unitType: values.unitTypes?.[0] || "apartment",
+    bedroomType: getBedroomType(values.bedrooms),
+    bedrooms: Number(values.bedrooms || 0),
+    bathrooms: Number(values.bathrooms || 0),
     propertySubType: "off_plan", 
     transactionType: "sell",
     approvalStatus: "approved",      // Directly approved
@@ -638,10 +652,8 @@ const handleSaveOffplan = async () => {
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
-              <Form.Item name="bedroomType" label="Bedrooms">
-                <Select size="large" placeholder="Select">
-                  {BEDROOM_TYPES.map(b => <Option key={b.value} value={b.value}>{b.label}</Option>)}
-                </Select>
+              <Form.Item name="bedrooms" label="Bedrooms" rules={[{ required: true }]}>
+                <Select size="large" placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
@@ -979,10 +991,8 @@ const handleSaveOffplan = async () => {
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
-              <Form.Item name="bedroomType" label="Bedrooms">
-                <Select size="large" placeholder="Select">
-                  {BEDROOM_TYPES.map(b => <Option key={b.value} value={b.value}>{b.label}</Option>)}
-                </Select>
+              <Form.Item name="bedrooms" label="Bedrooms" rules={[{ required: true }]}>
+                <Select size="large" placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
@@ -1405,6 +1415,16 @@ const handleSaveOffplan = async () => {
             </Select>
           </Form.Item>
         </Col>
+        <Col xs={12} md={6}>
+          <Form.Item name="bedrooms" label="Bedrooms" rules={[{ required: true }]}>
+            <Select size="large" placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
+          </Form.Item>
+        </Col>
+        <Col xs={12} md={6}>
+          <Form.Item name="bathrooms" label="Bathrooms" rules={[{ required: true }]}>
+            <InputNumber min={0} max={50} size="large" style={{ width: "100%" }} placeholder="e.g., 2" />
+          </Form.Item>
+        </Col>
         <Col xs={24} md={12}>
           <Form.Item name="projectStatus" label="Project Status">
             <Select size="large" defaultValue="presale">
@@ -1705,7 +1725,7 @@ const handleSaveOffplan = async () => {
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
-          <Form form={rentalForm} layout="vertical" initialValues={{ permitAvailable: false }}>
+          <Form form={rentalForm} layout="vertical" initialValues={{ permitAvailable: false, bedrooms: 1, bathrooms: 1 }}>
             {renderRentalStep(0)}
             {renderRentalStep(1)}
             {renderRentalStep(2)}
@@ -1725,7 +1745,7 @@ const handleSaveOffplan = async () => {
       {/* ═══════════ SECONDARY ═══════════ */}
       {formMode === "secondary" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
-          <Form form={secondaryForm} layout="vertical">
+          <Form form={secondaryForm} layout="vertical" initialValues={{ bedrooms: 1, bathrooms: 1 }}>
             {renderSecondaryStep(0)}
             {renderSecondaryStep(1)}
             {renderSecondaryStep(2)}

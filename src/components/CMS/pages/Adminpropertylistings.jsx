@@ -67,6 +67,8 @@ export default function AdminPropertyListings() {
       location: p.location || "—",
       type: p.unitType || "—",
       bedrooms: p.bedrooms || "—",
+      bedroomType: p.bedroomType || "",
+      bathrooms: p.bathrooms ?? null,
       price: p.price || 0,
       area: p.area || 0,
       status: (p.approvalStatus || "pending").toLowerCase().trim(),
@@ -160,7 +162,16 @@ export default function AdminPropertyListings() {
       render: (_, r) => (
         <>
           <Tag color="purple">{r.type}</Tag>
-          <div style={{ fontSize: 12 }}>{r.bedrooms} BR</div>
+          <div style={{ fontSize: 12 }}>
+            {r.bedroomType === "studio"
+              ? "Studio"
+              : typeof r.bedrooms === "number"
+                ? `${r.bedrooms} ${r.bedrooms === 1 ? "Bed" : "Beds"}`
+                : "Bedrooms not set"}
+            {r.bathrooms > 0
+              ? ` · ${r.bathrooms} ${r.bathrooms === 1 ? "Bath" : "Baths"}`
+              : ""}
+          </div>
         </>
       ),
     },
