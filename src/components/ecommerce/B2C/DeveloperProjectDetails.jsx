@@ -6,7 +6,7 @@ import {
 import {
   ArrowLeftOutlined, EnvironmentOutlined, CalendarOutlined,
   PlusOutlined, EditOutlined, DeleteOutlined,
-  ReloadOutlined, FilePdfOutlined, PaperClipOutlined,
+  ReloadOutlined, FilePdfOutlined, PaperClipOutlined, FolderOpenOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -284,6 +284,13 @@ export default function DeveloperProjectDetails() {
             style={{ background: THEME.primary, borderColor: THEME.primary }}
           >
             Edit Project
+          </Button>
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={() => navigate(`/dashboard/developer/developer-properties/${id}/documents`)}
+            style={{ borderColor: '#7c3aed', color: '#7c3aed' }}
+          >
+            Documents
           </Button>
           <Button
             icon={<PlusOutlined />}
