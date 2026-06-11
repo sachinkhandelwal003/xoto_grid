@@ -11,6 +11,7 @@ import {
   FilePdfOutlined, VideoCameraOutlined, ExpandOutlined,
   AppstoreOutlined, PictureOutlined, CalendarOutlined,
   SafetyCertificateOutlined, QrcodeOutlined, WalletOutlined,
+  DownloadOutlined // Added for document downloads
 } from '@ant-design/icons';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -126,28 +127,42 @@ const PropertyDetailPage = () => {
   const { id }    = useParams();
   const navigate  = useNavigate();
 
-  const [property,      setProperty]      = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [activeImg,     setActiveImg]     = useState(0);
-  const [lightbox,      setLightbox]      = useState(false);
-  const [rejectOpen,    setRejectOpen]    = useState(false);
-  const [rejectReason,  setRejectReason]  = useState('');
-  const [actionLoading, setActionLoading] = useState('');
+  const [property,       setProperty]      = useState(null);
+  const [documents,      setDocuments]     = useState([]); // Added state for Library Documents
+  const [loading,        setLoading]       = useState(true);
+  const [activeImg,      setActiveImg]     = useState(0);
+  const [lightbox,       setLightbox]      = useState(false);
+  const [rejectOpen,     setRejectOpen]    = useState(false);
+  const [rejectReason,   setRejectReason]  = useState('');
+  const [actionLoading,  setActionLoading] = useState('');
 
   const fetchProperty = async () => {
-    setLoading(true);
     try {
       const res = await apiService.get(`/properties/${id}`);
       const data = res?.data?.data || res?.data || res;
       setProperty(data);
     } catch {
       message.error('Failed to load property');
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchProperty(); }, [id]);
+  // Fetch API for library documents
+  const fetchDocuments = async () => {
+    try {
+      const res = await apiService.get(`/property-documents/${id}`);
+      setDocuments(res?.data?.data || res?.data || []);
+    } catch {
+      console.error('Failed to fetch property documents');
+    }
+  };
+
+  const loadAllData = async () => {
+    setLoading(true);
+    await Promise.all([fetchProperty(), fetchDocuments()]);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadAllData(); }, [id]);
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -213,12 +228,12 @@ const PropertyDetailPage = () => {
 
   const tc = typeColors[subType] || typeColors.off_plan;
 
-  // ── Completion date display ───────────────────────────────────────────────
+// ── Completion date display ───────────────────────────────────────────────
   const completionDisplay = p.completionDate?.quarter
     ? `${p.completionDate.quarter} ${p.completionDate.year}`
     : p.completionDate?.fullDate
       ? new Date(p.completionDate.fullDate).toLocaleDateString('en-AE', { month: 'short', year: 'numeric' })
-      : (p.completionDate || null);
+      : (typeof p.completionDate === 'string' ? p.completionDate : null);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const act = (key, fn) => async () => {
@@ -521,23 +536,23 @@ const PropertyDetailPage = () => {
             {/* Property Details */}
             <SectionCard title="Property Details" icon={<BuildOutlined />}>
               <div className="pdp-stats">
-                {p.bedrooms > 0     && <StatChip icon={<HomeOutlined />}        label="Bedrooms"     value={`${p.bedrooms} Bed`}                              accent={T.primary} />}
-                {p.bathrooms > 0    && <StatChip icon={<UserOutlined />}        label="Bathrooms"    value={`${p.bathrooms} Bath`}                            accent="#0ea5e9"   />}
-                {areaStr            && <StatChip icon={<ColumnWidthOutlined />} label="Built-Up Area" value={areaStr}                                         accent="#16a34a"   />}
+                {p.bedrooms > 0     && <StatChip icon={<HomeOutlined />}        label="Bedrooms"     value={`${p.bedrooms} Bed`}                            accent={T.primary} />}
+                {p.bathrooms > 0    && <StatChip icon={<UserOutlined />}        label="Bathrooms"    value={`${p.bathrooms} Bath`}                          accent="#0ea5e9"   />}
+                {areaStr            && <StatChip icon={<ColumnWidthOutlined />} label="Built-Up Area" value={areaStr}                                       accent="#16a34a"   />}
                 {(p.furnishing || p.furnishingStatus) && (
                   <StatChip icon={<AppstoreOutlined />} label="Furnishing" value={(p.furnishing || p.furnishingStatus).replace('_', ' ')} accent={T.primary} />
                 )}
                 {(p.parkingSpaces > 0 || p.parkingAllocation) && (
                   <StatChip icon={<CarOutlined />} label="Parking" value={p.parkingAllocation || `${p.parkingSpaces} spaces`} accent="#d97706" />
                 )}
-                {p.ownershipType    && <StatChip icon={<SafetyCertificateOutlined />} label="Ownership"  value={p.ownershipType}                             accent="#8b5cf6"   />}
+                {p.ownershipType    && <StatChip icon={<SafetyCertificateOutlined />} label="Ownership"  value={p.ownershipType}                            accent="#8b5cf6"   />}
                 {(p.unitType || (p.unitTypes?.[0])) && (
                   <StatChip icon={<BuildOutlined />} label="Unit Type" value={Array.isArray(p.unitTypes) ? p.unitTypes.join(', ') : p.unitType}             accent="#06b6d4"   />
                 )}
                 {(p.numberOfFloors || p.floors) > 0 && (
                   <StatChip icon={<BuildOutlined />} label="Floors" value={p.numberOfFloors || p.floors}                                                    accent={T.primary} />
                 )}
-                {p.totalUnits > 0   && <StatChip icon={<HomeOutlined />}        label="Total Units"  value={p.totalUnits}                                    accent="#0ea5e9"   />}
+                {p.totalUnits > 0   && <StatChip icon={<HomeOutlined />}        label="Total Units"  value={p.totalUnits}                                   accent="#0ea5e9"   />}
                 {p.developmentStatus && <StatChip icon={<BuildOutlined />}      label="Dev. Status"  value={p.developmentStatus}                            accent="#7c3aed"   />}
                 {p.saleStatus       && <StatChip icon={<CheckCircleFilled />}   label="Sale Status"  value={p.saleStatus}                                   accent={T.success} />}
                 {p.serviceCharge    && <StatChip icon={<WalletOutlined />}      label="Service Charge" value={`${p.serviceCharge} AED/sqft/yr`}             accent="#f59e0b"   />}
@@ -896,23 +911,70 @@ const PropertyDetailPage = () => {
               </SectionCard>
             )}
 
-            {/* Documents */}
-            {(p.brochure || p.projectPlan) && (
+            {/* ── UPDATED Documents SECTION ── */}
+            {(p.brochure || p.projectPlan || documents.length > 0) && (
               <SectionCard title="Documents" icon={<FilePdfOutlined />}>
-                {p.brochure && (
-                  <a href={p.brochure} target="_blank" rel="noreferrer" className="pdp-media-btn"
-                    style={{ background: T.primaryLt, color: T.primary, border: `1px solid #ddd6fe` }}>
-                    <FilePdfOutlined /> Download Brochure
-                  </a>
-                )}
-                {p.projectPlan && (
-                  <a href={p.projectPlan} target="_blank" rel="noreferrer" className="pdp-media-btn"
-                    style={{ background: '#e0f2fe', color: '#0369a1', border: `1px solid #bae6fd` }}>
-                    <FilePdfOutlined /> Download Site Plan
-                  </a>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  
+                  {/* Legacy Documents Fallback */}
+                  {p.brochure && (
+                    <a href={p.brochure} target="_blank" rel="noreferrer" className="pdp-media-btn"
+                      style={{ background: T.primaryLt, color: T.primary, border: `1px solid #ddd6fe`, margin: 0 }}>
+                      <FilePdfOutlined /> Download Brochure (Legacy)
+                    </a>
+                  )}
+                  {p.projectPlan && (
+                    <a href={p.projectPlan} target="_blank" rel="noreferrer" className="pdp-media-btn"
+                      style={{ background: '#e0f2fe', color: '#0369a1', border: `1px solid #bae6fd`, margin: 0 }}>
+                      <FilePdfOutlined /> Download Site Plan (Legacy)
+                    </a>
+                  )}
+
+                  {/* API Library Documents (from Developers) */}
+                  {documents.map((doc) => (
+                    <div 
+                      key={doc._id} 
+                      style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                        padding: '10px 12px', background: T.surface, 
+                        border: `1px solid ${T.border}`, borderRadius: 10 
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {doc.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          <Tag style={{ margin: 0, fontSize: 10, border: 'none', background: '#e2e8f0', color: T.textSoft, fontWeight: 600 }}>
+                            {doc.documentCategory?.replace(/_/g, ' ')}
+                          </Tag>
+                          {doc.isAgentVisible && (
+                            <Tag color="green" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Agent Vis.</Tag>
+                          )}
+                          {doc.isPublic && (
+                            <Tag color="blue" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Public</Tag>
+                          )}
+                        </div>
+                      </div>
+                      <a 
+                        href={doc.fileUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          width: 32, height: 32, background: '#fff', border: `1px solid ${T.border}`, 
+                          borderRadius: 8, color: T.primary, flexShrink: 0, textDecoration: 'none' 
+                        }}
+                      >
+                        <DownloadOutlined />
+                      </a>
+                    </div>
+                  ))}
+
+                </div>
               </SectionCard>
             )}
+
           </div>
         </div>
       </div>

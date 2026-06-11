@@ -205,16 +205,28 @@ const CreateProperty = () => {
   const [rentalForm]    = Form.useForm();
   const [rentalLoading, setRentalLoading] = useState(false);
   const [rentalEmirate, setRentalEmirate] = useState("");
-  const [rentalImages,  setRentalImages]  = useState([]);
   const [rentalQrFile,  setRentalQrFile]  = useState([]);
   const [rentalPermitOnly, setRentalPermitOnly] = useState(false);
+  
+  const [rentalMainLogoFileList, setRentalMainLogoFileList] = useState([]);
+  const [rentalPhotosArchitecture, setRentalPhotosArchitecture] = useState([]);
+  const [rentalPhotosInterior, setRentalPhotosInterior] = useState([]);
+  const [rentalPhotosLobby, setRentalPhotosLobby] = useState([]);
+  const [rentalPhotosOther, setRentalPhotosOther] = useState([]);
+  const [rentalBrochureFileList, setRentalBrochureFileList] = useState([]);
 
   /* ── Secondary ── */
   const [secondaryForm]    = Form.useForm();
   const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [secondaryEmirate, setSecondaryEmirate] = useState("");
-  const [secondaryImages,  setSecondaryImages]  = useState([]);
   const [secondaryQrFile,  setSecondaryQrFile]  = useState([]);
+  
+  const [secMainLogoFileList, setSecMainLogoFileList] = useState([]);
+  const [secPhotosArchitecture, setSecPhotosArchitecture] = useState([]);
+  const [secPhotosInterior, setSecPhotosInterior] = useState([]);
+  const [secPhotosLobby, setSecPhotosLobby] = useState([]);
+  const [secPhotosOther, setSecPhotosOther] = useState([]);
+  const [secBrochureFileList, setSecBrochureFileList] = useState([]);
 
   /* ── Off-Plan ── */
   const [offplanForm]              = Form.useForm();
@@ -236,6 +248,8 @@ const CreateProperty = () => {
   const [previewOpen,  setPreviewOpen]  = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
+
+  const formatFiles = (urls) => (urls || []).map((url, i) => ({ uid: Math.random().toString(), name: `img-${i}`, status: "done", url, response: { url } }));
 
   /* ── Edit mode load ── */
   useEffect(() => {
@@ -270,9 +284,15 @@ const CreateProperty = () => {
         floorNumber: data.floorNumber || 0, isFeatured: data.isFeatured || false,
         showContactOnlyVerified: data.showContactOnlyVerified ?? true,
       });
+      
       const photos = data.photos || {};
-      const allImages = [...(photos.architecture||[]),...(photos.interior||[]),...(photos.lobby||[]),...(photos.other||[]),...(data.mainLogo?[data.mainLogo]:[])];
-      if (allImages.length) setRentalImages(allImages.map((url, i) => ({ uid: `-img-${i}`, name: `image-${i+1}`, status: "done", url })));
+      if (data.mainLogo) setRentalMainLogoFileList(formatFiles([data.mainLogo]));
+      setRentalPhotosArchitecture(formatFiles(photos.architecture));
+      setRentalPhotosInterior(formatFiles(photos.interior));
+      setRentalPhotosLobby(formatFiles(photos.lobby));
+      setRentalPhotosOther(formatFiles(photos.other));
+      if (data.brochure) setRentalBrochureFileList(formatFiles([data.brochure]));
+
     } catch { message.error("Failed to load property for editing."); }
     finally { setRentalLoading(false); }
   };
@@ -341,21 +361,33 @@ const CreateProperty = () => {
   const isAnyOffplanUploading = () =>
     [mainLogoFileList, photosArchitecture, photosInterior, photosLobby, photosOther, brochureFileList]
       .some(l => l.some(f => f.status === "uploading"));
+      
+  const isAnyRentalUploading = () =>
+    [rentalMainLogoFileList, rentalPhotosArchitecture, rentalPhotosInterior, rentalPhotosLobby, rentalPhotosOther, rentalBrochureFileList]
+      .some(l => l.some(f => f.status === "uploading"));
+      
+  const isAnySecUploading = () =>
+    [secMainLogoFileList, secPhotosArchitecture, secPhotosInterior, secPhotosLobby, secPhotosOther, secBrochureFileList]
+      .some(l => l.some(f => f.status === "uploading"));
 
 
 
-  /* ── Rental submit ── */
-  /* ── Rental submit ── */
 /* ── Rental submit ── */
 const handleSaveRental = async () => {
-  if (rentalImages.length === 0) { message.error("Please upload at least one image."); return; }
+  if (isAnyRentalUploading()) return showToast("Please wait for uploads to finish.", "error");
+  
+  const mainLogoUrls = collectUrls(rentalMainLogoFileList);
+  if (mainLogoUrls.length === 0) return showToast("Please upload a main logo image.", "error");
+
   let values;
   try { values = await rentalForm.validateFields(); } catch { return; }
   const rentalQrUrl = rentalQrFile.map(extractUrl).filter(Boolean)[0] || null;
   const permitAvailable = Boolean(values.permitAvailable);
   setRentalLoading(true);
   try {
-    const imageUrls = rentalImages.map(extractUrl).filter(Boolean);
+    const brochureUrl = rentalBrochureFileList.length > 0 && rentalBrochureFileList[0].status === "done" 
+      ? rentalBrochureFileList[0]?.url || extractPhotoUrl(rentalBrochureFileList[0]) || "" : "";
+
     const payload = {
       propertySubType: "rental", 
       propertyName: values.propertyName,
@@ -404,14 +436,21 @@ const handleSaveRental = async () => {
       dldRegistrationNumber: values.dldRegistrationNumber || null,
       trakheesiPermitId: permitAvailable ? null : (values.trakheesiPermitId || null),
       qrCode: permitAvailable ? null : rentalQrUrl,
-      mainLogo: imageUrls[0] || "",
-      photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
+      mainLogo: mainLogoUrls[0] || "",
+      brochure: brochureUrl,
+      photos: { 
+        architecture: collectUrls(rentalPhotosArchitecture), 
+        interior: collectUrls(rentalPhotosInterior), 
+        lobby: collectUrls(rentalPhotosLobby), 
+        other: collectUrls(rentalPhotosOther) 
+      },
       isFeatured: values.isFeatured || false,
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
     };
+    
     const response = isEditMode
       ? await apiService.put(`/properties/${id}`, payload)
       : await apiService.post("/properties", payload);
@@ -429,16 +468,21 @@ const handleSaveRental = async () => {
   } finally { setRentalLoading(false); }
 };
 
-  /* ── Secondary submit ── */
- /* ── Secondary submit ── */
+/* ── Secondary submit ── */
 const handleSubmitSecondary = async () => {
-  if (secondaryImages.length === 0) { message.error("Please upload at least one image."); return; }
+  if (isAnySecUploading()) return showToast("Please wait for uploads to finish.", "error");
+
+  const mainLogoUrls = collectUrls(secMainLogoFileList);
+  if (mainLogoUrls.length === 0) return showToast("Please upload a main logo image.", "error");
+
   let values;
   try { values = await secondaryForm.validateFields(); } catch { return; }
   const secondaryQrUrl = secondaryQrFile.map(extractUrl).filter(Boolean)[0] || null;
   setSecondaryLoading(true);
   try {
-    const imageUrls = secondaryImages.map(extractUrl).filter(Boolean);
+    const brochureUrl = secBrochureFileList.length > 0 && secBrochureFileList[0].status === "done" 
+      ? secBrochureFileList[0]?.url || extractPhotoUrl(secBrochureFileList[0]) || "" : "";
+
     const payload = {
       propertySubType: "secondary", 
       propertyName: values.propertyName, 
@@ -495,8 +539,14 @@ const handleSubmitSecondary = async () => {
         price:       Number(u.price || 0),
         status:      u.status || "available",
       })),
-      mainLogo: imageUrls[0] || "",
-      photos: { architecture: [], interior: [], lobby: [], other: imageUrls },
+      mainLogo: mainLogoUrls[0] || "",
+      brochure: brochureUrl,
+      photos: { 
+        architecture: collectUrls(secPhotosArchitecture), 
+        interior: collectUrls(secPhotosInterior), 
+        lobby: collectUrls(secPhotosLobby), 
+        other: collectUrls(secPhotosOther) 
+      },
       approvalStatus: "approved",
       listingStatus: "active",
       status: "approved"
@@ -508,14 +558,19 @@ const handleSubmitSecondary = async () => {
       placement: "topRight" 
     });
     secondaryForm.resetFields();
-    setSecondaryImages([]);
+    
+    setSecMainLogoFileList([]);
+    setSecPhotosArchitecture([]);
+    setSecPhotosInterior([]);
+    setSecPhotosLobby([]);
+    setSecPhotosOther([]);
+    setSecBrochureFileList([]);
   } catch (err) {
     message.error(err?.response?.data?.message || err?.message || "Failed to save property.");
   } finally { setSecondaryLoading(false); }
 };
 
-  /* ── Off-Plan submit ── */
- /* ── Off-Plan submit ── */
+/* ── Off-Plan submit ── */
 const handleSaveOffplan = async () => {
   if (!selectedDeveloperId) return showToast("Please select a developer first", "error");
   const values = offplanForm.getFieldsValue(true);
@@ -936,14 +991,20 @@ const handleSaveOffplan = async () => {
 
       case 4: return (
         <>
-          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Property Images</Divider>
-          <Alert type="info" showIcon message="At least 1 image is required." style={{ marginBottom: 16, borderRadius: 8 }} />
-          <Upload
-            listType="picture-card" multiple
-            fileList={rentalImages} onChange={({ fileList }) => setRentalImages(fileList)}
-            customRequest={handleImageUpload} onPreview={handlePreview}>
-            {rentalImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
-          </Upload>
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Media & Photos</Divider>
+          <Alert type="info" showIcon message="Upload high-quality images. Main Logo is required. Max 5 MB each." style={{ marginBottom: 20, borderRadius: 8 }} />
+          
+          <UploadBox label="Main Logo / Cover Image *" hint="Primary image shown on listings" fileList={rentalMainLogoFileList} onChange={setRentalMainLogoFileList} maxCount={1} />
+          <UploadBox label="Architecture Photos" hint="Exterior, renders, facade" fileList={rentalPhotosArchitecture} onChange={setRentalPhotosArchitecture} />
+          <UploadBox label="Interior Photos" hint="Living areas, kitchens, bedrooms" fileList={rentalPhotosInterior} onChange={setRentalPhotosInterior} />
+          <UploadBox label="Lobby / Common Area Photos" fileList={rentalPhotosLobby} onChange={setRentalPhotosLobby} />
+          <UploadBox label="Other Photos" fileList={rentalPhotosOther} onChange={setRentalPhotosOther} />
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Brochure (PDF)</div>
+            <Upload fileList={rentalBrochureFileList} onChange={({ fileList: fl }) => setRentalBrochureFileList(fl)} customRequest={customUploadRequest} accept=".pdf" maxCount={1}>
+              <Button icon={<PlusOutlined />}>Upload Brochure</Button>
+            </Upload>
+          </div>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
@@ -954,7 +1015,7 @@ const handleSaveOffplan = async () => {
               { label: "Frequency",     value: rentalForm.getFieldValue("rentalFrequency") || "—" },
               { label: "Area",          value: rentalForm.getFieldValue("area") || "—" },
               { label: "City",          value: rentalForm.getFieldValue("city") || "—" },
-              { label: "Images",        value: `${rentalImages.length} uploaded` },
+              { label: "Images",        value: `${rentalMainLogoFileList.length + rentalPhotosArchitecture.length + rentalPhotosInterior.length + rentalPhotosLobby.length + rentalPhotosOther.length} uploaded` },
             ].map(({ label, value }) => (
               <div key={label} style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, border: "1px solid #e5e7eb", minWidth: 160 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
@@ -1229,14 +1290,20 @@ const handleSaveOffplan = async () => {
 
       case 4: return (
         <>
-          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Property Images</Divider>
-          <Alert type="info" showIcon message="At least 1 image is required." style={{ marginBottom: 16, borderRadius: 8 }} />
-          <Upload
-            listType="picture-card" multiple
-            fileList={secondaryImages} onChange={({ fileList }) => setSecondaryImages(fileList)}
-            customRequest={handleImageUpload} onPreview={handlePreview}>
-            {secondaryImages.length >= 20 ? null : <div><PlusOutlined /><div style={{ marginTop: 8 }}>Upload</div></div>}
-          </Upload>
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}>Media & Photos</Divider>
+          <Alert type="info" showIcon message="Upload high-quality images. Main Logo is required. Max 5 MB each." style={{ marginBottom: 20, borderRadius: 8 }} />
+          
+          <UploadBox label="Main Logo / Cover Image *" hint="Primary image shown on listings" fileList={secMainLogoFileList} onChange={setSecMainLogoFileList} maxCount={1} />
+          <UploadBox label="Architecture Photos" hint="Exterior, renders, facade" fileList={secPhotosArchitecture} onChange={setSecPhotosArchitecture} />
+          <UploadBox label="Interior Photos" hint="Living areas, kitchens, bedrooms" fileList={secPhotosInterior} onChange={setSecPhotosInterior} />
+          <UploadBox label="Lobby / Common Area Photos" fileList={secPhotosLobby} onChange={setSecPhotosLobby} />
+          <UploadBox label="Other Photos" fileList={secPhotosOther} onChange={setSecPhotosOther} />
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Brochure (PDF)</div>
+            <Upload fileList={secBrochureFileList} onChange={({ fileList: fl }) => setSecBrochureFileList(fl)} customRequest={customUploadRequest} accept=".pdf" maxCount={1}>
+              <Button icon={<PlusOutlined />}>Upload Brochure</Button>
+            </Upload>
+          </div>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
@@ -1247,7 +1314,7 @@ const handleSaveOffplan = async () => {
               { label: "Transaction",    value: secondaryForm.getFieldValue("transactionType")    || "—" },
               { label: "Area",           value: secondaryForm.getFieldValue("area")               || "—" },
               { label: "City",           value: secondaryForm.getFieldValue("city")               || "—" },
-              { label: "Images",         value: `${secondaryImages.length} uploaded` },
+              { label: "Images",         value: `${secMainLogoFileList.length + secPhotosArchitecture.length + secPhotosInterior.length + secPhotosLobby.length + secPhotosOther.length} uploaded` },
             ].map(({ label, value }) => (
               <div key={label} style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, border: "1px solid #e5e7eb", minWidth: 160 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
