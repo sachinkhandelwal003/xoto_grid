@@ -113,7 +113,7 @@ const InfoRow = ({ icon, label, value }) => (
       <div style={{ fontSize: 13, color: T.text, fontWeight: 500, wordBreak: "break-word" }}>
         {value || <span style={{ color: T.textMuted, fontStyle: "italic" }}>Not provided</span>}
       </div>
-    </div>
+    </div> 
   </div>
 );
 
