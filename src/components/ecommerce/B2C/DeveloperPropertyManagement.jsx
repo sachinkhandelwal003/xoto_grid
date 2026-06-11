@@ -213,38 +213,50 @@ const PropertyCard = ({
           )}
         </div>
 
-        {/* Stats row */}
-        {(bedrooms > 0 || bathrooms > 0 || areaStr) && (
-          <div style={{ display: 'flex', gap: 10, fontSize: 12, color: C.muted, flexWrap: 'wrap', alignItems: 'center' }}>
-            {bedrooms > 0 && (
-              <span style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                background: '#f5f3ff', borderRadius: 6,
-                padding: '3px 8px', fontWeight: 600, color: '#5b21b6',
-              }}>
-                {bedrooms} Bed
-              </span>
-            )}
-            {bathrooms > 0 && (
-              <span style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                background: '#f0f9ff', borderRadius: 6,
-                padding: '3px 8px', fontWeight: 600, color: '#0369a1',
-              }}>
-                {bathrooms} Bath
-              </span>
-            )}
-            {areaStr && (
-              <span style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                background: '#f0fdf4', borderRadius: 6,
-                padding: '3px 8px', fontWeight: 600, color: '#166534',
-              }}>
-                {areaStr}
-              </span>
-            )}
-          </div>
-        )}
+{/* Stats row */}
+{(bedrooms !== undefined && bedrooms !== null || bathrooms > 0 || areaStr) && (
+  <div style={{ display: 'flex', gap: 10, fontSize: 12, color: C.muted, flexWrap: 'wrap', alignItems: 'center' }}>
+    {(bedrooms !== undefined && bedrooms !== null) && (
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        background: '#f5f3ff', borderRadius: 6,
+        padding: '3px 8px', fontWeight: 600, color: '#5b21b6',
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        {Number(bedrooms) === 0 ? 'Studio' : `${bedrooms} Bed`}
+      </span>
+    )}
+    {bathrooms > 0 && (
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        background: '#f0f9ff', borderRadius: 6,
+        padding: '3px 8px', fontWeight: 600, color: '#0369a1',
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M4 12h16a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3a1 1 0 0 1 1-1z"/>
+          <path d="M6 12V5a2 2 0 0 1 2-2h3v2.25"/>
+        </svg>
+        {bathrooms} Bath
+      </span>
+    )}
+    {areaStr && (
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        background: '#f0fdf4', borderRadius: 6,
+        padding: '3px 8px', fontWeight: 600, color: '#166534',
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M21 3H3v18h18V3z"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        {areaStr}
+      </span>
+    )}
+  </div>
+)}
 
         {/* Price */}
         <div style={{ fontSize: 15, fontWeight: 800, color: C.primary, marginTop: 'auto' }}>

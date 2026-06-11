@@ -153,9 +153,13 @@ function PropertyCard({ p, onClick }) {
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", color: "#9ca3af" }}>{devName}</span>
         </div>
 
-        {(p.bedrooms > 0 || p.bathrooms > 0 || p.builtUpArea || p.builtUpArea_min) && (
+        {(p.bedroomType === "studio" || p.bedrooms > 0 || p.bathrooms > 0 || p.builtUpArea || p.builtUpArea_min) && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-            {p.bedrooms > 0 && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{p.bedrooms} {p.bedrooms === 1 ? "Bed" : "Beds"}</span>}
+            {(p.bedroomType === "studio" || p.bedrooms > 0) && (
+              <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>
+                {p.bedroomType === "studio" ? "Studio" : `${p.bedrooms} ${p.bedrooms === 1 ? "Bed" : "Beds"}`}
+              </span>
+            )}
             {p.bathrooms > 0 && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{p.bathrooms} {p.bathrooms === 1 ? "Bath" : "Baths"}</span>}
             {(p.builtUpArea || p.builtUpArea_min) && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{(p.builtUpArea || p.builtUpArea_min).toLocaleString()} sqft</span>}
           </div>

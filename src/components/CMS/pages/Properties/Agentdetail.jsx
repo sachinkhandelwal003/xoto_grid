@@ -201,7 +201,10 @@ const DocCard = ({ title, url }) => {
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const AgentDetail = () => {
-  const { agentId } = useParams();
+  // id aur agentId dono ko nikal kar check karenge
+  const params = useParams();
+  const activeId = params.agentId || params.id; 
+  
   const navigate    = useNavigate();
 
   const [agent, setAgent]               = useState(null);
@@ -214,7 +217,8 @@ const AgentDetail = () => {
   const fetchAgent = async () => {
     setLoading(true);
     try {
-      const res = await apiService.get(`/agency/admin/agents/${agentId}`);
+      // Yahan agentId ki jagah activeId pass karein
+      const res = await apiService.get(`/agency/admin/agents/${activeId}`);
       setAgent(res?.data?.data || res?.data || res);
     } catch {
       message.error("Failed to load agent details");
@@ -223,7 +227,10 @@ const AgentDetail = () => {
     }
   };
 
-  useEffect(() => { if (agentId) fetchAgent(); }, [agentId]);
+  // Yahan bhi activeId use karein
+  useEffect(() => { 
+    if (activeId) fetchAgent(); 
+  }, [activeId]);
 
   const handleApprove = async () => {
     if (agent?.agencyApprovalStatus !== "approved") {
