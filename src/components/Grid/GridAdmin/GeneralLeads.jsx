@@ -1018,7 +1018,7 @@ const navigate = useNavigate();
          <Button
   type="primary"
   icon={<PlusOutlined />}
-  onClick={() => navigate('/dashboard/admin/grid/addgenerallead')}
+  onClick={() => navigate('/dashboard/admin/add-generalleads')}
   style={{ background: PRIMARY, borderColor: PRIMARY }}
 >
   Add Lead

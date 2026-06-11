@@ -32,68 +32,77 @@ const MORTGAGE_CALCULATOR_LINK = {
 
 const GRID_NAV: Record<string, MenuItem[]> = {
   // ── Grid Admin (1) ──────────────────────────────────────────────────────────
-  '1': [
-    {
-      title: 'Listings', icon: 'fas fa-building',
-      submenus: [
-        { title: 'All Listings',      to: '/dashboard/admin/property-management' },
-        { title: 'Approval Queue',    to: '/dashboard/admin/listings/approval-queue' },
-        { title: 'Edit Review Queue', to: '/dashboard/admin/listings/edit-review-queue' },
-        { title: 'Create Properties', to: '/dashboard/admin/rental/properties' },
-      ],
-    },
-    {
-      title: 'Lead Management', icon: 'fas fa-filter',
-      submenus: [
-        { title: 'All Leads',      to: '/dashboard/admin/grid/AllgridLeads' },
-        { title: 'Platform Leads', to: '/dashboard/admin/GridAdmin/propertyleads' },
-        { title: 'Agent Leads',    to: '/dashboard/admin/grid/agentleads' },
-        { title: 'General Leads',  to: '/dashboard/admin/grid/generalleads' },
-        { title: 'Referral Leads', to: '/dashboard/admin/grid/referralleads' },
-      ],
-    },
-    {
-      title: 'Partners', icon: 'fas fa-network-wired',
-      submenus: [
-        { title: 'Create Partner', to: '/dashboard/admin/onboarding/agency' },
-        { title: 'Partner List',   to: '/dashboard/admin/agency-list' },
-      ],
-    },
-    {
-      title: 'Developers', icon: 'fas fa-user-tie',
-      submenus: [
-        { title: 'Developer List',   to: '/dashboard/admin/developer-list' },
-        { title: 'Create Developer', to: '/dashboard/admin/onboarding/developer' },
-      ],
-    },
-    {
-      title: 'Agents', icon: 'fas fa-user-friends',
-      submenus: [
-        { title: 'Agent List', to: '/dashboard/admin/agent-list' },
-      ],
-    },
-    {
-      title: 'Xoto Advisors', icon: 'fas fa-user-shield',
-      submenus: [
-        { title: 'Advisor List',   to: '/dashboard/admin/advisors' },
-        { title: 'Create Advisor', to: '/dashboard/admin/advisor/create' },
-      ],
-    },
-    {
-      title: 'Referral Partners', icon: 'fas fa-handshake',
-      submenus: [
-        { title: 'All Referral Partners', to: '/dashboard/admin/referral-partners' },
-        { title: 'Leaderboard',           to: '/dashboard/admin/referral-leaderboard' },
-      ],
-    },
-    {
-      title: 'Commission', icon: 'fas fa-file-invoice-dollar',
-      submenus: [
-        { title: 'Deal Records', to: '/dashboard/admin/deal-records' },
-        { title: 'Agreements',   to: '/dashboard/admin/admin/agreements' },
-      ],
-    },
-  ],
+ '1': [
+
+  {
+    title: 'Lead Management', icon: 'fas fa-filter',
+    submenus: [
+      { title: 'Leads Queue',    to: '/dashboard/admin/GridAdmin/propertyleads' },
+      { title: 'All Leads',      to: '/dashboard/admin/grid/AllgridLeads' },
+      { title: 'Agent Leads',    to: '/dashboard/admin/grid/agentleads' },
+      { title: 'Create Lead',  to: '/dashboard/admin/grid/generalleads' },
+      { title: 'Referral Leads', to: '/dashboard/admin/grid/referralleads' },
+    ],
+  },
+  {
+    title: 'Listing Management', icon: 'fas fa-building',
+    submenus: [
+      { title: 'All Listings',        to: '/dashboard/admin/property-management' },
+      { title: 'Create Listing',      to: '/dashboard/admin/rental/properties' },
+      { title: 'Approval Queue',      to: '/dashboard/admin/listings/approval-queue' },
+      { title: 'Edit Review Queue',   to: '/dashboard/admin/listings/edit-review-queue' },
+    ],
+  },
+  {
+    title: 'Customer Management', icon: 'fas fa-users',
+    submenus: [
+      { title: 'All Users',           to: '/dashboard/admin/grid/allusers' },
+      { title: 'Partners',            to: '/dashboard/admin/agency-list' },
+      { title: 'Create Partner',      to: '/dashboard/admin/onboarding/agency' },
+      { title: 'Developers',          to: '/dashboard/admin/developer-list' },
+      { title: 'Create Developer',    to: '/dashboard/admin/onboarding/developer' },
+      { title: 'Agents',              to: '/dashboard/admin/agent-list' },
+      { title: 'Xoto Advisors',       to: '/dashboard/admin/advisors' },
+      { title: 'Create Advisor',      to: '/dashboard/admin/advisor/create' },
+      { title: 'Referral Partners',   to: '/dashboard/admin/referral-partners' },
+    ],
+  },
+  {
+    title: 'Commissions', icon: 'fas fa-file-invoice-dollar',
+    submenus: [
+      { title: 'Deal Records',    to: '/dashboard/admin/deal-records' },
+      { title: 'Agreements',      to: '/dashboard/admin/admin/agreements' },
+      { title: 'Leaderboard',     to: '/dashboard/admin/referral-leaderboard' },
+    ],
+  },
+  {
+    title: 'Audit Logs', icon: 'fas fa-clipboard-list',
+    submenus: [
+      { title: 'All Logs', to: '/dashboard/admin/audit-logs' },
+    ],
+  },
+  {
+    title: 'Analytics & Reporting', icon: 'fas fa-chart-line',
+    submenus: [
+      { title: 'Overview',          to: '/dashboard/admin/overview' },
+      { title: 'Lead Reports',      to: '/dashboard/admin/leadreports' },
+      { title: 'Listing Reports',   to: '/dashboard/admin/listingreports' },
+    ],
+  },
+  {
+    title: 'Notifications', icon: 'fas fa-bell',
+    submenus: [
+      { title: 'All Notifications', to: '/dashboard/admin/notifications' },
+    ],
+  },
+  {
+    title: 'Platform Configuration', icon: 'fas fa-sliders',
+    submenus: [
+      { title: 'Settings',          to: '/dashboard/admin/settings' },
+      { title: 'Roles & Permissions', to: '/dashboard/admin/roles' },
+    ],
+  },
+],
 
   // ── Grid Partner/Agency (15) ───────────────────────────────────────────────
   '15': [
