@@ -38,6 +38,18 @@ const AMENITIES_LIST = [
   "Jogging Track", "Cycling Track", "Pet-Friendly Area",
 ];
 
+const BEDROOM_OPTIONS = [
+  { label: "Studio", value: 0 },
+  { label: "1 Bed", value: 1 },
+  { label: "2 Beds", value: 2 },
+  { label: "3 Beds", value: 3 },
+  { label: "4 Beds", value: 4 },
+  { label: "5 Beds", value: 5 },
+  { label: "6 Beds", value: 6 },
+  { label: "7 Beds", value: 7 },
+  { label: "8+ Beds", value: 8 },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const extractFileUrl = (fileItem) => {
@@ -58,6 +70,13 @@ const collectUrls = (fileList) =>
     .filter((f) => f.status === "done")
     .map((f) => f.url || extractFileUrl(f))
     .filter(Boolean);
+
+const getBedroomType = (bedrooms) => {
+  const count = Number(bedrooms || 0);
+  if (count === 0) return "studio";
+  if (count >= 8) return "8plus";
+  return `${count}bed`;
+};
 
 const customUploadRequest = async ({ file, onSuccess, onError }) => {
   try {
@@ -208,6 +227,9 @@ export default function DeveloperAddProperty() {
       unitTypes: Array.isArray(values.unitTypes)
         ? values.unitTypes
         : (values.unitTypes ? [values.unitTypes] : []),
+      bedroomType: getBedroomType(values.bedrooms),
+      bedrooms:  Number(values.bedrooms || 0),
+      bathrooms: Number(values.bathrooms || 0),
 
       overview:    values.overview?.trim(),
       description: values.overview?.trim(),
@@ -353,6 +375,8 @@ export default function DeveloperAddProperty() {
         scrollToFirstError={{ behavior: "smooth", block: "center" }}
         initialValues={{
           propertyType:         "Residential",
+          bedrooms:             1,
+          bathrooms:            1,
           furnishing:           "unfurnished",
           projectStatus:        "presale",
           developmentStatus:    "Planned",
@@ -430,6 +454,27 @@ export default function DeveloperAddProperty() {
                   <Option value="retail">Retail</Option>
                   <Option value="warehouse">Warehouse</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={12} md={8}>
+              <Form.Item
+                name="bedrooms"
+                label="Bedrooms"
+                rules={[{ required: true, message: "Enter the number of bedrooms" }]}
+              >
+                <Select placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={8}>
+              <Form.Item
+                name="bathrooms"
+                label="Bathrooms"
+                rules={[{ required: true, message: "Enter the number of bathrooms" }]}
+              >
+                <InputNumber min={0} max={50} style={{ width: "100%" }} placeholder="e.g., 2" />
               </Form.Item>
             </Col>
           </Row>

@@ -208,11 +208,11 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
         <Text style={{ textTransform: "capitalize" }}>{record.location}</Text>
       ),
     },
-    {
-      title: "Agency Approval",
-      key: "agencyApprovalStatus",
-      render: (_, record) => statusTag(record.agencyApprovalStatus),
-    },
+    // {
+    //   title: "Agency Approval",
+    //   key: "agencyApprovalStatus",
+    //   render: (_, record) => statusTag(record.agencyApprovalStatus),
+    // },
     {
       title: "Admin Status",
       key: "adminApprovalStatus",
