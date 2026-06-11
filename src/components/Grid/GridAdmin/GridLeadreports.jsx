@@ -12,7 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, LineChart, Line, FunnelChart, Funnel, LabelList
 } from "recharts";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
-import CustomTable from "../../../components/common/CustomTable";
+import CustomTable from "../../common/CustomTable";
 import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;

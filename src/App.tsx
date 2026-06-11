@@ -56,10 +56,7 @@ const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin/Agreement
 const GridOverview = lazy(() => import('./components/Grid/GridAdmin/GridOverview'));
 const GridLeadReports = lazy(() => import('./components/Grid/GridAdmin/GridLeadreports'));
 const GridListingReports = lazy(() => import('./components/Grid/GridAdmin/GridListingreports'));
-const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecordspage'));
-const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecorddetailpage'));
-const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin.jsx/Agreement'));
-const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin.jsx/PropertyDocumentLibrary'));
+const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin/PropertyDocumentLibrary'));
 
 // Role 15 - Agency
 const AgencyDashboard = lazy(() => import('./components/ecommerce/B2C/AgencyDashboard'));
