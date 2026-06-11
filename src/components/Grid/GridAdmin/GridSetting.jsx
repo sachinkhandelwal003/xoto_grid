@@ -523,8 +523,7 @@ const GridSetting = () => {
             </Card>
           </Tabs.TabPane>
         </Tabs>
-
-        {/* Modal for adding records */}
+        
         <Modal
           title={modalType === "addAgent" ? "Add New Agent" : "Record New Deal"}
           open={modalVisible}
