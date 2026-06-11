@@ -56,6 +56,10 @@ const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin/Agreement
 const GridOverview = lazy(() => import('./components/Grid/GridAdmin/GridOverview'));
 const GridLeadReports = lazy(() => import('./components/Grid/GridAdmin/GridLeadreports'));
 const GridListingReports = lazy(() => import('./components/Grid/GridAdmin/GridListingreports'));
+const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecordspage'));
+const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecorddetailpage'));
+const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin.jsx/Agreement'));
+const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin.jsx/PropertyDocumentLibrary'));
 
 // Role 15 - Agency
 const AgencyDashboard = lazy(() => import('./components/ecommerce/B2C/AgencyDashboard'));
@@ -103,6 +107,7 @@ const DeveloperAnalytics = lazy(() => import('./components/ecommerce/B2C/Develop
 const DeveloperCommissionScheme = lazy(() => import('./components/ecommerce/B2C/DeveloperCommisionScheme'));
 const DeveloperAddProperty = lazy(() => import('./components/ecommerce/B2C/DeveloperAddProperty'));
 const DeveloperEditProperty = lazy(() => import('./components/ecommerce/B2C/DeveloperEditProperty'));
+const DeveloperDocumentLibrary = lazy(() => import('./components/ecommerce/B2C/DeveloperDocumentLibrary'));
 const Agreementdeveloper = lazy(() => import('./components/Grid/DeveloperGrid/Agreementdeveloper'));
 
 // Role 24 - Grid Advisor
@@ -219,6 +224,7 @@ const App: React.FC = () => (
         <Route path="overview" element={<GridOverview />} />
         <Route path="leadreports" element={<GridLeadReports />} />
         <Route path="listingreports" element={<GridListingReports />} />
+        <Route path="properties/:id/documents" element={<PropertyDocumentLibrary />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="*" element={<Navigate to="/dashboard/admin" replace />} />
       </Route>
@@ -292,6 +298,7 @@ const App: React.FC = () => (
         <Route path="analytics" element={<DeveloperAnalytics />} />
         <Route path="commission-scheme" element={<DeveloperCommissionScheme />} />
         <Route path="developer-agreement" element={<Agreementdeveloper />} />
+        <Route path="developer-properties/:id/documents" element={<DeveloperDocumentLibrary />} />
         <Route path="profile" element={<DeveloperProfile />} />
         <Route path="*" element={<Navigate to="/dashboard/developer" replace />} />
       </Route>

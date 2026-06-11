@@ -34,6 +34,7 @@ import {
   QrcodeOutlined,
   UploadOutlined,
   ExclamationCircleOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -353,6 +354,13 @@ export default function AdminPropertyDetail() {
                 </Button>
               </Tooltip>
             )}
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={() => navigate(`/dashboard/admin/properties/${property._id}/documents`)}
+            style={{ borderColor: '#7c3aed', color: '#7c3aed', borderRadius: 8 }}
+          >
+            Documents
+          </Button>
           </Space>
         </Col>
       </Row>

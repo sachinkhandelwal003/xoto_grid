@@ -356,12 +356,12 @@ export default function DeveloperProjects() {
                   <div style={S.statsRow}>
                     <div style={S.statItem}>
                       <EyeOutlined style={{ fontSize: 12, color: "#94a3b8" }} />
-                      <span style={S.statTxt}>{item.viewCount.toLocaleString()} views</span>
+                      <span style={S.statTxt}>{(item.viewCount ?? 0).toLocaleString()} views</span>
                     </div>
-                    <div style={{ ...S.statItem, ...(item.interestCount > 0 ? S.statItemHot : {}) }}>
-                      <HeartFilled style={{ fontSize: 12, color: item.interestCount > 0 ? "#e11d48" : "#94a3b8" }} />
-                      <span style={{ ...S.statTxt, ...(item.interestCount > 0 ? { color: "#e11d48", fontWeight: 700 } : {}) }}>
-                        {item.interestCount.toLocaleString()} {item.interestCount === 1 ? "interest" : "interests"}
+                    <div style={{ ...S.statItem, ...((item.interestCount ?? 0) > 0 ? S.statItemHot : {}) }}>
+                      <HeartFilled style={{ fontSize: 12, color: (item.interestCount ?? 0) > 0 ? "#e11d48" : "#94a3b8" }} />
+                      <span style={{ ...S.statTxt, ...((item.interestCount ?? 0) > 0 ? { color: "#e11d48", fontWeight: 700 } : {}) }}>
+                        {(item.interestCount ?? 0).toLocaleString()} {item.interestCount === 1 ? "interest" : "interests"}
                       </span>
                     </div>
                   </div>
