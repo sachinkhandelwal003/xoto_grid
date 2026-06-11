@@ -25,32 +25,39 @@ const Propertydetailpage = lazy(() => import('./components/CMS/pages/Propertydet
 const Adminpropertylistings = lazy(() => import('./components/CMS/pages/Adminpropertylistings'));
 const Adminoffplancreate = lazy(() => import('./components/CMS/pages/Adminoffplancreate'));
 const PropertyDetailPage = Propertydetailpage;
-const AllgridLeads = lazy(() => import('./components/Grid/GridAdmin.jsx/AllgridLeads'));
-const PlatformLeads = lazy(() => import('./components/Grid/GridAdmin.jsx/PlatformLeads'));
-const AgentLeads = lazy(() => import('./components/Grid/GridAdmin.jsx/AgentLeads'));
-const GeneralLeads = lazy(() => import('./components/Grid/GridAdmin.jsx/GeneralLeads'));
-const ReferralLeads = lazy(() => import('./components/Grid/GridAdmin.jsx/ReferralLeads'));
-const GridAgentLeadDetailadmin = lazy(() => import('./components/Grid/GridAdmin.jsx/GridAgentLeadDetailadmin'));
+const AllgridLeads = lazy(() => import('./components/Grid/GridAdmin/AllgridLeads'));
+const PlatformLeads = lazy(() => import('./components/Grid/GridAdmin/PlatformLeads'));
+const AgentLeads = lazy(() => import('./components/Grid/GridAdmin/AgentLeads'));
+const GeneralLeads = lazy(() => import('./components/Grid/GridAdmin/GeneralLeads'));
+const ReferralLeads = lazy(() => import('./components/Grid/GridAdmin/ReferralLeads'));
+const GridAgentLeadDetailadmin = lazy(() => import('./components/Grid/GridAdmin/GridAgentLeadDetailadmin'));
 const VaultLeadDetails = lazy(() => import('./components/ecommerce/B2C/VaultLeadDetails'));
 const OnBoardingAgency = lazy(() => import('./components/CMS/pages/dashboardPages/OnBoardingAgency'));
 const AgencyList = lazy(() => import('./components/CMS/pages/Properties/AgencyList'));
 const DeveloperList = lazy(() => import('./components/CMS/pages/DeveloperList'));
 const DeveloperForm = lazy(() => import('./components/CMS/pages/dashboardPages/DeveloperForm'));
 const AgentList = lazy(() => import('./components/CMS/pages/Properties/AgentList'));
-const AllAdvisors = lazy(() => import('./components/Grid/GridAdmin.jsx/Alladvisors'));
-const GridCreateadvisor = lazy(() => import('./components/Grid/GridAdmin.jsx/GridCreateadvisor'));
-const Advisordetail = lazy(() => import('./components/Grid/GridAdmin.jsx/Advisordetail'));
-const AdvisorLeaderboard = lazy(() => import('./components/Grid/GridAdmin.jsx/AdvisorLeaderboard'));
-const CreateOffplan = lazy(() => import('./components/Grid/GridAdmin.jsx/CreateOffplan'));
-const CommissionDashboard = lazy(() => import('./components/Grid/GridAdmin.jsx/CommissionDashboard'));
-const AddGeneralleads = lazy(() => import('./components/Grid/GridAdmin.jsx/AddGeneralleads'));
+const AllAdvisors = lazy(() => import('./components/Grid/GridAdmin/Alladvisors'));
+const GridCreateadvisor = lazy(() => import('./components/Grid/GridAdmin/GridCreateadvisor'));
+const Advisordetail = lazy(() => import('./components/Grid/GridAdmin/Advisordetail'));
+const AdvisorLeaderboard = lazy(() => import('./components/Grid/GridAdmin/AdvisorLeaderboard'));
+const CreateOffplan = lazy(() => import('./components/Grid/GridAdmin/CreateOffplan'));
+const CommissionDashboard = lazy(() => import('./components/Grid/GridAdmin/CommissionDashboard'));
+const AddGeneralleads = lazy(() => import('./components/Grid/GridAdmin/AddGeneralleads'));
+const AllUsers = lazy(() => import('./components/Grid/GridAdmin/AllUsers'));
 const AllReferralPartners = lazy(() => import('./components/GridReferralPartner/Admin/AllReferralPartners'));
 const ReferralPartnerDetail = lazy(() => import('./components/GridReferralPartner/Admin/ReferralPartnerDetail'));
 const ReferralPartnerLeaderboard = lazy(() => import('./components/GridReferralPartner/GridDashboardpages/ReferralPartnerLeaderboard'));
-const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecordspage'));
-const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin.jsx/Dealrecorddetailpage'));
-const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin.jsx/Agreement'));
-const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin.jsx/PropertyDocumentLibrary'));
+const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin/Dealrecordspage'));
+const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin/Dealrecorddetailpage'));
+const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin/Agreement'));
+
+// Grid Analytics Pages
+const GridOverview = lazy(() => import('./components/Grid/GridAdmin/GridOverview'));
+const GridLeadReports = lazy(() => import('./components/Grid/GridAdmin/GridLeadreports'));
+const GridListingReports = lazy(() => import('./components/Grid/GridAdmin/GridListingreports'));
+const GridSetting = lazy(() => import('./components/Grid/GridAdmin/GridSetting'));
+const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin/PropertyDocumentLibrary'));
 
 // Role 15 - Agency
 const AgencyDashboard = lazy(() => import('./components/ecommerce/B2C/AgencyDashboard'));
@@ -184,6 +191,7 @@ const App: React.FC = () => (
         <Route path="GridAdmin/propertyleads" element={<PlatformLeads />} />
         <Route path="grid/agentleads" element={<AgentLeads />} />
         <Route path="grid/generalleads" element={<GeneralLeads />} />
+        <Route path="grid/allusers" element={<AllUsers />} />
         <Route path="grid/referralleads" element={<ReferralLeads />} />
         <Route path="onboarding/agency" element={<OnBoardingAgency />} />
         <Route path="agency-list" element={<AgencyList />} />
@@ -200,6 +208,7 @@ const App: React.FC = () => (
         <Route path="commission-dashboard" element={<CommissionDashboard />} />
         <Route path="create-offplan" element={<CreateOffplan />} />
         <Route path="add-generalleads" element={<AddGeneralleads />} />
+        <Route path="grid/addgeneralleads" element={<AddGeneralleads />} />
         <Route path="grid/agent-leads/:id" element={<GridAgentLeadDetailadmin />} />
         {/* Lead Detail Page for Admin */}
         <Route path="lead-detail-admin/:id" element={<GridAgentLeadDetailadmin />} />
@@ -210,6 +219,10 @@ const App: React.FC = () => (
         <Route path="deal-records/create/:leadId" element={<Dealrecordspage />} />
         <Route path="deal-records/:dealId" element={<DealRecordDetailPage />} />
         <Route path="admin/agreements" element={<AdminAgreements />} />
+        <Route path="overview" element={<GridOverview />} />
+        <Route path="leadreports" element={<GridLeadReports />} />
+        <Route path="listingreports" element={<GridListingReports />} />
+        <Route path="setting" element={<GridSetting />} />
         <Route path="properties/:id/documents" element={<PropertyDocumentLibrary />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="*" element={<Navigate to="/dashboard/admin" replace />} />

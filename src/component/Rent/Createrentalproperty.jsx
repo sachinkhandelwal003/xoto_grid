@@ -1780,14 +1780,11 @@ const handleSaveOffplan = async () => {
       </div>
 
       {/* PROPERTY TYPE LABEL */}
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 10,
-        background: meta.bg, border: `1px solid ${meta.border}`,
-        borderRadius: 10, padding: "8px 18px", marginBottom: 20,
-      }}>
-        <span style={{ width: 10, height: 10, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-        <Text strong style={{ fontSize: 15, color: meta.color }}>{meta.label}</Text>
-      </div>
+    <div style={{ marginBottom: 20 }}>
+  <Text strong style={{ fontSize: 16, color: "#000", fontWeight: 700 }}>
+    {meta.label}
+  </Text>
+</div>
 
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (

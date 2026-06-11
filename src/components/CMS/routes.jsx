@@ -139,7 +139,7 @@ import AgencyLeadManagement from "../ecommerce/B2C/AgencyLeadManagement";
 import AgencyAgentProperties from "./pages/Properties/AgencyAgentProperties";
 // import AgencyTargets from "../ecommerce/B2C/AgencyTargets";
 import AgencyLeaderboard from "../ecommerce/B2C/AgencyLeaderboard"; 
-import AdvisorLeaderboard from "../Grid/GridAdmin.jsx/AdvisorLeaderboard";
+import AdvisorLeaderboard from "../Grid/GridAdmin/AdvisorLeaderboard";
 // import AgencyIncentives from "../ecommerce/B2C/AgencyIncentives";
 // import AgencyBranches from "../ecommerce/B2C/AgencyBranches";
 // import AgencyRoles from "../ecommerce/B2C/AgencyRoles";
@@ -182,22 +182,22 @@ import SecondaryPlans from "./pages/Properties/SecondaryPlans";
 import SecondaryPropertyDetail from "./pages/Properties/Secondarypropertydetail";
 
 
-import GridCreateadvisor from "../Grid/GridAdmin.jsx/GridCreateadvisor";
-import AllAdvisors from "../Grid/GridAdmin.jsx/Alladvisors";
-import AdvisorDetail from "../Grid/GridAdmin.jsx/Advisordetail";
+import GridCreateadvisor from "../Grid/GridAdmin/GridCreateadvisor";
+import AllAdvisors from "../Grid/GridAdmin/Alladvisors";
+import AdvisorDetail from "../Grid/GridAdmin/Advisordetail";
 import AllReferralPartners from "../GridReferralPartner/Admin/AllReferralPartners";
 import ReferralPartnerDetail from "../GridReferralPartner/Admin/ReferralPartnerDetail";
-import PlatformLeads from "../Grid/GridAdmin.jsx/PlatformLeads";
+import PlatformLeads from "../Grid/GridAdmin/PlatformLeads";
 import AdvisorLeadsPage from "../Grid/AdvisorGrid/Advisorleadspage";
 import PropertyCatalogue from "../Grid/AdvisorGrid/Propertycatalogue";
 import FavouriteProperty from "../Grid/Fav Property/FavouriteProperty";
-import AgentLeads from "../Grid/GridAdmin.jsx/AgentLeads";
-import AddGeneralleads from "../Grid/GridAdmin.jsx/AddGeneralleads";
-import GeneralLeads from "../Grid/GridAdmin.jsx/GeneralLeads";
-import ReferralLeads from "../Grid/GridAdmin.jsx/ReferralLeads";
-import AllgridLeads from "../Grid/GridAdmin.jsx/AllgridLeads";
-import CreateOffplan from "../Grid/GridAdmin.jsx/CreateOffplan";
-import CommissionDashboard from "../Grid/GridAdmin.jsx/CommissionDashboard";
+import AgentLeads from "../Grid/GridAdmin/AgentLeads";
+import AddGeneralleads from "../Grid/GridAdmin/AddGeneralleads";
+import GeneralLeads from "../Grid/GridAdmin/GeneralLeads";
+import ReferralLeads from "../Grid/GridAdmin/ReferralLeads";
+import AllgridLeads from "../Grid/GridAdmin/AllgridLeads";
+import CreateOffplan from "../Grid/GridAdmin/CreateOffplan";
+import CommissionDashboard from "../Grid/GridAdmin/CommissionDashboard";
 import GridAgentLead from "../Grid/GridAgent/GridAgentLead";
 import CreateAgentLead from "../Grid/GridAgent/CreateAgentLead";
 
@@ -287,19 +287,24 @@ import Presentations from "../ecommerce/B2C/PresentationManager";
 import BankProductViewwithdocuments from "../homepage/BankProductViewwithdocuments";
 import BankProductDocuments from "../homepage/BankProductDocuments";
 import GridAgentLeadDetail from "../Grid/GridAgent/GridAgentLeadDetail";
-import GridAgentLeadDetailadmin from "../Grid/GridAdmin.jsx/GridAgentLeadDetailadmin";
+import GridAgentLeadDetailadmin from "../Grid/GridAdmin/GridAgentLeadDetailadmin";
 import GridAdvisorLeadDetail from "../Grid/AdvisorGrid/GridAdvisorLeadDetail";
 import PerfectMortgageCalculator from "../../components/homepage/MortgageCalculator";
 import MortgageEligibilityCalculatorPage from "../../components/homepage/MortgageEligibilityCalculatorPage";
 import MortgageAffordabilityCalculatorPage from "../../components/homepage/MortgageAffordabilityCalculatorPage";
 import PresentationsList from '../Grid/presentation/PresentationsList';
-import Dealrecordspage from "../Grid/GridAdmin.jsx/Dealrecordspage";
-import DealRecordDetailPage from "../Grid/GridAdmin.jsx/DealRecordDetailPage";
+import Dealrecordspage from "../Grid/GridAdmin/Dealrecordspage";
+import DealRecordDetailPage from "../Grid/GridAdmin/DealRecordDetailPage";
 import AgencyDealsPage from "../Grid/grid agency/Agencydealspage";
-import AdminAgreements from "../Grid/GridAdmin.jsx/Agreement";
+import AdminAgreements from "../Grid/GridAdmin/Agreement";
 import Agreementdeveloper from "../Grid/DeveloperGrid/Agreementdeveloper";
 import Agreementagency from "../Grid/grid agency/Agreementagency";
 import Agreementagent from "../Grid/GridAgent/Agreementagent";
+import AllUsers from "../Grid/GridAdmin/AllUsers";
+import GridOverview from "../Grid/GridAdmin/GridOverview";
+import GridLeadreports from "../Grid/GridAdmin/GridLeadreports";
+import GridListingreports from "../Grid/GridAdmin/GridListingreports";
+import GridSetting from "../Grid/GridAdmin/Gridsetting";
 
 
 
@@ -657,13 +662,13 @@ const CmsRoutes = () => {
       <Route path="/admin/inventory" element={<DeveloperInventory />} />
 
       
-
+      <Route path="/grid/allusers" element={<AllUsers/>}/>
       <Route path="/GridAdmin/propertyleads" element={<PlatformLeads />} />
       <Route path="/grid/agentleads" element={<AgentLeads />} /> 
       <Route path="/grid/referralleads" element={<ReferralLeads/>}/>
       <Route path="/grid/generalleads" element={<GeneralLeads/>}/>
       <Route path= "/grid/AllgridLeads" element={<AllgridLeads/>}/>
-      <Route path="/grid/addgenerallead" element={<AddGeneralleads/>}/>
+      <Route path="grid/addgeneralleads" element={<AddGeneralleads/>}/>
       <Route path="/grid/createoffplan" element={<CreateOffplan/>}/>
       <Route path="/grid/commission" element={<CommissionDashboard/>}/>
       <Route path="/lead-detail/:id" element={<GridAgentLeadDetail />} />
@@ -683,6 +688,10 @@ const CmsRoutes = () => {
     <Route path="partner/deals" element={<AgencyDealsPage />} />
     <Route path="admin/agreements" element={<AdminAgreements />} />
     <Route path="agency-agreements" element={<Agreementagency />} />
+    <Route path="/overview" element={<GridOverview/>} />
+    <Route path="/leadreports" element={<GridLeadreports/>}/>
+    <Route path="/listingreports" element={<GridListingreports/>}/>
+    <Route path="/setting" element={<GridSetting/>}/>
 
       
       
