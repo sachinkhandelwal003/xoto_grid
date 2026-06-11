@@ -228,7 +228,7 @@ const UpdateVendorProfile = () => {
         <div className="flex items-center gap-4">
            <Avatar 
              size={80} 
-             src={vendorData?.store_details?.logo ? `http://localhost:5000/${vendorData.store_details.logo}` : null}
+             src={vendorData?.store_details?.logo ? `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${vendorData.store_details.logo}` : null}
              icon={<ShopOutlined />} 
              style={{ backgroundColor: THEME.primary }} 
            />
@@ -537,7 +537,7 @@ const UpdateVendorProfile = () => {
                                                 <CheckCircleOutlined style={{ color: THEME.success }} />
                                                 <span className="text-sm text-gray-500">File Uploaded</span>
                                                 <a 
-                                                    href={`http://localhost:5000/${doc.key === 'logo' ? vendorData.store_details.logo : vendorData.documents[doc.key].path}`} 
+                                                    href={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${doc.key === 'logo' ? vendorData.store_details.logo : vendorData.documents[doc.key].path}`} 
                                                     target="_blank" 
                                                     rel="noreferrer" 
                                                     className="text-xs text-blue-500 ml-auto"

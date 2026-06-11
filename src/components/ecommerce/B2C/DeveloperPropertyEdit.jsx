@@ -32,7 +32,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const UPLOAD_API = "https://xoto.ae/api/upload";
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 // ── Upload a single file to S3, return URL ──────────────────
 const uploadToS3 = async (file) => {

@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { loginStart, loginSuccess, loginFailure, logout } from './authSlice';
 
-axios.defaults.baseURL = 'http://localhost:5000/api';
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const loginUser = (email, password, endpoint) => async (dispatch) => {
   try {

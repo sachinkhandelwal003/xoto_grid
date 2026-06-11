@@ -20,7 +20,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 const THEME = { primary: "#7c3aed", success: "#10b981", error: "#ef4444" };
-const UPLOAD_API = "https://xoto.ae/api/upload";
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 /* ── UAE Areas ── */
 const UAE_AREAS = {

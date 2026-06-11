@@ -13,7 +13,7 @@ import { apiService } from "../../manageApi/utils/custom.apiservice";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const UPLOAD_API = "https://xoto.ae/api/upload";
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 const THEME = { primary: "#7c3aed" };
 
 export default function ReferralPartnerProfile() {

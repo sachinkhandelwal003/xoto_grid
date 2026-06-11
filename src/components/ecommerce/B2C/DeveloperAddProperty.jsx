@@ -18,7 +18,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const THEME = { primary: "#6d28d9", light: "#f3e8ff" };
-const UPLOAD_API = "https://xoto.ae/api/upload";
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 const UAE_LOCALITIES = [
   "Dubai Marina", "Downtown Dubai", "JVC - Jumeirah Village Circle",

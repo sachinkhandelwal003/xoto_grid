@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiService } from '../utils/custom.apiservice';
 
-const baseURL = 'http://localhost:5000/';
+const baseURL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/`;
 
 // Fetch all active and approved products with optional filters
 export const fetchProducts = createAsyncThunk('products/fetchProducts', async (filters = {}) => {

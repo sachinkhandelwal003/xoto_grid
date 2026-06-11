@@ -100,7 +100,7 @@ const BusinessProfile = () => {
   };
 
   const downloadDocument = (path) => {
-    window.open(`http://localhost:5000/${path}`, '_blank');
+    window.open(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${path}`, '_blank');
   };
 
   const openImageModal = (document) => {
@@ -252,7 +252,7 @@ const BusinessProfile = () => {
           </Title>
           <div className="flex justify-center mb-4">
             {business.store_details?.logo ? (
-              <Avatar size={96} src={`http://localhost:5000/${business.store_details.logo}`} />
+              <Avatar size={96} src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${business.store_details.logo}`} />
             ) : (
               <Avatar size={96} className="bg-teal-500">
                 <FaBuilding className="text-white text-3xl" />
@@ -358,7 +358,7 @@ const BusinessProfile = () => {
                           key={index}
                           width={100}
                           height={100}
-                          src={`http://localhost:5000/${img}`}
+                          src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${img}`}
                           alt={`Gallery ${index}`}
                           className="object-cover"
                         />
@@ -577,7 +577,7 @@ const BusinessProfile = () => {
                     {groupedDocuments[type].path && isImageFile(groupedDocuments[type].path) && (
                       <div className="mt-4 cursor-pointer" onClick={() => openImageModal(groupedDocuments[type])}>
                         <Image
-                          src={`http://localhost:5000/${groupedDocuments[type].path}`}
+                          src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${groupedDocuments[type].path}`}
                           alt={label}
                           preview={false}
                           className="max-h-48 object-contain"
@@ -825,7 +825,7 @@ const BusinessProfile = () => {
         </Title>
         <div className="flex justify-center mb-4">
           <Image
-            src={`http://localhost:5000/${selectedDocument?.path}`}
+            src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${selectedDocument?.path}`}
             alt={documentTypes[selectedDocument?.type]}
             className="max-h-96 object-contain"
             fallback={

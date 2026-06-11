@@ -148,7 +148,7 @@ const Leads = () => {
   const getFullImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return path.startsWith('/') ? `https://xoto.ae/api${path}` : path;
+    return path.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL}${path}` : path;
   };
 
   // Get customer name
