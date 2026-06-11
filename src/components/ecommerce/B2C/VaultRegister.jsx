@@ -159,7 +159,7 @@ const VaultRegister = () => {
     if (!isEmailValid) return;
     setLoading((prev) => ({ ...prev, emailOtpSending: true }));
     try {
-      await apiService.post("https://xoto.ae/api/otp/email-otp/send", { email: watchEmail });
+      await apiService.post(`${import.meta.env.VITE_API_BASE_URL}/otp/email-otp/send`, { email: watchEmail });
       message.success("OTP sent! Please check your email inbox.");
       setShowEmailOtpInput(true);
     } catch (error) {
@@ -173,7 +173,7 @@ const VaultRegister = () => {
     if (!emailOtpValue || emailOtpValue.length < 4) return message.error("Please enter a valid OTP");
     setLoading((prev) => ({ ...prev, emailOtpVerifying: true }));
     try {
-      await apiService.post("https://xoto.ae/api/otp/email-otp/verify", { email: watchEmail, otp: emailOtpValue });
+      await apiService.post(`${import.meta.env.VITE_API_BASE_URL}/otp/email-otp/verify`, { email: watchEmail, otp: emailOtpValue });
       message.success("Email verified successfully!");
       setIsEmailVerified(true);
       setShowEmailOtpInput(false);

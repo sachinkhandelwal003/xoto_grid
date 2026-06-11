@@ -33,7 +33,7 @@ const downloadPdf = (url, filename = 'document.pdf') => {
   if (url.includes('amazonaws.com') || url.includes('.s3.')) {
     try {
       const key = new URL(url).pathname.replace(/^\//, '');
-      a.href = `${import.meta.env.VITE_API_BASE_URL || ''}/api/download-pdf?key=${encodeURIComponent(key)}`;
+      a.href = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/download-pdf?key=${encodeURIComponent(key)}`;
     } catch { a.href = url; }
   } else {
     // CDN or other public URLs — download directly

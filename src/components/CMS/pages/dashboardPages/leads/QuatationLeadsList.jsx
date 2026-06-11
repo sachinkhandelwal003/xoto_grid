@@ -89,7 +89,7 @@ const QuotationLeadsList = () => {
   const getFullImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
+    return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
   const getCustomerName = (customer) => {

@@ -156,7 +156,7 @@ export default function AdminPropertyDetail() {
       setQrUploading(true);
       const fd = new FormData();
       fd.append("file", file);
-      const res = await apiService.upload("https://xoto.ae/api/upload", fd);
+      const res = await apiService.upload(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`, fd);
       const url = res?.data?.file?.url || res?.data?.url || res?.file?.url || res?.url;
       if (!url) throw new Error("No URL returned");
       setQrCodeUrl(url);

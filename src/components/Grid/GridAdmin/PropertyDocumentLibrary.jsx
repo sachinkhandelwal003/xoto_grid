@@ -20,7 +20,7 @@ const P  = '#4A027C';
 const P2 = '#7C3AED';
 const GR = `linear-gradient(135deg, ${P} 0%, ${P2} 100%)`;
 
-const UPLOAD_API = 'https://xoto.ae/api/upload';
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 const CATEGORY_LABELS = {
   brochure:           'Brochure',

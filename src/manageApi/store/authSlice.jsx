@@ -3,10 +3,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 
-// Set base URL globally fsdf
-// const API_BASE = 'https://kotiboxglobaltech.online/api';
-// const API_BASE = 'http://localhost:5000/api';
-const API_BASE = 'https://xoto.ae/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 
   

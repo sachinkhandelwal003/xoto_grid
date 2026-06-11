@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, ArrowLeft, MapPin, Bed, Bath, Maximize2, Trash2 } from "lucide-react";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
-import bedicon from "../../../assets/img/buy/icon-bed.png";
-import tubicon from "../../../assets/img/buy/icon-tub.png";
-import layouticon from "../../../assets/img/buy/icon-layout.png";
+const bedicon = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><path d='M2 9V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4'/><path d='M2 9h20v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9z'/><path d='M6 9V7a2 2 0 0 1 4 0v2'/></svg>`;
+const tubicon = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><path d='M9 6L9 2'/><path d='M2 12h20v2a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4v-2z'/><path d='M7 18v2'/><path d='M17 18v2'/><circle cx='9' cy='6' r='2'/></svg>`;
+const layouticon = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18'/><path d='M9 21V9'/></svg>`;
 
 const transformProperty = (item) => ({
   id: item._id || item.id,
