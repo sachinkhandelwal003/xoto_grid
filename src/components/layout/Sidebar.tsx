@@ -91,9 +91,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   },
   {
     title: 'Notifications', icon: 'fas fa-bell',
-    submenus: [
-      { title: 'All Notifications', to: '/dashboard/admin/notifications' },
-    ],
+    to: '/dashboard/admin/gridnotification',
   },
   {
   title: 'Platform Configuration',
@@ -185,7 +183,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, mobileOpen, onCloseMobile 
 
   const displayName = typeof user?.role === 'object' ? user.role.name : roleSlug.replace(/-/g, ' ');
 
-  // Close mobile drawer on route change
+
+  
   useEffect(() => { onCloseMobile(); }, [location.pathname]);
 
   const navItems = useMemo(() => {

@@ -305,6 +305,7 @@ import GridOverview from "../Grid/GridAdmin/GridOverview";
 import GridLeadreports from "../Grid/GridAdmin/GridLeadreports";
 import GridListingreports from "../Grid/GridAdmin/GridListingreports";
 import GridSetting from "../Grid/GridAdmin/Gridsetting";
+import GridNotification from "../Grid/GridAdmin/GridNotification";
 
 
 
@@ -660,6 +661,7 @@ const CmsRoutes = () => {
       <Route path="/properties/create-offplan" element={<AdminOffPlanCreate />} />
       <Route path="developer/property/:id" element={<PropertyDetailPage />} />
       <Route path="/admin/inventory" element={<DeveloperInventory />} />
+      <Route path="gridnotification" element={<GridNotification/>}/>
 
       
       <Route path="/grid/allusers" element={<AllUsers/>}/>
