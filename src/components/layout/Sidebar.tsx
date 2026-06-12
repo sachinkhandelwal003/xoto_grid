@@ -56,7 +56,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   {
     title: 'Users & Profiles', icon: 'fas fa-users',
     submenus: [
-      // { title: 'All Users',           to: '/dashboard/admin/grid/allusers' },
+      // { title: 'All Users',           to: '/dashboard/admin/grid/allusers' },  
       { title: 'Partners',            to: '/dashboard/admin/agency-list' },
       { title: 'Create Partner',      to: '/dashboard/admin/onboarding/agency' },
       { title: 'Developers',          to: '/dashboard/admin/developer-list' },
@@ -75,12 +75,12 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       { title: 'Leaderboard',     to: '/dashboard/admin/referral-leaderboard' },
     ],
   },
-  {
-    title: 'Audit Logs', icon: 'fas fa-clipboard-list',
-    submenus: [
-      { title: 'All Logs', to: '/dashboard/admin/audit-logs' },
-    ],
-  },
+  // {
+  //   title: 'Audit Logs', icon: 'fas fa-clipboard-list',
+  //   submenus: [
+  //     { title: 'All Logs', to: '/dashboard/admin/audit-logs' },
+  //   ],
+  // },
   {
     title: 'Analytics & Reporting', icon: 'fas fa-chart-line',
     submenus: [
@@ -95,13 +95,13 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       { title: 'All Notifications', to: '/dashboard/admin/notifications' },
     ],
   },
-  {
-    title: 'Platform Configuration', icon: 'fas fa-sliders',
-    submenus: [
-      { title: 'Settings',          to: '/dashboard/admin/setting' },
-      { title: 'Roles & Permissions', to: '/dashboard/admin/roles' },
-    ],
-  },
+  // {
+  //   title: 'Platform Configuration', icon: 'fas fa-sliders',
+  //   submenus: [
+  //     { title: 'Settings',          to: '/dashboard/admin/setting' },
+  //     { title: 'Roles & Permissions', to: '/dashboard/admin/roles' },
+  //   ],
+  // },
 ],
 
   // ── Grid Partner/Agency (15) ───────────────────────────────────────────────
@@ -115,8 +115,8 @@ const GRID_NAV: Record<string, MenuItem[]> = {
 
   // ── Grid Agent (16) ────────────────────────────────────────────────────────
   '16': [
-    { title: "Catalogs", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
-    { title: "Leads", icon: "fas fa-calendar-check", to: "/dashboard/agent/GridAgent-lead" },
+    { title: "My Leads", icon: "fas fa-calendar-check", to: "/dashboard/agent/GridAgent-lead" },
+    { title: "Property Catalogue", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
     { title: "My Presentations", icon: "fas fa-file-powerpoint", to: "/dashboard/agent/presentations" },
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
@@ -149,6 +149,8 @@ const GRID_NAV: Record<string, MenuItem[]> = {
         },
       ],
     },
+    { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/GridAdvisor/leaderboard' },
+
   ],
 
   // ── Grid Referral Partner (25) ─────────────────────────────────────────────

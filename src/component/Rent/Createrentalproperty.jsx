@@ -220,6 +220,7 @@ const CreateProperty = () => {
   const [secondaryLoading, setSecondaryLoading] = useState(false);
   const [secondaryEmirate, setSecondaryEmirate] = useState("");
   const [secondaryQrFile,  setSecondaryQrFile]  = useState([]);
+  const [secondaryPermitOnly, setSecondaryPermitOnly] = useState(false);
   
   const [secMainLogoFileList, setSecMainLogoFileList] = useState([]);
   const [secPhotosArchitecture, setSecPhotosArchitecture] = useState([]);
@@ -231,6 +232,7 @@ const CreateProperty = () => {
   /* ── Off-Plan ── */
   const [offplanForm]              = Form.useForm();
   const [offplanLoading,           setOffplanLoading]           = useState(false);
+  const [offplanPermitOnly,        setOffplanPermitOnly]        = useState(false);
   const [selectedDeveloperId,      setSelectedDeveloperId]      = useState(null);
   const [developers,               setDevelopers]               = useState([]);
   const [loadingDevelopers,        setLoadingDevelopers]        = useState(false);
@@ -528,8 +530,9 @@ const handleSubmitSecondary = async () => {
       shareCommission: values.shareCommission || false,
       shareCommissionPercentage: values.shareCommissionPercentage || 0,
       dldRegistrationNumber: values.dldRegistrationNumber || null,
-      trakheesiPermitId: values.trakheesiPermitId || null,
-      qrCode: secondaryQrUrl,
+      permitAvailable: secondaryPermitOnly,
+      trakheesiPermitId: secondaryPermitOnly ? null : (values.trakheesiPermitId || null),
+      qrCode: secondaryPermitOnly ? null : secondaryQrUrl,
       inventory: (values.secondaryInventory || []).map(u => ({
         unitNumber:  u.unitNumber  || "",
         floorNumber: Number(u.floor || 0),
@@ -580,8 +583,8 @@ const handleSaveOffplan = async () => {
   if (!values.priceRangeFrom || !values.priceRangeTo) return showToast("Price range is required", "error");
   if (isAnyOffplanUploading()) return showToast("Please wait for uploads to finish.", "error");
   const offplanQrUrl = offplanQrFile.map(extractUrl).filter(Boolean)[0] || null;
-  if (!offplanQrUrl) return showToast("QR Code is required before publishing.", "error");
-  if (!values.trakheesiPermitId?.trim()) return showToast("Trakheesi Permit ID is required before publishing.", "error");
+  if (!offplanPermitOnly && !offplanQrUrl) return showToast("QR Code is required before publishing.", "error");
+  if (!offplanPermitOnly && !values.trakheesiPermitId?.trim()) return showToast("Trakheesi Permit ID is required before publishing.", "error");
   const mainLogoUrls = collectUrls(mainLogoFileList);
   if (mainLogoUrls.length === 0) return showToast("Please upload a main logo image.", "error");
   const brochureUrl = brochureFileList.length > 0 && brochureFileList[0].status === "done" 
@@ -630,8 +633,9 @@ const handleSaveOffplan = async () => {
     },
     location: { address: values.address || "", latitude: values.latitude || null, longitude: values.longitude || null },
     brochure: brochureUrl,
-    trakheesiPermitId: values.trakheesiPermitId || null,
-    qrCode: offplanQrUrl,
+    permitAvailable: offplanPermitOnly,
+    trakheesiPermitId: offplanPermitOnly ? null : (values.trakheesiPermitId || null),
+    qrCode: offplanPermitOnly ? null : offplanQrUrl,
     buildings: values.buildings || [],
     amenities: values.amenities || [],
     floorPlans: values.floorPlans || [], 
@@ -1164,31 +1168,61 @@ const handleSaveOffplan = async () => {
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance & Settings <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>— optional, admin requires before publishing</span></Divider>
           <Row gutter={16}>
             <Col xs={24} md={12}>
+              <Form.Item label="Permit Available?">
+                <Switch
+                  checkedChildren="ON"
+                  unCheckedChildren="OFF"
+                  checked={secondaryPermitOnly}
+                  onChange={(checked) => {
+                    setSecondaryPermitOnly(checked);
+                    if (checked) {
+                      secondaryForm.setFieldsValue({ trakheesiPermitId: "" });
+                      setSecondaryQrFile([]);
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            {secondaryPermitOnly && (
+              <Col span={24}>
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="This property will be visible only to the GRID userbase and will not be published on the website."
+                  style={{ marginBottom: 16, borderRadius: 8 }}
+                />
+              </Col>
+            )}
+            <Col xs={24} md={12}>
               <Form.Item name="dldRegistrationNumber" label="DLD Registration Number">
                 <Input size="large" placeholder="Optional" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="trakheesiPermitId" label="Trakheesi Permit ID">
-                <Input size="large" placeholder="Enter Trakheesi Permit ID" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 4, fontWeight: 600 }}>
-                QR Code
-                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
-              </div>
-              <Upload
-                listType="picture-card"
-                fileList={secondaryQrFile}
-                onChange={({ fileList }) => setSecondaryQrFile(fileList)}
-                customRequest={customUploadRequest}
-                accept="image/*"
-                maxCount={1}
-              >
-                {secondaryQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
-              </Upload>
-            </Col>
+            {!secondaryPermitOnly && (
+              <>
+                <Col xs={24} md={12}>
+                  <Form.Item name="trakheesiPermitId" label="Trakheesi Permit ID">
+                    <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div style={{ marginBottom: 4, fontWeight: 600 }}>
+                    QR Code
+                    <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
+                  </div>
+                  <Upload
+                    listType="picture-card"
+                    fileList={secondaryQrFile}
+                    onChange={({ fileList }) => setSecondaryQrFile(fileList)}
+                    customRequest={customUploadRequest}
+                    accept="image/*"
+                    maxCount={1}
+                  >
+                    {secondaryQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
+                  </Upload>
+                </Col>
+              </>
+            )}
             <Col xs={12} md={6}>
               <Form.Item name="isFeatured" label="Featured?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
@@ -1662,29 +1696,59 @@ const handleSaveOffplan = async () => {
       <Divider orientation="left" style={{ borderColor: THEME.primary }}>Compliance</Divider>
       <Row gutter={16}>
         <Col xs={24} md={12}>
-          <Form.Item
-            name="trakheesiPermitId"
-            label={<span style={{ fontWeight: 600 }}>Trakheesi Permit ID <span style={{ color: "#ef4444" }}>*</span></span>}
-          >
-            <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+          <Form.Item label="Permit Available?">
+            <Switch
+              checkedChildren="ON"
+              unCheckedChildren="OFF"
+              checked={offplanPermitOnly}
+              onChange={(checked) => {
+                setOffplanPermitOnly(checked);
+                if (checked) {
+                  offplanForm.setFieldsValue({ trakheesiPermitId: "" });
+                  setOffplanQrFile([]);
+                }
+              }}
+            />
           </Form.Item>
         </Col>
-        <Col xs={24} md={12}>
-          <div style={{ marginBottom: 4, fontWeight: 600 }}>
-            QR Code <span style={{ color: "#ef4444" }}>*</span>
-            <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
-          </div>
-          <Upload
-            listType="picture-card"
-            fileList={offplanQrFile}
-            onChange={({ fileList }) => setOffplanQrFile(fileList)}
-            customRequest={customUploadRequest}
-            accept="image/*"
-            maxCount={1}
-          >
-            {offplanQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
-          </Upload>
-        </Col>
+        {offplanPermitOnly && (
+          <Col span={24}>
+            <Alert
+              type="warning"
+              showIcon
+              message="This property will be visible only to the GRID userbase and will not be published on the website."
+              style={{ marginBottom: 16, borderRadius: 8 }}
+            />
+          </Col>
+        )}
+        {!offplanPermitOnly && (
+          <>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="trakheesiPermitId"
+                label={<span style={{ fontWeight: 600 }}>Trakheesi Permit ID <span style={{ color: "#ef4444" }}>*</span></span>}
+              >
+                <Input size="large" placeholder="Enter Trakheesi Permit ID" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <div style={{ marginBottom: 4, fontWeight: 600 }}>
+                QR Code <span style={{ color: "#ef4444" }}>*</span>
+                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 400, marginLeft: 6 }}>JPG / PNG — must be scannable</span>
+              </div>
+              <Upload
+                listType="picture-card"
+                fileList={offplanQrFile}
+                onChange={({ fileList }) => setOffplanQrFile(fileList)}
+                customRequest={customUploadRequest}
+                accept="image/*"
+                maxCount={1}
+              >
+                {offplanQrFile.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload QR</div></div>}
+              </Upload>
+            </Col>
+          </>
+        )}
       </Row>
     </>
   );

@@ -5,14 +5,14 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import {
-  HomeOutlined, BellOutlined, ArrowUpOutlined, ArrowDownOutlined,
-  MessageOutlined, ReloadOutlined, BuildOutlined, LineChartOutlined,
+  HomeOutlined, ArrowUpOutlined, ArrowDownOutlined,
+  ReloadOutlined, BuildOutlined, LineChartOutlined,
   CheckCircleOutlined, ClockCircleOutlined, TrophyOutlined,
-  DashboardOutlined, EyeOutlined, HeartOutlined
+  DashboardOutlined, FireOutlined, FileSearchOutlined
 } from "@ant-design/icons";
 import {
   Card, Row, Col, Select, Button, Typography, Tag,
-  Badge, Table, Spin, message, Tabs
+  Table, Spin, message, Tabs, Empty
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
@@ -20,11 +20,9 @@ import { apiService } from "../../../manageApi/utils/custom.apiservice";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// ─── Theme & Branding ──────────────────────────────────────────────────────────
 const THEME = {
   primary:      '#5c039b',
   primaryLight: '#f3e8ff',
-  primaryMid:   '#9333ea',
   success:      '#16a34a',
   successLight: '#dcfce7',
   info:         '#0369a1',
@@ -33,41 +31,12 @@ const THEME = {
   warningLight: '#fef3c7',
   error:        '#b91c1c',
   errorLight:   '#fee2e2',
-  gray:         '#64748b',
-  grayLight:    '#f8fafc',
 };
 
 const cardStyle = {
-  borderRadius: 14,
-  border: '1px solid #ede9fe',
-  boxShadow: '0 4px 20px rgba(92,3,155,0.03)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-};
-
-// ─── Custom Badge & Status Components ────────────────────────────────────────
-const StagePill = ({ stage }) => {
-  const map = {
-    'new':                  { bg: '#e0f2fe', color: '#0369a1' },
-    'contacted':            { bg: '#f3e8ff', color: '#7e22ce' },
-    'qualified':            { bg: '#e0f2fe', color: '#0369a1' },
-    'in_discussion':        { bg: '#f3e8ff', color: '#7e22ce' },
-    'site_visit_scheduled': { bg: '#fef3c7', color: '#b45309' },
-    'offer_made':           { bg: '#fef3c7', color: '#b45309' },
-    'reserved':             { bg: '#f3e8ff', color: '#7e22ce' },
-    'spa_signed':           { bg: '#dcfce7', color: '#16a34a' },
-    'completed':            { bg: '#dcfce7', color: '#16a34a' },
-    'not_proceeding':        { bg: '#fee2e2', color: '#b91c1c' },
-  };
-  const s = map[stage] || { bg: '#f1f5f9', color: '#475569' };
-  return (
-    <span style={{
-      fontSize: 11, padding: '3px 10px', borderRadius: 20,
-      background: s.bg, color: s.color, fontWeight: 600, whiteSpace: 'nowrap',
-      display: 'inline-block', letterSpacing: '0.3px'
-    }}>
-      {stage?.replace('_', ' ')?.toUpperCase() || 'NEW'}
-    </span>
-  );
+  borderRadius: 12,
+  border: '1px solid #f1f5f9',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
 };
 
 const BadgePill = ({ text, type }) => {
@@ -79,110 +48,101 @@ const BadgePill = ({ text, type }) => {
   };
   const s = styles[type] || styles.info;
   return (
-    <span style={{
-      fontSize: 11, padding: '3px 8px', borderRadius: 20,
-      background: s.bg, color: s.color, fontWeight: 600,
-    }}>
+    <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: s.bg, color: s.color, fontWeight: 500 }}>
       {text}
     </span>
   );
 };
 
-const formatCurrency = (val) => {
-  if (!val) return '0 AED';
-  return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(val);
-};
+const PIE_COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899"];
 
-// ─── Table Column Configurations ─────────────────────────────────────────────
-const leadColumns = [
+// Deals closed columns — date + unit reference only (PRD §9.1, §9.4)
+const dealColumns = [
   {
-    title: 'Customer',
-    dataIndex: 'customerName',
-    key: 'customerName',
-    render: (text) => <span className="font-semibold text-gray-800">{text}</span>
+    title: 'Deal Date',
+    dataIndex: 'date',
+    key: 'date',
+    render: (date) => (
+      <span style={{ color: '#64748b' }}>
+        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      </span>
+    )
   },
   {
-    title: 'Project',
-    dataIndex: 'projectName',
-    key: 'projectName',
-    render: (text) => <Tag color="purple">{text}</Tag>
-  },
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    key: 'email',
-    render: (text) => <span className="text-gray-500">{text}</span>
-  },
-  {
-    title: 'Phone',
-    dataIndex: 'phone',
-    key: 'phone',
-    render: (text) => <span className="text-gray-500">{text}</span>
+    title: 'Unit Reference',
+    dataIndex: 'unit',
+    key: 'unit',
+    render: (text) => <span style={{ fontWeight: 500, color: '#334155' }}>{text}</span>
   },
   {
     title: 'Status',
     dataIndex: 'status',
     key: 'status',
-    render: (status) => <StagePill stage={status} />
-  },
-  {
-    title: 'Registered On',
-    dataIndex: 'createdAt',
-    key: 'createdAt',
-    render: (date) => new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+    render: (status) => {
+      const color = status === 'Sold' || status === 'SPA Signed' ? 'success' : status === 'Reserved' ? 'processing' : 'default';
+      return <Tag color={color}>{status}</Tag>;
+    }
   }
 ];
 
-const dealColumns = [
-  { 
-    title: 'Deal Date', 
-    dataIndex: 'date', 
-    key: 'date',
-    render: (date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+// Aggregated interest by project — no customer PII (PRD §9.4)
+const interestColumns = [
+  {
+    title: 'Project',
+    dataIndex: 'projectName',
+    key: 'projectName',
+    render: (text) => <span style={{ fontWeight: 500, color: '#334155' }}>{text}</span>
   },
-  { 
-    title: 'Unit Reference', 
-    dataIndex: 'unit', 
-    key: 'unit',
-    render: (text) => <span className="font-semibold text-gray-700">{text}</span>
+  {
+    title: 'Total Interest Registrations',
+    dataIndex: 'totalInterest',
+    key: 'totalInterest',
+    render: (val) => (
+      <span style={{ fontWeight: 600, color: THEME.primary }}>{val}</span>
+    )
+  }
+];
+
+// Pending approvals columns (PRD §9.1)
+const pendingColumns = [
+  {
+    title: 'Project',
+    dataIndex: 'projectName',
+    key: 'projectName',
+    render: (text) => <span style={{ fontWeight: 500, color: '#334155' }}>{text}</span>
   },
-  { 
-    title: 'Status', 
-    dataIndex: 'status', 
-    key: 'status',
+  {
+    title: 'Approval Status',
+    dataIndex: 'approvalStatus',
+    key: 'approvalStatus',
     render: (status) => {
-      let color = 'gold';
-      if (status === 'Sold' || status === 'SPA Signed') color = 'green';
-      if (status === 'Reserved') color = 'blue';
-      return <Tag color={color}>{status}</Tag>;
+      const colorMap = { pending: 'warning', changes_requested: 'error', rejected: 'error' };
+      return <Tag color={colorMap[status] || 'default'}>{status?.replace('_', ' ')}</Tag>;
     }
   },
   {
-    title: 'Sale Value',
-    dataIndex: 'price',
-    key: 'price',
-    render: (price) => <span className="font-bold text-gray-900">{formatCurrency(price)}</span>
+    title: 'Submitted On',
+    dataIndex: 'createdAt',
+    key: 'createdAt',
+    render: (date) => (
+      <span style={{ color: '#64748b' }}>
+        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      </span>
+    )
   }
 ];
 
-const PIE_COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899"];
-
-// ─── Main Component ──────────────────────────────────────────────────────────
 const DeveloperDashboard = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth || {});
 
   const [timeRange, setTimeRange] = useState("30d");
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("grid_token") || localStorage.getItem("token");
     if (!token) return;
     try {
       setLoading(true);
@@ -199,269 +159,149 @@ const DeveloperDashboard = () => {
     }
   }, []);
 
-  const getBarChartData = () => {
-    if (!dashboardData?.propertyWiseInventory) return [];
-    return dashboardData.propertyWiseInventory.map(prop => ({
-      propertyName: prop.propertyName,
-      available: prop.stats.available,
-      reserved: prop.stats.reserved,
-      sold: prop.stats.sold + prop.stats.spa_signed
-    }));
-  };
-
-  const getTopPerformingListing = () => {
-    if (!dashboardData?.properties || dashboardData.properties.length === 0) return null;
-    const sorted = [...dashboardData.properties].sort((a, b) => {
-      const viewsA = a.viewCount || 0;
-      const viewsB = b.viewCount || 0;
-      return viewsB - viewsA;
-    });
-    return sorted[0];
-  };
-
   useEffect(() => {
-    if (user?.id || user?._id) {
-      fetchDashboardData();
-    }
-  }, [fetchDashboardData, user?.id, user?._id]);
+    const token = localStorage.getItem("grid_token") || localStorage.getItem("token");
+    if (token) fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchDashboardData().finally(() => {
-      setTimeout(() => setRefreshing(false), 800);
-    });
+    fetchDashboardData().finally(() => setTimeout(() => setRefreshing(false), 800));
   };
 
   const getDisplayName = () => {
-    if (user?.first_name) return `${user.first_name} ${user.last_name || ""}`;
+    if (user?.first_name) return `${user.first_name} ${user.last_name || ""}`.trim();
     if (user?.name) return user.name;
     if (user?.company_name) return user.company_name;
     return "Developer";
   };
 
-  const statsIcons = [
-    <BuildOutlined />,
-    <LineChartOutlined />,
-    <TrophyOutlined />,
-    <ClockCircleOutlined />
-  ];
+  const getBarChartData = () =>
+    (dashboardData?.propertyWiseInventory || []).map(prop => ({
+      name: prop.propertyName?.length > 16 ? prop.propertyName.substring(0, 16) + '…' : prop.propertyName,
+      available: prop.stats.available,
+      reserved: prop.stats.reserved,
+      sold: (prop.stats.sold || 0) + (prop.stats.spa_signed || 0)
+    }));
 
-  const topListing = getTopPerformingListing();
+  const statsIcons = [<BuildOutlined />, <LineChartOutlined />, <TrophyOutlined />, <ClockCircleOutlined />];
+  const top = dashboardData?.topPerformingListing;
 
   return (
-    <div style={{ padding: '24px', background: '#faf5ff', minHeight: '100vh', fontFamily: 'inherit' }}>
-      <Spin spinning={loading} tip="Loading Dashboard Analytics...">
+    <div style={{ padding: '24px', background: '#f8fafc', minHeight: '100vh' }}>
+      <Spin spinning={loading} tip="Loading Dashboard…">
+
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: THEME.primary, display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: THEME.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <DashboardOutlined style={{ color: '#fff', fontSize: 18 }} />
               </div>
-              <Title level={3} style={{ margin: 0, color: THEME.primary }}>Developer Portal</Title>
+              <Title level={4} style={{ margin: 0, color: THEME.primary, fontWeight: 500 }}>Developer Portal</Title>
             </div>
-            <Text type="secondary">
-              Welcome back, {getDisplayName()} 👋 Monitor your projects, live lead registrations and units funnel.
-            </Text>
+            <Text type="secondary" style={{ fontSize: 14 }}>Welcome back, {getDisplayName()} — monitor projects, interest registrations and unit pipeline.</Text>
           </div>
 
-          <div className="flex gap-3 items-center flex-wrap">
-            <Select value={timeRange} style={{ width: 140 }} onChange={setTimeRange} className="rounded-lg shadow-sm">
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Select value={timeRange} style={{ width: 140 }} onChange={setTimeRange}>
               <Option value="7d">Last 7 Days</Option>
               <Option value="30d">Last 30 Days</Option>
               <Option value="90d">Last 90 Days</Option>
             </Select>
-
-            <Button icon={<HomeOutlined />} onClick={() => navigate("/")} className="rounded-lg">
-              Home
-            </Button>
-
-            <Button
-              icon={<ReloadOutlined spin={refreshing} />}
-              loading={refreshing}
-              onClick={handleRefresh}
-              className="rounded-lg"
-            >
-              Refresh
-            </Button>
-
-            <Badge count={0} color="#7c3aed">
-              <Button
-                type="primary"
-                icon={<MessageOutlined />}
-                style={{ background: "#7c3aed", borderColor: "#7c3aed" }}
-                className="rounded-lg"
-              >
-                Chats
-              </Button>
-            </Badge>
-
-            <Button type="primary" icon={<BellOutlined />} style={{ background: THEME.primary, borderColor: THEME.primary }} className="rounded-lg">
-              Alerts
-            </Button>
+            <Button icon={<HomeOutlined />} onClick={() => navigate("/")}>Home</Button>
+            <Button icon={<ReloadOutlined spin={refreshing} />} onClick={handleRefresh}>Refresh</Button>
           </div>
         </div>
 
-        {/* STATS */}
-        <Row gutter={[16, 16]} className="mb-8">
-          {dashboardData?.stats?.map((stat, i) => (
-            <Col xs={24} sm={12} md={6} lg={6} xl={6} key={i}>
-              <Card 
-                bordered={false} 
-                style={cardStyle} 
-                className="hover:scale-[1.02] hover:shadow-lg duration-300"
-              >
-                <div className="flex justify-between items-start mb-2">
+        {/* STAT CARDS — PRD §9.1 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
+          {(dashboardData?.stats || []).map((stat, i) => (
+            <Col xs={24} sm={12} md={6} key={i}>
+              <Card bordered={false} style={cardStyle} bodyStyle={{ padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <Text type="secondary" className="font-semibold text-gray-500 uppercase tracking-wide text-xs">{stat.label}</Text>
-                    <Title level={2} style={{ margin: "6px 0 2px 0", fontWeight: 700, color: '#1e1b4b' }}>{stat.value}</Title>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>{stat.label}</div>
+                    <div style={{ fontSize: 26, fontWeight: 600, color: '#334155', marginTop: 4 }}>{stat.value}</div>
                   </div>
-                  <div style={{
-                    background: stat.bg,
-                    color: stat.color,
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "22px"
-                  }}>
+                  <div style={{ background: stat.bg, color: stat.color, width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
                     {statsIcons[i]}
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
                   {stat.change !== undefined && stat.change !== 0 ? (
-                    <BadgePill 
-                      text={`${stat.change > 0 ? '↑' : '↓'} ${Math.abs(stat.change)}% MoM`} 
-                      type={stat.change > 0 ? 'up' : 'down'} 
-                    />
-                  ) : (
-                    <span />
-                  )}
-                  {stat.subtext && (
-                    <span className="text-xs text-gray-400 font-medium">{stat.subtext}</span>
-                  )}
+                    <BadgePill text={`${stat.change > 0 ? '↑' : '↓'} ${Math.abs(stat.change)}% MoM`} type={stat.change > 0 ? 'up' : 'down'} />
+                  ) : <span />}
+                  {stat.subtext && <span style={{ fontSize: 11, color: '#94a3b8' }}>{stat.subtext}</span>}
                 </div>
               </Card>
             </Col>
           ))}
         </Row>
 
-        {/* DETAILS SECTION WITH TOP PERFORMING & CHARTS */}
-        <Row gutter={[16, 16]} className="mb-8">
+        {/* TOP PERFORMING LISTING + CHARTS — PRD §9.1 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
           <Col xs={24} lg={8}>
-            <Card title="🏆 Top Listing Performance" style={cardStyle} className="h-full">
-              {topListing ? (
-                <div className="flex flex-col h-full justify-between py-2">
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      {topListing.mainLogo ? (
-                        <img 
-                          src={topListing.mainLogo} 
-                          alt="logo" 
-                          style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }} 
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center bg-purple-100 text-purple-700 font-bold" style={{ width: 48, height: 48, borderRadius: 10, fontSize: 18 }}>
-                          {topListing.projectName?.substring(0, 2).toUpperCase() || "PR"}
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-bold text-gray-800 text-lg leading-tight">{topListing.projectName || topListing.propertyName}</h4>
-                        <span className="text-xs text-gray-400 font-semibold uppercase">{topListing.locality || "Primary Location"}</span>
-                      </div>
+            <Card
+              title={<span style={{ fontWeight: 500, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}><TrophyOutlined style={{ color: THEME.warning }} /> Top Listing by Interest</span>}
+              style={{ ...cardStyle, height: '100%' }}
+            >
+              {top ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 8, background: THEME.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: THEME.primary, fontWeight: 700 }}>
+                      {top.projectName?.substring(0, 2).toUpperCase()}
                     </div>
-
-                    <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100/50 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase">Approval Status</span>
-                        <Tag color={topListing.approvalStatus === "approved" ? "success" : "warning"} className="font-semibold uppercase text-[10px]">
-                          {topListing.approvalStatus}
-                        </Tag>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase">Listing State</span>
-                        <Tag color={topListing.listingStatus === "active" ? "processing" : "default"} className="font-semibold uppercase text-[10px]">
-                          {topListing.listingStatus}
-                        </Tag>
-                      </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#334155' }}>{top.projectName}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>Highest Interest Volume</div>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="p-3 bg-gray-50 rounded-xl text-center border border-gray-100">
-                      <EyeOutlined className="text-blue-500 mb-1" style={{ fontSize: '18px' }} />
-                      <div className="text-lg font-bold text-gray-800">{topListing.viewCount || 0}</div>
-                      <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Views</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-xl text-center border border-gray-100">
-                      <HeartOutlined className="text-red-500 mb-1" style={{ fontSize: '18px' }} />
-                      <div className="text-lg font-bold text-gray-800">{topListing.wishlistCount || 0}</div>
-                      <div className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Shortlists</div>
-                    </div>
+                  <div style={{ background: THEME.primaryLight, borderRadius: 10, padding: '16px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 36, fontWeight: 700, color: THEME.primary }}>{top.interestCount}</div>
+                    <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 2 }}>Total Interest Registrations</div>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center py-12">
-                  <TrophyOutlined style={{ fontSize: "54px", color: "#f59e0b", marginBottom: "16px" }} />
-                  <Title level={4} style={{ color: '#1e1b4b', margin: 0 }}>No Listings Yet</Title>
-                  <Text type="secondary" className="mt-2 block">Create property listings to start tracking popularity.</Text>
-                </div>
+                <Empty description="No interest registrations yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               )}
             </Card>
           </Col>
 
           <Col xs={24} lg={16}>
-            <Card style={cardStyle} className="h-full">
-              <Tabs defaultActiveKey="funnel" className="custom-dashboard-tabs">
-                <Tabs.TabPane tab="Sales Funnel Pipeline" key="funnel">
-                  <ResponsiveContainer width="100%" height={280}>
+            <Card style={{ ...cardStyle, height: '100%' }} bodyStyle={{ paddingTop: 12 }}>
+              <Tabs defaultActiveKey="funnel">
+                <Tabs.TabPane tab="Sales Funnel" key="funnel">
+                  <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={dashboardData?.dealFunnel || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="funnelGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/>
-                          <stop offset="100%" stopColor="#5c039b" stopOpacity={0.7}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3e8ff" />
-                      <XAxis dataKey="stage" stroke="#94a3b8" fontSize={11} fontWeight={600} />
-                      <YAxis stroke="#94a3b8" fontSize={11} />
-                      <Tooltip cursor={{ fill: '#f3e8ff', opacity: 0.4 }} />
-                      <Bar dataKey="count" fill="url(#funnelGrad)" radius={[6, 6, 0, 0]} name="Registrations" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="stage" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                      <Bar dataKey="count" fill={THEME.primary} radius={[4, 4, 0, 0]} name="Count" barSize={32} />
                     </BarChart>
                   </ResponsiveContainer>
                 </Tabs.TabPane>
-                <Tabs.TabPane tab="Inventory Status Breakdown" key="inventory">
-                  <div className="flex flex-wrap items-center justify-between">
-                    <ResponsiveContainer width="60%" height={280}>
+                <Tabs.TabPane tab="Inventory Breakdown" key="inventory">
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <ResponsiveContainer width="60%" height={260}>
                       <PieChart>
-                        <Pie 
-                          data={dashboardData?.inventoryStatus || []} 
-                          dataKey="value" 
-                          outerRadius={95} 
-                          innerRadius={50}
-                          paddingAngle={3}
-                          label
-                        >
-                          {(dashboardData?.inventoryStatus || []).map((_, index) => (
-                            <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        <Pie data={dashboardData?.inventoryStatus || []} dataKey="value" outerRadius={90} innerRadius={55} paddingAngle={2} stroke="none">
+                          {(dashboardData?.inventoryStatus || []).map((_, idx) => (
+                            <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip contentStyle={{ borderRadius: 8, border: 'none' }} />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className="w-[35%] flex flex-col gap-2">
+                    <div style={{ width: '38%' }}>
                       {(dashboardData?.inventoryStatus || []).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
-                          <div className="flex items-center gap-2">
-                            <span className="w-3 height-3 rounded-full" style={{ background: PIE_COLORS[idx % PIE_COLORS.length], width: 10, height: 10, display: 'inline-block' }} />
-                            <span className="text-xs font-semibold text-gray-600">{item.name}</span>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: PIE_COLORS[idx % PIE_COLORS.length], display: 'inline-block' }} />
+                            <span style={{ fontSize: 12, color: '#64748b' }}>{item.name}</span>
                           </div>
-                          <span className="text-xs font-bold text-gray-900">{item.value}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -472,38 +312,21 @@ const DeveloperDashboard = () => {
           </Col>
         </Row>
 
-        {/* PROPERTY-WISE INVENTORY IN ONE OVERALL CHART */}
-        {dashboardData?.propertyWiseInventory && dashboardData.propertyWiseInventory.length > 0 && (
-          <Row gutter={[16, 16]} className="mb-8">
+        {/* PROPERTY-WISE INVENTORY CHART */}
+        {(dashboardData?.propertyWiseInventory || []).length > 0 && (
+          <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
             <Col span={24}>
-              <Card title="📊 Property-Wise Inventory Distribution" style={cardStyle}>
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart
-                    data={getBarChartData()}
-                    margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
-                  >
-                    <defs>
-                      <linearGradient id="availGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                      </linearGradient>
-                      <linearGradient id="resGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.8}/>
-                      </linearGradient>
-                      <linearGradient id="soldGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.95}/>
-                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.8}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3e8ff" />
-                    <XAxis dataKey="propertyName" stroke="#94a3b8" fontSize={11} fontWeight={600} />
-                    <YAxis stroke="#94a3b8" fontSize={11} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="available" stackId="inventoryStack" fill="url(#availGrad)" name="Available" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="reserved" stackId="inventoryStack" fill="url(#resGrad)" name="Reserved" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="sold" stackId="inventoryStack" fill="url(#soldGrad)" name="Sold/SPA Signed" radius={[4, 4, 0, 0]} />
+              <Card title={<span style={{ fontWeight: 500, color: '#334155' }}>Property-Wise Inventory Distribution</span>} style={cardStyle}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={getBarChartData()} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: 8, border: 'none' }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: '#64748b' }} iconType="circle" />
+                    <Bar dataKey="available" stackId="a" fill="#60a5fa" name="Available" barSize={32} />
+                    <Bar dataKey="reserved" stackId="a" fill="#fbbf24" name="Reserved" />
+                    <Bar dataKey="sold" stackId="a" fill="#34d399" name="Sold / SPA" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -511,37 +334,79 @@ const DeveloperDashboard = () => {
           </Row>
         )}
 
-        {/* DYNAMIC LEADS TABLE */}
-        <Row gutter={[16, 16]} className="mb-8">
-          <Col span={24}>
-            <Card title="✉️ Recent Interest Registrations & Leads" style={cardStyle}>
-              <Table 
-                columns={leadColumns} 
-                dataSource={dashboardData?.recentLeads || []} 
-                pagination={{ pageSize: 5 }}
-                rowKey="_id"
+        {/* INTEREST REGISTRATIONS BY PROJECT — aggregated, no PII (PRD §9.4) */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
+          <Col xs={24} lg={12}>
+            <Card
+              title={
+                <span style={{ fontWeight: 500, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <LineChartOutlined style={{ color: THEME.info }} /> Interest Registrations by Project
+                </span>
+              }
+              style={cardStyle}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table
+                columns={interestColumns}
+                dataSource={dashboardData?.interestByProject || []}
+                rowKey="propertyId"
+                pagination={{ pageSize: 5, size: 'small' }}
+                size="small"
                 bordered={false}
-                className="custom-table"
+                locale={{ emptyText: <Empty description="No registrations yet" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+              />
+            </Card>
+          </Col>
+
+          {/* PENDING APPROVAL LISTINGS — PRD §9.1 */}
+          <Col xs={24} lg={12}>
+            <Card
+              title={
+                <span style={{ fontWeight: 500, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <FileSearchOutlined style={{ color: THEME.error }} /> Pending Admin Approval
+                </span>
+              }
+              style={cardStyle}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table
+                columns={pendingColumns}
+                dataSource={dashboardData?.pendingListings || []}
+                rowKey="propertyId"
+                pagination={{ pageSize: 5, size: 'small' }}
+                size="small"
+                bordered={false}
+                locale={{ emptyText: <Empty description="No listings pending approval" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
               />
             </Card>
           </Col>
         </Row>
 
-        {/* DEALS CLOSED TABLE */}
+        {/* DEALS CLOSED — date + unit reference only (PRD §9.1) */}
         <Row gutter={[16, 16]}>
           <Col span={24}>
-            <Card title="🤝 Closed Platform Deals (Xoto GRID)" style={cardStyle}>
-              <Table 
-                columns={dealColumns} 
-                dataSource={dashboardData?.dealsClosed || []} 
-                pagination={{ pageSize: 5 }}
+            <Card
+              title={
+                <span style={{ fontWeight: 500, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircleOutlined style={{ color: THEME.success }} /> Deals Closed via Platform
+                </span>
+              }
+              style={cardStyle}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table
+                columns={dealColumns}
+                dataSource={dashboardData?.dealsClosed || []}
                 rowKey="key"
+                pagination={{ pageSize: 5, size: 'small' }}
+                size="small"
                 bordered={false}
-                className="custom-table"
+                locale={{ emptyText: <Empty description="No closed deals yet" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
               />
             </Card>
           </Col>
         </Row>
+
       </Spin>
     </div>
   );
