@@ -91,9 +91,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   },
   {
     title: 'Notifications', icon: 'fas fa-bell',
-    submenus: [
-      { title: 'All Notifications', to: '/dashboard/admin/notifications' },
-    ],
+    to: '/dashboard/admin/gridnotification',
   },
   {
   title: 'Platform Configuration',

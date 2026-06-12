@@ -47,6 +47,7 @@ const AddGeneralleads = lazy(() => import('./components/Grid/GridAdmin/AddGenera
 const AllUsers = lazy(() => import('./components/Grid/GridAdmin/AllUsers'));
 const AllReferralPartners = lazy(() => import('./components/GridReferralPartner/Admin/AllReferralPartners'));
 const ReferralPartnerDetail = lazy(() => import('./components/GridReferralPartner/Admin/ReferralPartnerDetail'));
+const GridNotification = lazy(() => import('./components/Grid/GridAdmin/GridNotification'));
 const ReferralPartnerLeaderboard = lazy(() => import('./components/GridReferralPartner/GridDashboardpages/ReferralPartnerLeaderboard'));
 const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin/Dealrecordspage'));
 const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin/Dealrecorddetailpage'));
@@ -219,6 +220,7 @@ const App: React.FC = () => (
         <Route path="deal-records/create/:leadId" element={<Dealrecordspage />} />
         <Route path="deal-records/:dealId" element={<DealRecordDetailPage />} />
         <Route path="admin/agreements" element={<AdminAgreements />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="overview" element={<GridOverview />} />
         <Route path="leadreports" element={<GridLeadReports />} />
         <Route path="listingreports" element={<GridListingReports />} />
