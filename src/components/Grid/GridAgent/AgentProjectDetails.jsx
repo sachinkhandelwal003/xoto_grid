@@ -1153,7 +1153,7 @@ export default function AgentProjectDetails() {
                 </button>
                 <button onClick={() => setShowLeadModal(true)}
                   style={{ width: "100%", height: 52, borderRadius: 16, border: `1px solid ${P}`, background: "#fff", color: P, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <UserOutlined /> Create Lead & Link Property
+                  <UserOutlined /> Add Lead
                 </button>
               </div>
 

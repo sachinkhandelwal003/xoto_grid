@@ -822,9 +822,9 @@ const ReferralLeads = () => {
           <Button icon={<ReloadOutlined />} onClick={() => fetchLeads(filters, pagination.page, pagination.limit)} style={{ borderColor: PRIMARY, color: PRIMARY }}>
             Refresh
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreate(true)} style={{ background: PRIMARY, borderColor: PRIMARY }}>
+          {/* <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreate(true)} style={{ background: PRIMARY, borderColor: PRIMARY }}>
             Add Lead
-          </Button>
+          </Button> */}
         </div>
       </div>
 
