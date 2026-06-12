@@ -23,8 +23,8 @@ const THEME = {
 
 const AddCategory = () => {
   // Base URL
-  const BASE_URL = "https://xoto.ae/api/products"; 
-  const UPLOAD_URL = "https://xoto.ae/api/upload";
+  const BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/products`; 
+  const UPLOAD_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);

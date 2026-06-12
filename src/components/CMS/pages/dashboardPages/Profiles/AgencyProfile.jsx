@@ -162,7 +162,7 @@ const AgencyProfile = () => {
 
   try {
     const response = await apiService.post(
-      "https://xoto.ae/api/upload",
+      `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`,
       formData,
       {
         headers: {
@@ -274,7 +274,7 @@ message.success("Logo updated successfully");
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await apiService.post("https://xoto.ae/api/upload", formData);
+      const response = await apiService.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`, formData);
       const resData = response?.data ?? response;
       const fileUrl = resData?.file?.url;
 
@@ -353,7 +353,7 @@ message.success("Logo updated successfully");
         const formData = new FormData();
         formData.append("file", item.file);
 
-        const response = await apiService.post("https://xoto.ae/api/upload", formData);
+        const response = await apiService.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`, formData);
         const resData = response?.data ?? response;
         const fileUrl = resData?.file?.url;
 

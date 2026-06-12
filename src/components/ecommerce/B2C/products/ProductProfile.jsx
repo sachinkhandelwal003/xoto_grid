@@ -53,7 +53,7 @@ const ProductProfile = () => {
   const getImageUrl = (path) => {
     if (!path) return null;
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    return `http://localhost:5000/${cleanPath}`;
+    return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${cleanPath}`;
   };
 
   // --- FETCH DATA ---

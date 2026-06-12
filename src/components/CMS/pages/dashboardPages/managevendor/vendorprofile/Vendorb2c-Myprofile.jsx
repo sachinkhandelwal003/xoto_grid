@@ -93,7 +93,7 @@ const MyProfileB2C = () => {
   };
 
   const downloadDocument = (path) => {
-    window.open(`http://localhost:5000/${path}`, '_blank');
+    window.open(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${path}`, '_blank');
   };
 
   const openImageModal = (document) => {
@@ -446,7 +446,7 @@ const MyProfileB2C = () => {
                             onClick={() => openImageModal(doc)}
                           >
                             <img
-                              src={`http://localhost:5000/${doc.path}`}
+                              src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${doc.path}`}
                               alt={documentTypes[doc.type] || doc.type}
                               className="object-contain max-h-full max-w-full"
                               onError={(e) => {
@@ -589,7 +589,7 @@ const MyProfileB2C = () => {
               </div>
               <div className="flex-1 overflow-auto p-6 flex items-center justify-center flex-col">
                 <img
-                  src={`http://localhost:5000/${selectedDocument.path}`}
+                  src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${selectedDocument.path}`}
                   alt={documentTypes[selectedDocument.type] || selectedDocument.type}
                   className="max-w-full max-h-[60vh] object-contain"
                   onError={(e) => {

@@ -80,7 +80,7 @@ const handleImageUploadRequest = async ({ file, onSuccess, onError }) => {
   formData.append("file", file);
   setImageUploading(true);
   try {
-    const res  = await fetch("https://xoto.ae/api/upload", {
+    const res  = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`, {
       method: "POST",
       body:   formData,
     });

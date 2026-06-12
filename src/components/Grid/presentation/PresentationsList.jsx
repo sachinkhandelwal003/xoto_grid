@@ -30,7 +30,7 @@ import { apiService } from '../../../manageApi/utils/custom.apiservice';
 const PAGE_SIZE = 10;
 
 const buildTrackingUrl = (token) =>
-  `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/presentation/track/${token}`;
+  `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/presentation/track/${token}`;
 
 const formatDate = (value) => {
   if (!value) return '-';

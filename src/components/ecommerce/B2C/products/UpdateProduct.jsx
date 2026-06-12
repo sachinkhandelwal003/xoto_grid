@@ -105,7 +105,7 @@ const ColorVariantItem = memo(({
           {variant.images.map((img, i) => {
             const previewSrc = img instanceof File
               ? URL.createObjectURL(img)
-              : `http://localhost:5000/${img.url}`;
+              : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${img.url}`;
 
             return (
               <div key={i} className="relative group">

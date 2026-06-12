@@ -35,7 +35,7 @@ const DEAL_TYPE = {
 };
 
 const DOC_TYPES = ['spa', 'booking_form', 'title_deed', 'noc', 'other'];
-const UPLOAD_API = 'https://xoto.ae/api/upload';
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 // ─── FORMATTERS ───────────────────────────────────────────────────────────────
 const fmt = (n, cur = 'AED') =>

@@ -11,7 +11,7 @@ export const store = configureStore({
 });
 
 // Set up Axios interceptor after store creation
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Add a request interceptor to include the token in all requests
 axios.interceptors.request.use(

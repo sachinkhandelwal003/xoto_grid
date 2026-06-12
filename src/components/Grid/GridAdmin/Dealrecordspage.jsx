@@ -24,7 +24,7 @@ const P2 = '#7C3AED';
 const GR = `linear-gradient(135deg, ${P} 0%, ${P2} 100%)`;
 
 // ─── UPLOAD API ───────────────────────────────────────────────────────────────
-const UPLOAD_API = 'https://xoto.ae/api/upload';
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 // ─── SHARED FILE UPLOAD HELPER ────────────────────────────────────────────────
 const uploadFile = async (file) => {

@@ -205,7 +205,7 @@ const ReferralPartnerProfile = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await apiService.post("https://xoto.ae/api/upload", formData);
+      const response = await apiService.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`, formData);
       const resData = response?.data ?? response;
       const fileUrl = resData?.file?.url;
 

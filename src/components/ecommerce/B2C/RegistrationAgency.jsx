@@ -249,7 +249,7 @@ const RegistrationAgency = () => {
     };
 
     const response = await axios.post(
-      "http://localhost:5000/api/agency/agency-signup",
+      `${import.meta.env.VITE_API_BASE_URL}/agency/agency-signup`,
       payload
     );
 

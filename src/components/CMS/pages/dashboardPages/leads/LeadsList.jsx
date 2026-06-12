@@ -98,7 +98,7 @@ const PURPLE_THEME = {
   light: '#f8fafc'
 };
 
-const BASE_URL = "https://xoto.ae/api";
+const BASE_URL = `${import.meta.env.VITE_API_BASE_URL}`;
 
 const LeadsList = () => {
   const [leads, setLeads] = useState([]);

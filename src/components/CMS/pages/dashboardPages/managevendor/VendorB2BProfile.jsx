@@ -76,7 +76,7 @@ const VendorB2BProfile = () => {
   };
 
   const downloadDocument = (path) => {
-    window.open(`http://localhost:5000/${path}`, '_blank');
+    window.open(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${path}`, '_blank');
   };
 
   const openImageModal = (document) => {
@@ -177,7 +177,7 @@ const VendorB2BProfile = () => {
             <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
             <div className="flex justify-center mb-4">
               {vendor.business_details?.logo ? (
-                <Avatar src={`http://localhost:5000/${vendor.business_details.logo}`} size={96} />
+                <Avatar src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${vendor.business_details.logo}`} size={96} />
               ) : (
                 <Avatar icon={<FiUser />} size={96} className="bg-gray-200" />
               )}
@@ -421,7 +421,7 @@ const VendorB2BProfile = () => {
                               onClick={() => openImageModal(doc)}
                             >
                               <img
-                                src={`http://localhost:5000/${doc.path}`}
+                                src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${doc.path}`}
                                 alt={label}
                                 className="max-w-full max-h-48 object-contain"
                                 onError={(e) => {
@@ -482,7 +482,7 @@ const VendorB2BProfile = () => {
           </div>
           <div className="flex justify-center mb-4">
             <img
-              src={`http://localhost:5000/${selectedDocument?.path}`}
+              src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/${selectedDocument?.path}`}
               alt={documentTypes[selectedDocument?.type]}
               className="max-w-full max-h-[60vh] object-contain"
               onError={(e) => {

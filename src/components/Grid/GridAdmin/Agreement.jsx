@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 
-const UPLOAD_API = "https://xoto.ae/api/upload";
+const UPLOAD_API = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/upload`;
 
 const T = {
   primary: "#4A027C",
