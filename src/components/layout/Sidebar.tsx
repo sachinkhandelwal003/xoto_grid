@@ -54,9 +54,9 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     ],
   },
   {
-    title: 'Customer Management', icon: 'fas fa-users',
+    title: 'Users & Profiles', icon: 'fas fa-users',
     submenus: [
-      { title: 'All Users',           to: '/dashboard/admin/grid/allusers' },
+      // { title: 'All Users',           to: '/dashboard/admin/grid/allusers' },
       { title: 'Partners',            to: '/dashboard/admin/agency-list' },
       { title: 'Create Partner',      to: '/dashboard/admin/onboarding/agency' },
       { title: 'Developers',          to: '/dashboard/admin/developer-list' },

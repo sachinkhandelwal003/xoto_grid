@@ -14,10 +14,13 @@ const api = axios.create({
 
 });
 
-// Request interceptor to add auth token c
+// Request interceptor to add auth token
+// 'grid_token' is set by the TypeScript auth system (VaultLogin/AuthContext)
+// 'token'      is set by the legacy JavaScript auth system
+// grid_token takes priority to ensure the correct active session is used
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('grid_token') || localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
