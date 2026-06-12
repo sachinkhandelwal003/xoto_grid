@@ -484,6 +484,18 @@ const CreateAgentLead = ({ navigate }) => {
   };
 
   const fetchLiveMatches = async () => {
+    const hasAnyCriteria =
+      form.property_type || form.budget_max || form.budget_min ||
+      form.bedrooms || locationInputs.some((l) => l.trim());
+
+    if (!hasAnyCriteria) {
+      setLiveMatches([]);
+      setMatchType('none');
+      setMatchNote('');
+      setMatchLoading(false);
+      return;
+    }
+
     setMatchLoading(true);
     try {
       const strictRes  = await apiService.get(`/properties/?${buildParams('strict')}`);
@@ -530,10 +542,7 @@ const CreateAgentLead = ({ navigate }) => {
 
   const validate = () => {
     const errs = {};
-    const filledLocations = locationInputs.filter((l) => l.trim());
-    const hasReq = form.property_type || filledLocations.length > 0 || form.budget_min ||
-                   form.budget_max || form.bedrooms || form.bathrooms || form.additional_notes;
-    if (!hasReq) errs._requirements = 'At least one core requirement is needed (property type, location, budget, or bedrooms)';
+    if (!form.first_name.trim()) errs.first_name = 'First name is required';
     if (form.budget_min && form.budget_max && Number(form.budget_min) > Number(form.budget_max))
       errs.budget_max = 'Max budget cannot be less than Min budget';
     return errs;
@@ -632,40 +641,58 @@ const CreateAgentLead = ({ navigate }) => {
                 </div>
               )}
 
-              {errors._requirements && (
-                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
-                  <FiAlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={18} />
-                  <p className="text-sm font-semibold text-amber-800">{errors._requirements}</p>
-                </div>
-              )}
-
               {/* Section 1: Client Info */}
-              <SectionCard title="Client Information (Optional)" icon={FiUser}>
-                <InputField label="First Name" placeholder="John" required={true} icon={FiUser} value={form.first_name} onChange={(e) => set('first_name', e.target.value)} />
-                <InputField label="Last Name"  placeholder="Smith" required={true} value={form.last_name} onChange={(e) => set('last_name', e.target.value)} />
-                <div>
-                  <Label>Phone Number</Label>
-                  <div className="flex gap-2">
-                    <select
-                      className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 bg-gray-50/50 outline-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 appearance-none transition-all"
-                      style={{ minWidth: 90 }}
-                      value={form.country_code}
-                      onChange={(e) => set('country_code', e.target.value)}
-                    >
-                      {['+971', '+91', '+1', '+44', '+966', '+974', '+965', '+968'].map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="tel" placeholder="50 123 4567" required={true}
-                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-gray-50/50 placeholder-gray-400 outline-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 transition-all"
-                      value={form.phone_number}
-                      onChange={(e) => set('phone_number', e.target.value)}
-                    />
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: PRIMARY_LIGHT, color: PRIMARY }}>
+                    <FiUser size={16} />
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Client Information</h3>
+                </div>
+                <div className="px-6 pt-4 pb-2">
+                  <div className="flex items-start gap-3 bg-purple-50 border border-purple-100 rounded-xl px-4 py-3">
+                    <FiInfo className="text-purple-500 mt-0.5 flex-shrink-0" size={15} />
+                    <p className="text-xs font-medium text-purple-800 leading-relaxed">
+                      <span className="font-bold">Client anonymity is protected.</span> Only first name is required. Phone, email and last name are optional — you are not required to disclose your client's contact details. Contact info can be shared later when proceeding to site visit.
+                    </p>
                   </div>
                 </div>
-                <InputField label="Email Address" type="email" placeholder="john@example.com" icon={FiMail} value={form.email} onChange={(e) => set('email', e.target.value)} />
-              </SectionCard>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputField
+                    label="First Name" placeholder="e.g. John" required icon={FiUser}
+                    value={form.first_name}
+                    error={errors.first_name}
+                    onChange={(e) => set('first_name', e.target.value)}
+                  />
+                  <InputField
+                    label="Last Name" placeholder="e.g. Smith (optional)"
+                    value={form.last_name}
+                    onChange={(e) => set('last_name', e.target.value)}
+                  />
+                  <div>
+                    <Label>Phone Number <span className="text-gray-400 font-normal normal-case text-[11px]">(optional)</span></Label>
+                    <div className="flex gap-2">
+                      <select
+                        className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 bg-gray-50/50 outline-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 appearance-none transition-all"
+                        style={{ minWidth: 90 }}
+                        value={form.country_code}
+                        onChange={(e) => set('country_code', e.target.value)}
+                      >
+                        {['+971', '+91', '+1', '+44', '+966', '+974', '+965', '+968'].map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel" placeholder="50 123 4567 (optional)"
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-gray-50/50 placeholder-gray-400 outline-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 transition-all"
+                        value={form.phone_number}
+                        onChange={(e) => set('phone_number', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <InputField label="Email Address" type="email" placeholder="john@example.com (optional)" icon={FiMail} value={form.email} onChange={(e) => set('email', e.target.value)} />
+                </div>
+              </div>
 
               {/* Section 2: Property Requirements */}
               <SectionCard title="Property Requirements" icon={FiHome}>

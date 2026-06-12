@@ -1147,6 +1147,225 @@ const NotePanel = ({ leadId, onClose, onAdded }) => {
   );
 };
 
+// ─── EDIT LEAD MODAL ─────────────────────────────────────────────────────────
+const EditLeadModal = ({ lead, onClose, onSuccess }) => {
+  const req = lead?.requirements || {};
+  const ci  = lead?.contact_info || {};
+
+  const [form, setForm] = useState({
+    first_name:    ci.name?.first_name || '',
+    last_name:     ci.name?.last_name  || '',
+    phone_number:  ci.mobile?.number   || '',
+    country_code:  ci.mobile?.country_code || '+971',
+    email:         ci.email?.address   || '',
+    property_type: req.property_type   || '',
+    transaction_type: req.transaction_type || 'buy',
+    budget_min:    req.budget_min  || '',
+    budget_max:    req.budget_max  || '',
+    bedrooms:      req.bedrooms != null ? String(req.bedrooms) : '',
+    bathrooms:     req.bathrooms != null ? String(req.bathrooms) : '',
+    furnished:     req.furnished  || 'any',
+    additional_notes: req.additional_notes || '',
+    ready_by_date: req.ready_by_date ? req.ready_by_date.split('T')[0] : '',
+  });
+  const [locationInputs, setLocationInputs] = useState(
+    (req.location_preferences || []).map(l => typeof l === 'string' ? l : l.area).concat([''])
+  );
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const validate = () => {
+    const errs = {};
+    if (!form.first_name.trim()) errs.first_name = 'First name is required';
+    if (form.budget_min && form.budget_max && Number(form.budget_min) > Number(form.budget_max))
+      errs.budget_max = 'Max budget cannot be less than min budget';
+    return errs;
+  };
+
+  const handleSave = async () => {
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setSaving(true);
+    try {
+      const filledLocs = locationInputs.filter(l => l.trim());
+      const res  = await apiService.put(`/gridlead/agent/${lead._id}/edit`, {
+        ...form,
+        location_preferences: filledLocs,
+      });
+      const data = res?.data?.success !== undefined ? res.data : res;
+      if (data?.success) onSuccess(data?.data);
+      else { message.error(data?.message || 'Failed to update lead'); }
+    } catch (e) {
+      message.error(e?.response?.data?.message || 'Failed to update lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateLoc = (i, v) => {
+    const next = [...locationInputs];
+    next[i] = v;
+    if (i === next.length - 1 && v.trim()) next.push('');
+    setLocationInputs(next);
+  };
+  const removeLoc = (i) => setLocationInputs(prev => prev.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: P, color: '#fff' }}>
+              <FiEdit3 size={16} />
+            </div>
+            <h3 className="text-base font-extrabold text-gray-900">Edit Lead</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100">
+            <FiX size={16} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          {/* Client Info */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Client Information</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">First Name <span className="text-red-500">*</span></label>
+                <input value={form.first_name} onChange={e => set('first_name', e.target.value)}
+                  placeholder="John"
+                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${errors.first_name ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'}`} />
+                {errors.first_name && <p className="text-xs text-red-500 mt-1">{errors.first_name}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Last Name <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input value={form.last_name} onChange={e => set('last_name', e.target.value)}
+                  placeholder="Smith"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
+                <div className="flex gap-2">
+                  <select value={form.country_code} onChange={e => set('country_code', e.target.value)}
+                    className="px-2 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400" style={{ minWidth: 80 }}>
+                    {['+971','+91','+1','+44','+966','+974','+965','+968'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                  <input value={form.phone_number} onChange={e => set('phone_number', e.target.value)}
+                    placeholder="50 123 4567" type="tel"
+                    className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Email <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input value={form.email} onChange={e => set('email', e.target.value)}
+                  placeholder="john@example.com" type="email"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all" />
+              </div>
+            </div>
+          </div>
+
+          {/* Requirements */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Property Requirements</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Property Type</label>
+                <select value={form.property_type} onChange={e => set('property_type', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 transition-all">
+                  <option value="">Any</option>
+                  {['Apartment','Villa','Townhouse','Penthouse','Studio','Office','Retail','Warehouse','Land'].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Transaction Type</label>
+                <select value={form.transaction_type} onChange={e => set('transaction_type', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 transition-all">
+                  <option value="buy">Buy</option>
+                  <option value="rent">Rent</option>
+                  <option value="invest">Invest</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Min Budget (AED)</label>
+                <input value={form.budget_min} onChange={e => set('budget_min', e.target.value)}
+                  type="number" placeholder="500,000"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Max Budget (AED)</label>
+                <input value={form.budget_max} onChange={e => set('budget_max', e.target.value)}
+                  type="number" placeholder="2,000,000"
+                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${errors.budget_max ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100'}`} />
+                {errors.budget_max && <p className="text-xs text-red-500 mt-1">{errors.budget_max}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Bedrooms</label>
+                <select value={form.bedrooms} onChange={e => set('bedrooms', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 transition-all">
+                  <option value="">Any</option>
+                  {[0,1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n === 0 ? 'Studio' : `${n} BR`}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">Furnishing</label>
+                <select value={form.furnished} onChange={e => set('furnished', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 transition-all">
+                  {['any','furnished','unfurnished','semi-furnished'].map(f => <option key={f}>{f}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Locations */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Preferred Locations</p>
+            <div className="space-y-2">
+              {locationInputs.map((loc, i) => (
+                <div key={i} className="flex gap-2">
+                  <input value={loc} onChange={e => updateLoc(i, e.target.value)}
+                    placeholder={`Location ${i + 1} (e.g. Dubai Marina)`}
+                    className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all" />
+                  {locationInputs.length > 1 && (
+                    <button onClick={() => removeLoc(i)}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all">
+                      <FiX size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-bold text-gray-600 mb-1.5">Additional Notes</label>
+            <textarea value={form.additional_notes} onChange={e => set('additional_notes', e.target.value)}
+              rows={3} placeholder="Any special requirements or notes..."
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all resize-none" />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+            style={{ background: GR }}>
+            {saving ? <FiLoader size={14} className="animate-spin" /> : <FiEdit3 size={14} />}
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const GridAgentLeadDetail = () => {
   const { id }  = useParams();
@@ -1170,6 +1389,9 @@ const GridAgentLeadDetail = () => {
   const [showNote,         setShowNote]         = useState(false);
   const [showPresentation, setShowPresentation] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showEditLead,     setShowEditLead]     = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting,         setDeleting]         = useState(false);
 
   // Collapsibles
   const [showHistory, setShowHistory] = useState(false);
@@ -1299,6 +1521,32 @@ const GridAgentLeadDetail = () => {
     setLead(prev => ({ ...prev, notes: [...(prev.notes || []), note] }));
   };
 
+  const handleEditSuccess = (updated) => {
+    setShowEditLead(false);
+    if (updated) setLead(sanitize(updated));
+    else fetchLead();
+    message.success('Lead updated successfully');
+  };
+
+  const handleDeleteLead = async () => {
+    setDeleting(true);
+    try {
+      const res  = await apiService.delete(`/gridlead/agent/${id}/delete`);
+      const data = res?.data?.success !== undefined ? res.data : res;
+      if (data?.success) {
+        message.success('Lead deleted');
+        navigate(-1);
+      } else {
+        message.error(data?.message || 'Failed to delete lead');
+      }
+    } catch (e) {
+      message.error(e?.response?.data?.message || 'Failed to delete lead');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (pageLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -1331,6 +1579,35 @@ const GridAgentLeadDetail = () => {
       {showSubmit && <SubmitModal lead={lead} onClose={() => setShowSubmit(false)} onSuccess={handleSubmitSuccess} />}
       {showReqs   && <UpdateRequirementsPanel lead={lead} onClose={() => setShowReqs(false)} onSuccess={handleReqsSuccess} />}
       {showNote   && <NotePanel leadId={id} onClose={() => setShowNote(false)} onAdded={handleNoteAdded} />}
+      {showEditLead && <EditLeadModal lead={lead} onClose={() => setShowEditLead(false)} onSuccess={handleEditSuccess} />}
+
+      {/* ── DELETE CONFIRM ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <FiAlertTriangle size={20} className="text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900">Delete Lead?</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              This will permanently delete the lead for <span className="font-bold text-gray-800">{`${fn} ${ln}`.trim() || 'this client'}</span>. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleDeleteLead} disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-60 flex items-center justify-center gap-2">
+                {deleting ? <FiLoader size={14} className="animate-spin" /> : <FiAlertTriangle size={14} />}
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="min-h-screen bg-slate-50 font-sans">
 
@@ -1351,6 +1628,16 @@ const GridAgentLeadDetail = () => {
               <StatusBadge status={lead.status} />
               <ClassBadge cls={lead.classification} />
               {isSubmitted && <Tag color="#059669" bg="#f0fdf4" border="#bbf7d0">Submitted ✓</Tag>}
+              {!isSubmitted && (
+                <>
+                  <Btn variant="ghost" size="sm" onClick={() => setShowEditLead(true)}>
+                    <FiEdit3 size={13} /> Edit Lead
+                  </Btn>
+                  <Btn variant="danger" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                    <FiX size={13} /> Delete
+                  </Btn>
+                </>
+              )}
             </div>
           </div>
         </div>

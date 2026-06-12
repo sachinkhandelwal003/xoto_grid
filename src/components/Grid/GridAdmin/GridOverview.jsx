@@ -64,7 +64,10 @@ export default function GridOverview() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [period]);
+  useEffect(() => {
+    const token = localStorage.getItem('grid_token') || localStorage.getItem('token');
+    if (token) fetchData();
+  }, [period]);
 
   /* ── Fallback demo data when API returns nothing ── */
   const stats = data?.stats || {

@@ -5,7 +5,7 @@ import {
   FileText, ChevronLeft, ChevronRight, Home, Sparkles,
   TrendingUp, Grid3X3, Plus, LayoutGrid, Layers,
   X, Loader2, Copy, Mail,
-   Key, Briefcase, ChevronDown  
+   Key, Briefcase, ChevronDown , QrCode 
 } from "lucide-react";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 
@@ -258,6 +258,10 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
   };
 
   const handleGenerate = async () => {
+    if (!clientNotes.clientName || clientNotes.clientName.trim() === "") {
+      setError("Client Name is mandatory to generate the presentation.");
+      return; // Execution yahan ruk jayegi
+    }
     setGenerating(true);
     setError("");
     try {
@@ -357,8 +361,15 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Client Name</label>
-                <input value={clientNotes.clientName} onChange={(e) => setClientNotes((p) => ({ ...p, clientName: e.target.value }))} placeholder="Client name" style={styles.input} />
+                <label style={styles.formLabel}>
+                  Client Name <span style={{ color: "#dc2626", fontSize: 12 }}>*</span>
+                </label>
+                <input 
+                  value={clientNotes.clientName} 
+                  onChange={(e) => setClientNotes((p) => ({ ...p, clientName: e.target.value }))} 
+                  placeholder="Enter client name" 
+                  style={styles.input} 
+                />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div style={styles.formGroup}>
@@ -1084,50 +1095,51 @@ useEffect(() => {
           <div style={{ fontSize: 13 }}>Try adjusting your search or filters</div>
         </div>
       ) : (
-        <div style={styles.grid}>
+     <div style={styles.grid}>
           {properties.map((p) => (
-            <PropertyCard
-              key={p._id}
-              property={p}
-              onView={setSelectedProp}
-              onGeneratePresentation={setPresentationProp}
-            />
+            <div key={p._id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <PropertyCard
+                property={p}
+                onView={setSelectedProp}
+                onGeneratePresentation={setPresentationProp}
+              />
+              {/* QR Code Button – show on hover */}
+              {p.qr_code && (
+                <div style={{ padding: '0 12px', marginBottom: 8 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <button
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '6px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
+                        background: '#fff', fontSize: 11, fontWeight: 600, color: '#374151',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        const img = e.currentTarget.nextSibling;
+                        if (img) img.style.display = 'block';
+                      }}
+                      onMouseLeave={(e) => {
+                        const img = e.currentTarget.nextSibling;
+                        if (img) img.style.display = 'none';
+                      }}
+                    >
+                      <QrCode size={14} /> QR
+                    </button>
+                    <div style={{
+                      display: 'none', position: 'absolute', bottom: '100%', left: '50%',
+                      transform: 'translateX(-50%)', marginBottom: 8, zIndex: 10,
+                    }}>
+                      <img
+                        src={p.qr_code}
+                        alt="QR"
+                        style={{ width: 180, height: 180, borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
-          {/* QR Code Button – show on hover */}
-{property.qr_code && (
-  <div style={{ padding: '0 12px', marginBottom: 8 }}>
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          padding: '6px 10px', borderRadius: 8, border: '1px solid #e5e7eb',
-          background: '#fff', fontSize: 11, fontWeight: 600, color: '#374151',
-          cursor: 'pointer',
-        }}
-        onMouseEnter={(e) => {
-          const img = e.currentTarget.nextSibling;
-          if (img) img.style.display = 'block';
-        }}
-        onMouseLeave={(e) => {
-          const img = e.currentTarget.nextSibling;
-          if (img) img.style.display = 'none';
-        }}
-      >
-        <QrcodeIcon size={14} /> QR
-      </button>
-      <div style={{
-        display: 'none', position: 'absolute', bottom: '100%', left: '50%',
-        transform: 'translateX(-50%)', marginBottom: 8, zIndex: 10,
-      }}>
-        <img
-          src={property.qr_code}
-          alt="QR"
-          style={{ width: 180, height: 180, borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-        />
-      </div>
-    </div>
-  </div>
-)}
         </div>
       )}
 

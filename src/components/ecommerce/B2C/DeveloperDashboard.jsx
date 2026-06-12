@@ -182,6 +182,8 @@ const DeveloperDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
     try {
       setLoading(true);
       const res = await apiService.get("/properties/developer/dashboard");
@@ -218,8 +220,10 @@ const DeveloperDashboard = () => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (user?.id || user?._id) {
+      fetchDashboardData();
+    }
+  }, [fetchDashboardData, user?.id, user?._id]);
 
   const handleRefresh = () => {
     setRefreshing(true);
