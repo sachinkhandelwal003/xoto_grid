@@ -2,9 +2,7 @@
 import axios from 'axios';
 import { showToast } from './toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-  ? `${import.meta.env.VITE_API_BASE_URL}/api`
-  : 'https://xoto.ae/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://xoto.ae/api';
 
 // ihfwierhvjfdnv;ioenv;ioeasnj
 

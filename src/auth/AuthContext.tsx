@@ -13,7 +13,7 @@ import type { AuthContextType, AuthUser } from '../types/auth';
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-const API_BASE = 'https://xotobackend.kotiboxglobaltech.site';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, token, loading, error, isAuthenticated } = useSelector(
