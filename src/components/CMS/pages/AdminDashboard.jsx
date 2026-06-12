@@ -39,7 +39,8 @@ const AdminDashboard = () => {
   const [range, setRange] = useState('7d');
 
   useEffect(() => {
-    fetchDashboardData();
+    const token = localStorage.getItem('grid_token') || localStorage.getItem('token');
+    if (token) fetchDashboardData();
   }, [range]);
 
   const fetchDashboardData = async () => {
@@ -99,7 +100,7 @@ const AdminDashboard = () => {
   const statsCards = [
     { label: 'Pending Approvals', value: (dashboardData.agents.pending || 0) + (dashboardData.agencies.pending || 0), icon: <ExclamationCircleOutlined />, color: THEME.warning, bg: '#fffbe6' },
     { label: 'Total Verified Agents', value: dashboardData.agents.approved, icon: <TeamOutlined />, color: THEME.info, bg: '#e6f7ff' },
-    { label: 'Total Agencies', value: dashboardData.agencies.total, icon: <BankOutlined />, color: THEME.purple, bg: THEME.purpleBg },
+    { label: 'Total Partners', value: dashboardData.agencies.total, icon: <BankOutlined />, color: THEME.purple, bg: THEME.purpleBg },
     { label: 'Total Deals', value: dashboardData.deals.total, icon: <FileProtectOutlined />, color: THEME.success, bg: '#f6ffed' },
     { label: 'Active Inventory', value: dashboardData.properties.available, icon: <HomeOutlined />, color: THEME.primary, bg: THEME.primaryBg },
     { label: 'Total Revenue', value: `AED ${(dashboardData.products.revenue || 0).toLocaleString('en-AE')}`, icon: <DollarOutlined />, color: THEME.revenue, bg: '#f6ffed' },

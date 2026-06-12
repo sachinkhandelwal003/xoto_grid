@@ -93,7 +93,7 @@ const [description, setDescription] = useState("");
   const fetchDeveloperById = async (devId) => {
     setLoadingDetail(true);
     try {
-      const resData = await apiService.get(`/property/get-developer-by-id`, { id: devId });
+      const resData = await apiService.get(`/developer/get-developer-by-id`, { id: devId });
       const dev = resData?.data || resData;
       setSelectedDev(dev);
       fetchDeveloperProperties(dev._id);
@@ -507,7 +507,7 @@ const handleUpdateDescription = async () => {
   </Row>
 )}
         {/* DOCUMENTS SECTION */}
-        <Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}>
+        {/* <Divider orientation="left" style={{ color: "#5c039b", borderColor: "#e9d5ff" }}>
           <Space>
             <FileTextOutlined /> Documents
             <Button size="small" type="primary" icon={<UploadOutlined />} onClick={() => setAgreementModalVisible(true)}
@@ -515,56 +515,9 @@ const handleUpdateDescription = async () => {
               Upload Agreement
             </Button>
           </Space>
-        </Divider>
+        </Divider> */}
 
-        <Row gutter={[24, 16]} style={{ marginBottom: "24px" }}>
-          {/* VERIFICATION DOCUMENTS COLUMN */}
-          <Col xs={24} md={12}>
-            {selectedDev.kycStatus === "pending" && (
-              <div style={{
-                background: "linear-gradient(135deg, #fefce8, #fffbeb)", border: "1px solid #fde68a", borderRadius: "12px",
-                padding: "14px 16px", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px"
-              }}>
-                <div><Text strong style={{ color: "#92400e", fontSize: "13px" }}>Verification Pending Review</Text></div>
-                <Space size={6}>
-                  <Button size="small" type="primary" icon={<CheckOutlined />} loading={kycActionLoading} onClick={handleKycApprove}
-                    style={{ background: "#059669", borderColor: "#059669", borderRadius: "6px", fontWeight: "600" }}>Approve</Button>
-                  <Button size="small" danger icon={<CloseOutlined />} onClick={() => setRejectModalVisible(true)}
-                    style={{ borderRadius: "6px", fontWeight: "600" }}>Reject</Button>
-                </Space>
-              </div>
-            )}
-            {selectedDev.kycStatus === "approved" && (
-              <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: "12px", padding: "12px 16px", marginBottom: "12px" }}>
-                <Text strong style={{ color: "#166534" }}>Verification Approved</Text>
-              </div>
-            )}
-            {selectedDev.kycStatus === "rejected" && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "12px", padding: "12px 16px", marginBottom: "12px" }}>
-                <Text strong style={{ color: "#991b1b" }}>Verification Rejected</Text>
-              </div>
-            )}
-            <Card bordered style={{ borderRadius: "12px", border: "1px solid #e9d5ff" }} bodyStyle={{ padding: "16px" }}
-              title={<Space><div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#5c039b" }} /><Text strong style={{ color: "#5c039b", fontSize: "13px" }}>Verification Documents</Text></Space>}
-            >
-              {visibleKycDocuments.length > 0
-                ? visibleKycDocuments.map((doc) => <DocCard key={doc._id || doc.url} doc={doc} typeLabel={kycTypeLabel} accentColor="#5c039b" bgColor="#faf5ff" borderColor="#e9d5ff" iconBg="#ede9fe" />)
-                : <Text type="secondary" style={{ fontSize: "13px" }}>No verification documents uploaded.</Text>}
-            </Card>
-          </Col>
-
-          {/* AGREEMENT DOCUMENTS COLUMN */}
-          <Col xs={24} md={12}>
-            <AgreementActionBanner />
-            <Card bordered style={{ borderRadius: "12px", border: "1px solid #bfdbfe" }} bodyStyle={{ padding: "16px" }}
-              title={<Space><div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2563eb" }} /><Text strong style={{ color: "#2563eb", fontSize: "13px" }}>Agreement Documents</Text></Space>}
-            >
-              {visibleAgreementDocuments.length > 0
-                ? visibleAgreementDocuments.map((doc) => <DocCard key={doc._id || doc.url} doc={doc} typeLabel={agreementTypeLabel} accentColor="#2563eb" bgColor="#eff6ff" borderColor="#bfdbfe" iconBg="#dbeafe" />)
-                : <Text type="secondary" style={{ fontSize: "13px" }}>No agreement documents uploaded.</Text>}
-            </Card>
-          </Col>
-        </Row>
+  
       </div>
 
       {/* MODALS */}
