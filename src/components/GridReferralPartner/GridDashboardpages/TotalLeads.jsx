@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   FiSearch, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight,
-  FiRefreshCw, FiPlus, FiEye, FiUser, FiHome, FiPhone, FiMail, FiActivity, FiCheckCircle, FiClock, FiEdit, FiTrash2
+  FiRefreshCw, FiPlus, FiEye, FiUser, FiHome, FiPhone, FiMail, FiMapPin, FiActivity, FiCheckCircle, FiClock, FiEdit, FiTrash2
 } from 'react-icons/fi';
 import { Input, Select, Button, Tooltip, message, Modal, Form, InputNumber, Drawer, Descriptions, Tag, Avatar, Row, Col, Statistic, Card, Tabs } from 'antd';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
@@ -411,26 +411,27 @@ const TotalLeads = () => {
   const handleEditLead = async (values) => {
     setModalLoading(true);
     try {
+      const nameParts = (values.customerName || '').trim().split(/\s+/);
+      const first_name = nameParts[0] || '';
+      const last_name  = nameParts.slice(1).join(' ') || '';
+
       const payload = {
         requirements: {
-          property_type: values.propertyType,
-          transaction_type: values.transactionType,
-          location_preferences: values.areaOfInterest ? [{ area: values.areaOfInterest }] : [],
-          budget_min: values.budgetMin,
-          budget_max: values.budgetMax,
-          bedrooms: values.bedrooms,
-          bathrooms: values.bathrooms,
-          area_sqft_min: values.areaMin,
-          area_sqft_max: values.areaMax,
-          furnished: values.furnished,
-          ready_by_date: values.readyByDate,
-          additional_notes: values.additionalNotes,
+          first_name,
+          last_name,
+          phone_number: values.phoneNumber,
+          country_code: values.countryCode || '+971',
+          ...(values.email         && { email: values.email }),
+          ...(values.areaOfInterest && { interest_area: values.areaOfInterest }),
+          ...(values.budget         && { budget_max: values.budget }),
+          ...(values.propertyType   && { property_type: values.propertyType }),
+          transaction_type: selectedLead?.requirements?.transaction_type || 'buy',
         },
-        reason: 'Updated by referral partner'
+        reason: 'Updated by referral partner',
       };
 
       await apiService.put(`/gridlead/referral/${selectedLead._id}/update-requirements`, payload);
-      
+
       message.success('Lead updated successfully!');
       setIsEditModalVisible(false);
       setSelectedLead(null);
@@ -454,24 +455,16 @@ const TotalLeads = () => {
 
   const openEditModal = (lead) => {
     setSelectedLead(lead);
+    const fn = lead.contact_info?.name?.first_name || '';
+    const ln = lead.contact_info?.name?.last_name  || '';
     form.setFieldsValue({
-      firstName: lead.contact_info?.name?.first_name,
-      lastName: lead.contact_info?.name?.last_name,
-      phoneNumber: lead.contact_info?.mobile?.number,
-      countryCode: lead.contact_info?.mobile?.country_code || '+971',
-      email: lead.contact_info?.email?.address,
-      propertyType: lead.requirements?.property_type,
-      transactionType: lead.requirements?.transaction_type,
+      customerName:   `${fn} ${ln}`.trim(),
+      phoneNumber:    lead.contact_info?.mobile?.number,
+      countryCode:    lead.contact_info?.mobile?.country_code || '+971',
+      email:          lead.contact_info?.email?.address,
       areaOfInterest: lead.requirements?.location_preferences?.[0]?.area,
-      budgetMin: lead.requirements?.budget_min,
-      budgetMax: lead.requirements?.budget_max,
-      bedrooms: lead.requirements?.bedrooms,
-      bathrooms: lead.requirements?.bathrooms,
-      areaMin: lead.requirements?.area_sqft_min,
-      areaMax: lead.requirements?.area_sqft_max,
-      furnished: lead.requirements?.furnished,
-      readyByDate: lead.requirements?.ready_by_date,
-      additionalNotes: lead.requirements?.additional_notes,
+      budget:         lead.requirements?.budget_max,
+      propertyType:   lead.requirements?.property_type,
     });
     setIsEditModalVisible(true);
   };
@@ -580,16 +573,6 @@ const TotalLeads = () => {
       render: (_, row) => <CommissionBadge status={row.referral_info?.commission_status} />,
     },
     {
-      key: 'submitted_to_xoto', title: 'Submitted', sortable: true,
-      render: (val) => val ? (
-        <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
-          <FiCheckCircle size={12} /> Yes
-        </span>
-      ) : (
-        <span className="text-xs text-gray-400 font-semibold">No</span>
-      ),
-    },
-    {
       key: 'actions', title: 'Actions', sortable: false,
       render: (_, row) => (
         <div className="flex gap-2">
@@ -602,17 +585,15 @@ const TotalLeads = () => {
               onClick={() => navigate(`/dashboard/gridreferralpartner/lead/${row._id}`)}
             />
           </Tooltip>
-          {!row.submitted_to_xoto && (
-            <Tooltip title="Edit Lead">
-              <Button
-                shape="circle"
-                size="small"
-                icon={<FiEdit size={14} />}
-                style={{ color: PRIMARY, borderColor: PRIMARY }}
-                onClick={() => navigate(`/dashboard/gridreferralpartner/submit-leads?id=${row._id}`)}
-              />
-            </Tooltip>
-          )}
+          <Tooltip title="Edit Lead">
+            <Button
+              shape="circle"
+              size="small"
+              icon={<FiEdit size={14} />}
+              style={{ color: PRIMARY, borderColor: PRIMARY }}
+              onClick={() => openEditModal(row)}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -638,113 +619,73 @@ const TotalLeads = () => {
       }}
       confirmLoading={modalLoading}
       onOk={() => form.submit()}
-      okText={isEdit ? "Update Lead" : "Submit Lead"}
+      okText={isEdit ? 'Update Lead' : 'Submit Lead'}
       okButtonProps={{ style: { backgroundColor: PRIMARY } }}
       destroyOnClose
-      width={700}
+      width={560}
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={isEdit ? handleEditLead : handleAddLead}
-        initialValues={{
-          countryCode: '+971',
-          transactionType: 'buy',
-          furnished: 'any',
-          ...initialValues,
-        }}
-        className="mt-4"
+        initialValues={{ countryCode: '+971', ...initialValues }}
+        style={{ marginTop: '16px' }}
       >
-        <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginBottom: '12px', marginTop: '0' }}>
-          <FiUser style={{ marginRight: '6px', color: PRIMARY }} />
-          Client Information
-        </h3>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="firstName"
-              label="First Name"
-              rules={[{ required: true, message: 'First name is required' }]}
-            >
-              <Input placeholder="John" prefix={<FiUser />} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="lastName"
-              label="Last Name"
-              rules={[{ required: true, message: 'Last name is required' }]}
-            >
-              <Input placeholder="Doe" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              name="countryCode"
-              label="Country Code"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <Select placeholder="+971">
-                <Option value="+91">+91 (India)</Option>
-                <Option value="+971">+971 (UAE)</Option>
-                <Option value="+1">+1 (USA)</Option>
-                <Option value="+44">+44 (UK)</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={16}>
-            <Form.Item
-              name="phoneNumber"
-              label="Phone Number"
-              rules={[{ required: true, message: 'Phone number is required' }]}
-            >
-              <Input placeholder="501234567" prefix={<FiPhone />} />
-            </Form.Item>
-          </Col>
-        </Row>
-
+        {/* Customer Name */}
         <Form.Item
-          name="email"
-          label="Email (Optional)"
+          name="customerName"
+          label="Customer Name"
+          rules={[{ required: true, message: 'Customer name is required' }]}
         >
-          <Input placeholder="john@example.com" prefix={<FiMail />} />
+          <Input prefix={<FiUser size={13} color="#94A3B8" />} placeholder="e.g. Ahmed Al Mansouri" />
         </Form.Item>
 
-        <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '20px 0' }} />
-
-        <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', marginBottom: '12px', marginTop: '0' }}>
-          <FiHome style={{ marginRight: '6px', color: PRIMARY }} />
-          Property Requirements
-        </h3>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="transactionType"
-              label="Looking to"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <Select placeholder="Select">
-                <Option value="buy">Buy</Option>
-                <Option value="rent">Rent</Option>
-                <Option value="sell">Sell</Option>
+        {/* Phone */}
+        <Form.Item label="Customer Phone" required style={{ marginBottom: 0 }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Form.Item name="countryCode" noStyle rules={[{ required: true, message: 'Required' }]}>
+              <Select showSearch style={{ width: '130px' }} optionFilterProp="children"
+                filterOption={(input, option) => option?.children?.toString().toLowerCase().includes(input.toLowerCase())}
+              >
+                <Option value="+971">+971 (UAE)</Option>
+                <Option value="+91">+91 (India)</Option>
+                <Option value="+1">+1 (USA)</Option>
+                <Option value="+44">+44 (UK)</Option>
+                <Option value="+966">+966 (KSA)</Option>
+                <Option value="+974">+974 (Qatar)</Option>
+                <Option value="+965">+965 (Kuwait)</Option>
+                <Option value="+973">+973 (Bahrain)</Option>
+                <Option value="+968">+968 (Oman)</Option>
               </Select>
             </Form.Item>
+            <Form.Item name="phoneNumber" noStyle rules={[
+              { required: true, message: 'Phone number is required' },
+              { pattern: /^\d{6,15}$/, message: 'Enter a valid phone number' },
+            ]}>
+              <Input prefix={<FiPhone size={13} color="#94A3B8" />} placeholder="501234567" style={{ flex: 1 }} />
+            </Form.Item>
+          </div>
+        </Form.Item>
+
+        {/* Email */}
+        <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Enter a valid email' }]} style={{ marginTop: '16px' }}>
+          <Input prefix={<FiMail size={13} color="#94A3B8" />} placeholder="client@email.com" />
+        </Form.Item>
+
+        {/* Interest Area + Property Type — 2 col */}
+        <Row gutter={12}>
+          <Col span={12}>
+            <Form.Item name="areaOfInterest" label="Interest Area">
+              <Input prefix={<FiMapPin size={13} color="#94A3B8" />} placeholder="e.g. Dubai Marina" />
+            </Form.Item>
           </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="propertyType"
-              label="Property Type"
-              rules={[{ required: true, message: 'Property type is required' }]}
-            >
-              <Select placeholder="Select Property Type">
+          <Col span={12}>
+            <Form.Item name="propertyType" label="Property Type">
+              <Select placeholder="Select type" allowClear>
                 <Option value="Apartment">Apartment</Option>
                 <Option value="Villa">Villa</Option>
                 <Option value="Townhouse">Townhouse</Option>
+                <Option value="Penthouse">Penthouse</Option>
                 <Option value="Commercial">Commercial</Option>
                 <Option value="Land">Land</Option>
               </Select>
@@ -752,128 +693,14 @@ const TotalLeads = () => {
           </Col>
         </Row>
 
-        <Form.Item
-          name="areaOfInterest"
-          label="Area of Interest"
-        >
-          <Input placeholder="e.g., Dubai Marina, Jumeirah" />
-        </Form.Item>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="budgetMin"
-              label="Budget (Min) - AED"
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="Minimum budget"
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="budgetMax"
-              label="Budget (Max) - AED"
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="Maximum budget"
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="bedrooms"
-              label="Bedrooms"
-            >
-              <Select placeholder="Any">
-                <Option value={0}>Studio</Option>
-                <Option value={1}>1</Option>
-                <Option value={2}>2</Option>
-                <Option value={3}>3</Option>
-                <Option value={4}>4</Option>
-                <Option value={5}>5+</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="bathrooms"
-              label="Bathrooms"
-            >
-              <Select placeholder="Any">
-                <Option value={1}>1</Option>
-                <Option value={2}>2</Option>
-                <Option value={3}>3</Option>
-                <Option value={4}>4+</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="areaMin"
-              label="Area (Min) - Sq Ft"
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="Minimum area"
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="areaMax"
-              label="Area (Max) - Sq Ft"
-            >
-              <InputNumber
-                style={{ width: '100%' }}
-                placeholder="Maximum area"
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item
-          name="furnished"
-          label="Furnished"
-        >
-          <Select placeholder="Any">
-            <Option value="any">Any</Option>
-            <Option value="furnished">Furnished</Option>
-            <Option value="semi">Semi-Furnished</Option>
-            <Option value="unfurnished">Unfurnished</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          name="readyByDate"
-          label="Ready By Date (Optional)"
-        >
-          <Input placeholder="e.g., Q1 2025" />
-        </Form.Item>
-
-        <Form.Item
-          name="additionalNotes"
-          label="Additional Notes"
-        >
-          <TextArea
-            rows={4}
-            placeholder="Any other requirements or notes about the client..."
+        {/* Budget */}
+        <Form.Item name="budget" label="Budget (AED)">
+          <InputNumber
+            style={{ width: '100%' }}
+            placeholder="e.g. 1,500,000"
+            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={v => v?.replace(/,/g, '')}
+            min={0}
           />
         </Form.Item>
       </Form>

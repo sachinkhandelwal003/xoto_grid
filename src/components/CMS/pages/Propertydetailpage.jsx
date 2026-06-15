@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
+import { useAuth } from '../../../auth/AuthContext';
+import { VAULT_ROLE_SLUG_MAP } from '../../../types/auth';
 import { Button, Spin, Tag, Popconfirm, message, Modal, Input, Progress } from 'antd';
 import {
   ArrowLeftOutlined, FireFilled, StarFilled, EnvironmentOutlined,
   CheckCircleFilled, ClockCircleFilled, CloseCircleFilled,
   EyeOutlined, HomeOutlined, UserOutlined, ColumnWidthOutlined,
-  DeleteOutlined, PhoneOutlined, MailOutlined, CarOutlined,
+  DeleteOutlined, PhoneOutlined, MailOutlined, CarOutlined, EditOutlined,
   CheckOutlined, CloseOutlined, WarningOutlined, BuildOutlined,
   FilePdfOutlined, VideoCameraOutlined, ExpandOutlined,
   AppstoreOutlined, PictureOutlined, CalendarOutlined,
@@ -126,6 +128,9 @@ const SectionCard = ({ title, icon, children, noPad, borderColor }) => (
 const PropertyDetailPage = () => {
   const { id }    = useParams();
   const navigate  = useNavigate();
+  const { user }  = useAuth();
+  const roleCode  = typeof user?.role === 'object' ? String(user.role.code) : String(user?.role || '');
+  const roleSlug  = VAULT_ROLE_SLUG_MAP[roleCode] || 'admin';
 
   const [property,       setProperty]      = useState(null);
   const [documents,      setDocuments]     = useState([]); // Added state for Library Documents
@@ -347,6 +352,19 @@ const PropertyDetailPage = () => {
                 Activate
               </Button>
             )}
+
+            {/* {(subType === 'secondary' || subType === 'rental') && (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => {
+                  if (subType === 'rental') navigate(`/dashboard/${roleSlug}/rental/properties/edit/${id}`);
+                  else navigate(`/dashboard/${roleSlug}/secondary-properties/edit/${id}`);
+                }}
+                style={{ borderRadius: 9, fontWeight: 600, borderColor: '#7c3aed', color: '#7c3aed' }}
+              >
+                Edit Property
+              </Button>
+            )} */}
 
             <Button
               icon={<FireFilled />}

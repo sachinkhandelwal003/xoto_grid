@@ -1,170 +1,358 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  FiArrowLeft, FiUser, FiPhone, FiMail, FiMessageSquare,
-  FiHome, FiMapPin, FiDollarSign, FiTag, FiLayers,
-  FiClock, FiAlertCircle, FiActivity, FiCheckCircle,
-  FiXCircle, FiChevronDown, FiChevronUp, FiInfo,
-  FiFileText, FiRadio, FiTarget, FiBarChart2,
-  FiLoader, FiShield, FiBriefcase, FiGitBranch,
-  FiRepeat, FiList, FiCpu, FiHash,
+  FiArrowLeft, FiUser, FiPhone, FiMail, FiMapPin,
+  FiDollarSign, FiHome, FiClock, FiAlertCircle,
+  FiCheckCircle, FiEdit2, FiActivity, FiChevronDown, FiChevronUp,
+  FiFileText, FiX,
 } from 'react-icons/fi';
-import { Spin } from 'antd';
+import { Spin, Modal, Form, Input, InputNumber, Select, Button, message } from 'antd';
+import { Country } from 'country-state-city';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
-// ─── THEME ────────────────────────────────────────────────────────────────────
+const { Option } = Select;
+
 const P  = '#4A027C';
 const P2 = '#7C3AED';
 const GR = `linear-gradient(135deg, ${P} 0%, ${P2} 100%)`;
 
-// ─── STATUS CONFIG ─────────────────────────────────────────────────────────────
+// ─── STATUS CONFIG ────────────────────────────────────────────────────────────
 const STATUS_CFG = {
-  new:                  { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', label: 'New Lead'      },
-  contacted:            { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', label: 'Contacted'     },
-  qualified:            { bg: '#ecfeff', color: '#0891b2', border: '#a5f3fc', label: 'Qualified'     },
-  in_discussion:        { bg: '#fffbeb', color: '#d97706', border: '#fde68a', label: 'In Discussion' },
-  site_visit_scheduled: { bg: '#ecfeff', color: '#0891b2', border: '#a5f3fc', label: 'Site Visit'   },
-  offer_made:           { bg: '#fdf2f8', color: '#db2777', border: '#fbcfe8', label: 'Offer Made'    },
-  completed:            { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', label: 'Completed'     },
-  not_proceeding:       { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'Dropped'       },
+  new:                  { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE', label: 'New Lead'       },
+  contacted:            { bg: '#F5F3FF', color: '#7C3AED', border: '#DDD6FE', label: 'Contacted'      },
+  qualified:            { bg: '#ECFEFF', color: '#0891B2', border: '#A5F3FC', label: 'Qualified'      },
+  in_discussion:        { bg: '#FFFBEB', color: '#D97706', border: '#FDE68A', label: 'In Discussion'  },
+  site_visit_scheduled: { bg: '#ECFEFF', color: '#0891B2', border: '#A5F3FC', label: 'Site Visit'     },
+  offer_made:           { bg: '#FDF2F8', color: '#DB2777', border: '#FBCFE8', label: 'Offer Made'     },
+  reserved:             { bg: '#FDF2F8', color: '#DB2777', border: '#FBCFE8', label: 'Reserved'       },
+  spa_signed:           { bg: '#ECFDF5', color: '#059669', border: '#6EE7B7', label: 'SPA Signed'     },
+  completed:            { bg: '#F0FDF4', color: '#16A34A', border: '#BBF7D0', label: 'Completed'      },
+  not_proceeding:       { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA', label: 'Not Proceeding' },
 };
 
 const CLASS_CFG = {
-  hot:  { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'Hot'  },
-  warm: { bg: '#fffbeb', color: '#d97706', border: '#fde68a', label: 'Warm' },
-  cold: { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', label: 'Cold' },
+  hot:  { bg: '#FEF2F2', color: '#DC2626', label: 'Hot'  },
+  warm: { bg: '#FFFBEB', color: '#D97706', label: 'Warm' },
+  cold: { bg: '#EFF6FF', color: '#2563EB', label: 'Cold' },
 };
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const COMMISSION_CFG = {
+  pending:   { bg: '#FFFBEB', color: '#D97706', label: 'Pending'   },
+  confirmed: { bg: '#EFF6FF', color: '#2563EB', label: 'Confirmed' },
+  paid:      { bg: '#F0FDF4', color: '#16A34A', label: 'Paid'      },
+  cancelled: { bg: '#FEF2F2', color: '#DC2626', label: 'Cancelled' },
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 const fmt = (v) => (v == null || v === '' ? '—' : String(v));
 const fmtDate = (d) =>
-  d ? new Date(d).toLocaleString('en-AE', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  }) : '—';
+  d ? new Date(d).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtMoney = (n) =>
   n != null ? `AED ${Number(n).toLocaleString()}` : null;
 
-// ─── ATOMS ────────────────────────────────────────────────────────────────────
-const PillTag = ({ label, color, bg, border }) => (
-  <span
-    className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
-    style={{ color, background: bg, border: `1px solid ${border || 'transparent'}` }}
-  >
-    {label}
-  </span>
+// ─── SMALL ATOMS ─────────────────────────────────────────────────────────────
+const Badge = ({ label, bg, color, border }) => (
+  <span style={{
+    background: bg, color, border: `1px solid ${border || bg}`,
+    padding: '4px 12px', borderRadius: '20px',
+    fontSize: '12px', fontWeight: 700, letterSpacing: '0.3px',
+    display: 'inline-block',
+  }}>{label}</span>
 );
 
 const StatusBadge = ({ status }) => {
-  const c = STATUS_CFG[status] || { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: status || '—' };
-  return <PillTag {...c} />;
+  const c = STATUS_CFG[status] || { bg: '#F1F5F9', color: '#64748B', border: '#E2E8F0', label: status || '—' };
+  return <Badge {...c} />;
 };
 
 const ClassBadge = ({ cls }) => {
   const c = CLASS_CFG[cls];
   if (!c) return null;
-  return <PillTag {...c} />;
+  return <Badge label={c.label} bg={c.bg} color={c.color} />;
 };
 
+const CommissionBadge = ({ status }) => {
+  const c = COMMISSION_CFG[status] || COMMISSION_CFG.pending;
+  return <Badge label={c.label} bg={c.bg} color={c.color} />;
+};
+
+// ─── INFO ROW ────────────────────────────────────────────────────────────────
 const InfoRow = ({ icon: Icon, label, value }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
-    <div
-      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-      style={{ background: '#F5F3FF' }}
-    >
-      <Icon size={13} style={{ color: P }} />
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 0', borderBottom: '1px solid #F8FAFC' }}>
+    <div style={{
+      width: '32px', height: '32px', borderRadius: '10px', background: '#F5F3FF',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    }}>
+      <Icon size={13} color={P} />
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
-      <p className="text-sm text-gray-800 font-medium mt-0.5 break-words leading-snug">{value || '—'}</p>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0 0 3px' }}>{label}</p>
+      <p style={{ fontSize: '14px', color: '#1E293B', fontWeight: 600, margin: 0, wordBreak: 'break-word' }}>{value || '—'}</p>
     </div>
   </div>
 );
 
-const SectionBox = ({ title, icon: Icon, children, action, collapsible, defaultOpen = true }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div
-        className={`flex items-center gap-3 px-5 py-4 border-b border-gray-50 ${collapsible ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
-        onClick={collapsible ? () => setOpen(o => !o) : undefined}
-      >
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: P, color: '#fff' }}
-        >
-          <Icon size={14} />
-        </div>
-        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex-1">{title}</h4>
-        {action && <div onClick={e => e.stopPropagation()}>{action}</div>}
-        {collapsible && (
-          open
-            ? <FiChevronUp size={14} className="text-gray-400 flex-shrink-0" />
-            : <FiChevronDown size={14} className="text-gray-400 flex-shrink-0" />
-        )}
-      </div>
-      {(!collapsible || open) && <div className="p-5">{children}</div>}
+// ─── CARD ────────────────────────────────────────────────────────────────────
+const Card = ({ children, style = {} }) => (
+  <div style={{
+    background: '#fff', borderRadius: '16px', border: '1px solid #E8ECF0',
+    boxShadow: '0 2px 12px rgba(15,23,42,0.04)', overflow: 'hidden', ...style,
+  }}>
+    {children}
+  </div>
+);
+
+const CardHeader = ({ title, icon: Icon, action }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: '10px',
+    padding: '14px 20px', borderBottom: '1px solid #F1F5F9',
+  }}>
+    <div style={{
+      width: '30px', height: '30px', borderRadius: '9px',
+      background: GR, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Icon size={13} color="#fff" />
     </div>
+    <h3 style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0, flex: 1 }}>{title}</h3>
+    {action}
+  </div>
+);
+
+// ─── STAT CARD ───────────────────────────────────────────────────────────────
+const StatCard = ({ label, children, accentColor }) => (
+  <div style={{
+    background: '#fff', borderRadius: '14px', border: '1px solid #E8ECF0',
+    padding: '16px 18px', boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+    borderLeft: `3px solid ${accentColor || P}`,
+  }}>
+    <p style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0 0 8px' }}>{label}</p>
+    {children}
+  </div>
+);
+
+// ─── EDIT MODAL ──────────────────────────────────────────────────────────────
+function EditLeadModal({ lead, visible, onClose, onSaved }) {
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+
+  const countryOptions = useMemo(() =>
+    Country.getAllCountries()
+      .map(c => ({ name: c.name, code: `+${c.phonecode}`, iso: c.isoCode }))
+      .filter(c => c.code !== '+undefined')
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    []
   );
-};
 
-const EmptyState = ({ text }) => (
-  <p className="text-center text-xs text-gray-400 py-4">{text}</p>
-);
+  useEffect(() => {
+    if (visible && lead) {
+      const ci   = lead.contact_info || {};
+      const name = ci.name  || {};
+      const mob  = ci.mobile || {};
+      const em   = ci.email  || {};
+      const req  = lead.requirements || {};
+      const locs = (req.location_preferences || []).map(l => l?.area || l).filter(Boolean);
 
-// ─── BOOL BADGE ───────────────────────────────────────────────────────────────
-const BoolBadge = ({ yes, yesLabel = 'Yes', noLabel = 'No' }) => (
-  <span
-    className="px-2.5 py-0.5 rounded-full text-xs font-bold"
-    style={{
-      background: yes ? '#f0fdf4' : '#fef2f2',
-      color: yes ? '#16a34a' : '#dc2626',
-    }}
-  >
-    {yes ? yesLabel : noLabel}
-  </span>
-);
+      form.setFieldsValue({
+        customerName: `${name.first_name || ''} ${name.last_name || ''}`.trim(),
+        countryCode:  mob.country_code || '+971',
+        phoneNumber:  mob.number || '',
+        email:        em.address || '',
+        interestArea: locs[0] || '',
+        budget:       req.budget_max || req.budget_min || null,
+        propertyType: req.property_type || undefined,
+      });
+    }
+  }, [visible, lead, form]);
 
-// ─── LIST SECTION (for history / empty arrays) ────────────────────────────────
-const ListSection = ({ icon: Icon, title, items, renderItem, emptyText, defaultOpen = false }) => {
-  const [open, setOpen] = useState(defaultOpen);
+  const handleSave = async (values) => {
+    setSaving(true);
+    try {
+      const nameParts  = (values.customerName || '').trim().split(/\s+/);
+      const first_name = nameParts[0] || '';
+      const last_name  = nameParts.slice(1).join(' ') || '';
+
+      const payload = {
+        first_name,
+        last_name,
+        phone_number:  values.phoneNumber,
+        country_code:  values.countryCode || '+971',
+        email:         values.email || undefined,
+        interest_area: values.interestArea || undefined,
+        budget_max:    values.budget || undefined,
+        property_type: values.propertyType || undefined,
+        transaction_type: lead.requirements?.transaction_type || 'buy',
+      };
+
+      await apiService.put(`/gridlead/referral/${lead._id}/update-requirements`, {
+        requirements: payload,
+        reason: 'Updated by referral partner',
+      });
+
+      message.success('Lead updated successfully');
+      onSaved();
+      onClose();
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to update lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <button
-        className="w-full flex items-center gap-3 px-5 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors"
-        onClick={() => setOpen(o => !o)}
-      >
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: P, color: '#fff' }}>
-          <Icon size={14} />
+    <Modal
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: GR, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FiEdit2 size={13} color="#fff" />
+          </div>
+          <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>Edit Lead</span>
         </div>
-        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex-1 text-left">
-          {title}
-          {items?.length > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold">{items.length}</span>
-          )}
-        </h4>
-        {open ? <FiChevronUp size={14} className="text-gray-400" /> : <FiChevronDown size={14} className="text-gray-400" />}
+      }
+      width={580}
+      styles={{ body: { padding: '20px 24px 4px' } }}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSave} requiredMark={false}>
+
+        {/* Customer Name */}
+        <Form.Item name="customerName" label={<FieldLabel text="Customer Name" required />}
+          rules={[{ required: true, message: 'Required' }]} style={{ marginBottom: '16px' }}>
+          <Input prefix={<FiUser size={14} color="#94A3B8" />} placeholder="Full name" size="large"
+            style={{ borderRadius: '10px' }} />
+        </Form.Item>
+
+        {/* Phone */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '6px' }}><FieldLabel text="Phone" required /></div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Form.Item name="countryCode" noStyle rules={[{ required: true }]}>
+              <Select showSearch size="large" style={{ width: '140px' }}
+                filterOption={(i, o) => o?.children?.toString().toLowerCase().includes(i.toLowerCase())}>
+                {countryOptions.map(c => <Option key={c.iso} value={c.code}>{c.code} {c.name}</Option>)}
+              </Select>
+            </Form.Item>
+            <Form.Item name="phoneNumber" noStyle
+              rules={[{ required: true, message: 'Phone required' }, { pattern: /^\d{6,15}$/, message: 'Invalid phone' }]}>
+              <Input prefix={<FiPhone size={14} color="#94A3B8" />} placeholder="501234567"
+                size="large" style={{ borderRadius: '10px', flex: 1 }} />
+            </Form.Item>
+          </div>
+        </div>
+
+        {/* Email */}
+        <Form.Item name="email" label={<FieldLabel text="Email" />}
+          rules={[{ type: 'email', message: 'Invalid email' }]} style={{ marginBottom: '16px' }}>
+          <Input prefix={<FiMail size={14} color="#94A3B8" />} placeholder="client@email.com"
+            size="large" style={{ borderRadius: '10px' }} />
+        </Form.Item>
+
+        {/* 2 cols: Interest Area + Budget */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <Form.Item name="interestArea" label={<FieldLabel text="Interest Area" />} style={{ marginBottom: 0 }}>
+            <Input prefix={<FiMapPin size={14} color="#94A3B8" />} placeholder="Dubai Marina"
+              size="large" style={{ borderRadius: '10px' }} />
+          </Form.Item>
+          <Form.Item name="budget" label={<FieldLabel text="Budget (AED)" />} style={{ marginBottom: 0 }}>
+            <InputNumber placeholder="1,500,000" size="large" style={{ width: '100%', borderRadius: '10px' }}
+              formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={v => v?.replace(/,/g, '')} min={0} />
+          </Form.Item>
+        </div>
+
+        {/* Property Type */}
+        <Form.Item name="propertyType" label={<FieldLabel text="Property Type" />} style={{ marginBottom: '24px' }}>
+          <Select placeholder="Select type" size="large" allowClear style={{ borderRadius: '10px' }}>
+            <Option value="Apartment">Apartment</Option>
+            <Option value="Villa">Villa</Option>
+            <Option value="Townhouse">Townhouse</Option>
+            <Option value="Penthouse">Penthouse</Option>
+            <Option value="Commercial">Commercial</Option>
+            <Option value="Land">Land</Option>
+          </Select>
+        </Form.Item>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingBottom: '4px' }}>
+          <Button onClick={onClose} size="large" style={{ borderRadius: '10px', minWidth: '90px' }}>Cancel</Button>
+          <Button type="primary" htmlType="submit" loading={saving} size="large"
+            style={{ borderRadius: '10px', minWidth: '120px', background: GR, border: 'none' }}>
+            Save Changes
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+}
+
+function FieldLabel({ text, required }) {
+  return (
+    <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+      {text}{required && <span style={{ color: '#EF4444', marginLeft: '3px' }}>*</span>}
+    </span>
+  );
+}
+
+// ─── STATUS TIMELINE ─────────────────────────────────────────────────────────
+function StatusTimeline({ history }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'none', border: 'none', cursor: 'pointer', padding: '10px 0',
+          fontSize: '12px', color: '#64748B', fontWeight: 600,
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <FiActivity size={13} /> Status Timeline ({history.length})
+        </span>
+        {open ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
       </button>
       {open && (
-        <div className="p-5">
-          {!items?.length
-            ? <EmptyState text={emptyText || `No ${title.toLowerCase()} yet`} />
-            : <div className="space-y-3">{items.map((item, i) => renderItem(item, i))}</div>
-          }
+        <div style={{ position: 'relative', paddingLeft: '24px', marginTop: '8px' }}>
+          <div style={{ position: 'absolute', left: '7px', top: 0, bottom: 0, width: '2px', background: '#E8ECF0' }} />
+          {[...history].reverse().map((h, i) => {
+            const cfg = STATUS_CFG[h.status] || { bg: '#F1F5F9', color: '#64748B', label: h.status };
+            return (
+              <div key={i} style={{ position: 'relative', marginBottom: '12px' }}>
+                <div style={{
+                  position: 'absolute', left: '-21px', top: '6px',
+                  width: '10px', height: '10px', borderRadius: '50%',
+                  background: cfg.color, border: '2px solid #fff', boxShadow: '0 0 0 2px ' + cfg.color,
+                }} />
+                <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '10px 12px', border: '1px solid #E8ECF0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: cfg.color, background: cfg.bg, padding: '3px 8px', borderRadius: '20px' }}>
+                      {cfg.label}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <FiClock size={10} />
+                      {h.changed_at ? new Date(h.changed_at).toLocaleDateString('en-AE', { day: '2-digit', month: 'short' }) : '—'}
+                    </span>
+                  </div>
+                  {h.notes && <p style={{ fontSize: '12px', color: '#64748B', margin: '6px 0 0', lineHeight: 1.5 }}>{h.notes}</p>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
+}
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function ReferralPartnerLeadDetail() {
-  const { id } = useParams();
+  const { id }   = useParams();
   const navigate = useNavigate();
 
-  const [lead,    setLead]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [lead,       setLead]       = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [editOpen,   setEditOpen]   = useState(false);
 
   const fetchLead = useCallback(async () => {
     try {
@@ -181,520 +369,271 @@ export default function ReferralPartnerLeadDetail() {
 
   useEffect(() => { if (id) fetchLead(); }, [id, fetchLead]);
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
       <Spin size="large" />
-      <p className="mt-4 text-gray-400 font-medium text-sm">Loading lead profile…</p>
+      <p style={{ color: '#9CA3AF', fontSize: '14px', margin: 0 }}>Loading lead…</p>
     </div>
   );
 
-  // ── Error ──────────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (error || !lead) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-      <FiAlertCircle size={48} className="text-gray-300" />
-      <p className="text-gray-500 font-medium">{error || 'Lead not found.'}</p>
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 text-sm font-bold transition-colors"
-      >
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
+      <FiAlertCircle size={40} color="#E5E7EB" />
+      <p style={{ color: '#6B7280', fontSize: '14px', margin: 0 }}>{error || 'Lead not found.'}</p>
+      <button onClick={() => navigate(-1)} style={{
+        display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px',
+        borderRadius: '10px', border: '1px solid #E2E8F0', background: '#fff',
+        color: '#374151', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+      }}>
         <FiArrowLeft size={14} /> Go Back
       </button>
     </div>
   );
 
-  // ── Destructure ────────────────────────────────────────────────────────────
-  const ci      = lead.contact_info    || {};
-  const name    = ci.name              || {};
-  const mobile  = ci.mobile            || {};
-  const email   = ci.email             || {};
-  const req     = lead.requirements    || {};
-  const deal    = lead.deal_record     || {};
-  const src     = lead.source          || {};
-  const nurt    = lead.nurturing       || {};
-  const signals = lead.intent_signals  || {};
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const ci      = lead.contact_info  || {};
+  const name    = ci.name            || {};
+  const mobile  = ci.mobile          || {};
+  const email   = ci.email           || {};
+  const req     = lead.requirements  || {};
 
   const fn       = name.first_name || '';
   const ln       = name.last_name  || '';
   const fullName = `${fn} ${ln}`.trim() || 'Unknown Client';
+  const initials = fn?.[0] ? (fn[0] + (ln?.[0] || '')).toUpperCase() : '?';
 
   const locs = (req.location_preferences || [])
     .map(l => (typeof l === 'string' ? l : l?.area))
     .filter(Boolean);
 
-  const budgetStr = req.budget_min && req.budget_max
-    ? `${fmtMoney(req.budget_min)} – ${fmtMoney(req.budget_max)}`
-    : req.budget_max ? `Up to ${fmtMoney(req.budget_max)}`
-    : req.budget_min ? `From ${fmtMoney(req.budget_min)}`
-    : null;
+  const budgetStr = req.budget_max
+    ? `Up to ${fmtMoney(req.budget_max)}`
+    : req.budget_min ? `From ${fmtMoney(req.budget_min)}` : null;
 
-  const bedroomsStr = req.bedrooms != null
-    ? (req.bedrooms === 0 ? 'Studio' : `${req.bedrooms} BR`)
-    : null;
+  const isAssignmentNote = (text = '') =>
+    /assign|advisor|assigned to|routing|escalat/i.test(text);
 
-  const notes        = lead.notes              || [];
-  const statusHist   = lead.status_history     || [];
-  const assignHist   = lead.assignment_history || [];
-  const matchedList  = lead.matched_listings   || [];
-  const presentations = lead.presentations     || [];
-  const advisors     = lead.advisor_suggestions || [];
-  const comms        = lead.communications     || [];
+  const notes      = (lead.notes || []).filter(n => !isAssignmentNote(n?.text || ''));
+  const statusHist = lead.status_history || [];
+  const statusCfg  = STATUS_CFG[lead.status] || { bg: '#F1F5F9', color: '#64748B', label: lead.status || '—' };
+  const commStatus = lead.referral_info?.commission_status || 'pending';
+  const reference  = `REF-${lead._id?.toString().slice(-8).toUpperCase()}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
+    <div style={{ background: '#F8FAFC', minHeight: '100%', padding: '0' }}>
 
-      {/* ── STICKY TOP BAR ── */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
-            >
-              <FiArrowLeft size={16} />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-base font-extrabold text-gray-900 truncate">{fullName}</h1>
-              <p className="text-xs text-gray-400 font-medium">Lead ID: {String(lead._id).slice(-8)}</p>
+      {/* ── HERO HEADER ─────────────────────────────────────────────────── */}
+      <div style={{ background: GR, padding: '24px 28px 28px' }}>
+        {/* Back row */}
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '10px', padding: '7px 14px', color: '#fff',
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer', marginBottom: '20px',
+          }}
+        >
+          <FiArrowLeft size={13} /> Back
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+          {/* Avatar + name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '18px',
+              background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '22px', fontWeight: 800, color: '#fff', flexShrink: 0,
+            }}>
+              {initials}
+            </div>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>{fullName}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+                  background: 'rgba(255,255,255,0.15)', padding: '3px 10px',
+                  borderRadius: '20px', letterSpacing: '0.5px',
+                }}>
+                  {reference}
+                </span>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, color: statusCfg.color,
+                  background: statusCfg.bg, padding: '3px 10px', borderRadius: '20px',
+                }}>
+                  {statusCfg.label}
+                </span>
+                {lead.submitted_to_xoto && (
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, color: '#16A34A',
+                    background: '#F0FDF4', padding: '3px 10px', borderRadius: '20px',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                  }}>
+                    <FiCheckCircle size={11} /> Submitted
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={lead.status} />
-            <ClassBadge cls={lead.classification} />
-            {lead.submitted_to_xoto && (
-              <PillTag label="Submitted ✓" color="#059669" bg="#f0fdf4" border="#bbf7d0" />
-            )}
-            {lead.is_active && (
-              <PillTag label="Active" color="#059669" bg="#f0fdf4" border="#bbf7d0" />
-            )}
-          </div>
+
+          {/* Edit button */}
+          <button
+            onClick={() => setEditOpen(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              background: '#fff', border: 'none', borderRadius: '12px',
+              padding: '10px 20px', color: P, fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            }}
+          >
+            <FiEdit2 size={14} /> Edit Lead
+          </button>
         </div>
       </div>
 
-      {/* ── SUBMITTED BANNER ── */}
-      {lead.submitted_to_xoto && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-4">
-          <div className="flex items-center gap-3 p-4 rounded-2xl bg-green-50 border border-green-200">
-            <FiCheckCircle size={20} className="text-green-500 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-green-800">Lead submitted to Xoto Admin</p>
-              <p className="text-xs text-green-700 mt-0.5">An advisor will be assigned shortly.</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── BODY ─────────────────────────────────────────────────────────── */}
+      <div style={{ padding: '24px 28px', maxWidth: '1100px', margin: '0 auto' }}>
 
-      {/* ── BODY ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ── 2-COLUMN GRID ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '20px', alignItems: 'start' }}>
 
-          {/* ════════ LEFT SIDEBAR ════════ */}
-          <div className="lg:col-span-4 space-y-4">
-
-            {/* Avatar card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-extrabold flex-shrink-0 shadow-lg"
-                  style={{ background: GR }}
-                >
-                  {(fn?.[0] || '?').toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-lg font-extrabold text-gray-900 leading-tight truncate">{fullName}</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {lead.lead_type && (
-                      <span
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
-                        style={{ color: P, background: '#F5F3FF', border: `1px solid #DDD6FE` }}
-                      >
-                        {lead.lead_type.replace(/_/g, ' ')}
-                      </span>
-                    )}
-                    {lead.enquiry_type && (
-                      <span
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
-                        style={{ color: '#0891b2', background: '#ecfeff', border: '1px solid #a5f3fc' }}
-                      >
-                        {lead.enquiry_type}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* ════ LEFT COLUMN ════ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* Contact Info */}
-            <SectionBox title="Contact Info" icon={FiUser}>
-              <div className="divide-y divide-gray-50">
-                <InfoRow icon={FiUser}         label="First Name"       value={fmt(fn)} />
-                <InfoRow icon={FiUser}         label="Last Name"        value={fmt(ln)} />
-                <InfoRow icon={FiPhone}        label="Phone"            value={mobile.number ? `${mobile.country_code || ''} ${mobile.number}`.trim() : '—'} />
-                <InfoRow icon={FiMail}         label="Email"            value={fmt(email.address)} />
-                <InfoRow icon={FiMessageSquare} label="Preferred Contact" value={fmt(ci.preferred_contact)} />
-                {mobile.verified !== undefined && (
-                  <div className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                      <FiShield size={13} style={{ color: P }} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Verified</p>
-                      <div className="flex gap-2 mt-1 flex-wrap">
-                        <span className="text-xs text-gray-500">Phone: <BoolBadge yes={mobile.verified} /></span>
-                        <span className="text-xs text-gray-500">Email: <BoolBadge yes={email.verified} /></span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+            <Card>
+              <CardHeader title="Contact Info" icon={FiUser} />
+              <div style={{ padding: '4px 20px 8px' }}>
+                <InfoRow icon={FiUser}  label="Full Name" value={fullName !== 'Unknown Client' ? fullName : '—'} />
+                <InfoRow icon={FiPhone} label="Phone"
+                  value={mobile.number ? `${mobile.country_code || ''} ${mobile.number}`.trim() : '—'} />
+                <InfoRow icon={FiMail}  label="Email" value={fmt(email.address)} />
               </div>
-            </SectionBox>
-
-            {/* Requirements */}
-            <SectionBox title="Requirements" icon={FiTag}>
-              <div className="divide-y divide-gray-50">
-                {req.property_type    && <InfoRow icon={FiHome}        label="Property Type"    value={req.property_type} />}
-                {req.transaction_type && <InfoRow icon={FiTag}         label="Transaction"      value={req.transaction_type} />}
-                {budgetStr            && <InfoRow icon={FiDollarSign}  label="Budget"           value={budgetStr} />}
-                {bedroomsStr          && <InfoRow icon={FiHome}        label="Bedrooms"         value={bedroomsStr} />}
-                {req.bathrooms        && <InfoRow icon={FiHome}        label="Bathrooms"        value={String(req.bathrooms)} />}
-                {req.furnished        && <InfoRow icon={FiHome}        label="Furnished"        value={req.furnished} />}
-                {locs.length > 0      && <InfoRow icon={FiMapPin}      label="Locations"        value={locs.join(', ')} />}
-                {req.additional_notes && <InfoRow icon={FiMessageSquare} label="Notes"          value={req.additional_notes} />}
-              </div>
-              {/* Location pills */}
-              {locs.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {locs.map((l, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-                      style={{ background: '#F5F3FF', color: P, border: `1px solid #DDD6FE` }}
-                    >
-                      <FiMapPin size={10} /> {l}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </SectionBox>
+            </Card>
 
             {/* Lead Meta */}
-            <SectionBox title="Lead Info" icon={FiLayers}>
-              <div className="divide-y divide-gray-50">
-                <InfoRow icon={FiRadio}       label="Source Channel"   value={fmt(src.channel?.replace(/_/g, ' '))} />
-                <InfoRow icon={FiHash}        label="Lead Type"        value={fmt(lead.lead_type?.replace(/_/g, ' '))} />
-                <InfoRow icon={FiTag}         label="Enquiry Type"     value={fmt(lead.enquiry_type)} />
-                <InfoRow icon={FiClock}       label="Created"          value={fmtDate(lead.createdAt)} />
-                <InfoRow icon={FiClock}       label="Updated"          value={fmtDate(lead.updatedAt)} />
-                {lead.classification_reason && (
-                  <InfoRow icon={FiAlertCircle} label="Classification Reason" value={lead.classification_reason} />
+            <Card>
+              <CardHeader title="Lead Info" icon={FiClock} />
+              <div style={{ padding: '4px 20px 8px' }}>
+                <InfoRow icon={FiClock}       label="Submitted On" value={fmtDate(lead.createdAt)} />
+                <InfoRow icon={FiClock}       label="Last Updated" value={fmtDate(lead.updatedAt)} />
+                <InfoRow icon={FiCheckCircle} label="Commission"   value={commStatus.replace(/_/g, ' ')} />
+                {lead.referral_info?.commission_rate != null && (
+                  <InfoRow icon={FiFileText} label="Commission Rate" value={`${lead.referral_info.commission_rate}%`} />
                 )}
               </div>
-            </SectionBox>
-
+            </Card>
           </div>
 
-          {/* ════════ RIGHT COLUMN ════════ */}
-          <div className="lg:col-span-8 space-y-5">
+          {/* ════ RIGHT COLUMN ════ */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {/* ── OVERVIEW STATS STRIP ── */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Overview</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[
-                  { label: 'Status',            value: <StatusBadge status={lead.status} /> },
-                  { label: 'Classification',    value: <ClassBadge cls={lead.classification} /> || <span className="text-xs text-gray-400">—</span> },
-                  { label: 'Submitted to Xoto', value: <BoolBadge yes={lead.submitted_to_xoto} /> },
-                  { label: 'Deal Created',      value: <BoolBadge yes={deal.created} /> },
-                  { label: 'Commission',        value: <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">{deal.commission_status?.replace(/_/g, ' ') || 'Pending'}</span> },
-                  { label: 'Duplicate',         value: <BoolBadge yes={lead.is_duplicate} yesLabel="Yes" noLabel="No" /> },
-                ].map(({ label, value }) => (
-                  <div key={label} className="bg-slate-50 rounded-xl p-3.5 border border-gray-100">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">{label}</p>
-                    {value}
-                  </div>
-                ))}
-              </div>
+            {/* ── 3 Stat cards ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <StatCard label="Lead Status" accentColor={statusCfg.color}>
+                <StatusBadge status={lead.status} />
+              </StatCard>
+              <StatCard label="Priority" accentColor={CLASS_CFG[lead.classification]?.color || P}>
+                <ClassBadge cls={lead.classification} />
+              </StatCard>
+              <StatCard label="Commission" accentColor={COMMISSION_CFG[commStatus]?.color || '#D97706'}>
+                <CommissionBadge status={commStatus} />
+              </StatCard>
             </div>
 
-            {/* ── DEAL RECORD ── */}
-            <SectionBox title="Deal Record" icon={FiBriefcase}>
-              <div className="divide-y divide-gray-50">
-                <div className="flex items-center gap-3 py-3 border-b border-gray-50">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiCheckCircle size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Deal Created</p>
-                    <div className="mt-0.5"><BoolBadge yes={deal.created} /></div>
-                  </div>
-                </div>
-                <InfoRow icon={FiDollarSign} label="Commission Status"  value={fmt(deal.commission_status?.replace(/_/g, ' '))} />
-                <div className="flex items-center gap-3 py-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiFileText size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Evidence</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <BoolBadge yes={deal.evidence_uploaded} yesLabel="Uploaded" noLabel="Not Uploaded" />
-                      {deal.evidence_documents?.length > 0 && (
-                        <span className="text-xs text-gray-500">{deal.evidence_documents.length} file(s)</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </SectionBox>
-
-            {/* ── NURTURING ── */}
-            <SectionBox title="Nurturing" icon={FiActivity}>
-              <div className="divide-y divide-gray-50">
-                <div className="flex items-center gap-3 py-3 border-b border-gray-50">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiActivity size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Is Nurturing</p>
-                    <div className="mt-0.5"><BoolBadge yes={nurt.is_nurturing} /></div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 py-3 border-b border-gray-50">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiInfo size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Notify When Available</p>
-                    <div className="mt-0.5"><BoolBadge yes={nurt.notify_when_available} /></div>
-                  </div>
-                </div>
-                {nurt.nurturing_reason && <InfoRow icon={FiMessageSquare} label="Reason"     value={nurt.nurturing_reason} />}
-                {nurt.nurturing_started_at && <InfoRow icon={FiClock}     label="Started At" value={fmtDate(nurt.nurturing_started_at)} />}
-                {nurt.last_nudge_sent_at   && <InfoRow icon={FiClock}     label="Last Nudge" value={fmtDate(nurt.last_nudge_sent_at)} />}
-              </div>
-            </SectionBox>
-
-            {/* ── INTENT SIGNALS ── */}
-            <SectionBox title="Intent Signals" icon={FiBarChart2}>
-              <div className="divide-y divide-gray-50">
-                <InfoRow icon={FiRepeat} label="Repeat Visits"     value={fmt(signals.repeat_visits ?? 0)} />
-                <InfoRow icon={FiList}   label="Properties Viewed" value={signals.properties_viewed?.length > 0 ? signals.properties_viewed.join(', ') : 'None'} />
-                <InfoRow icon={FiTag}    label="Search Criteria"   value={signals.search_criteria?.length > 0 ? signals.search_criteria.join(', ') : 'None'} />
-              </div>
-            </SectionBox>
-
-            {/* ── ASSIGNMENT & TRACKING ── */}
-            <SectionBox title="Assignment & Tracking" icon={FiTarget}>
-              <div className="divide-y divide-gray-50">
-                <InfoRow icon={FiUser}    label="Assigned To"          value={fmt(lead.assigned_to)} />
-                <InfoRow icon={FiClock}   label="Assigned At"          value={fmtDate(lead.assigned_at)} />
-                <InfoRow icon={FiUser}    label="Created By Agent"     value={fmt(lead.created_by_agent)} />
-                <InfoRow icon={FiHash}    label="Created By (User ID)" value={fmt(lead.created_by)} />
-                <div className="flex items-center gap-3 py-3 border-b border-gray-50">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiCheckCircle size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Follow-Up Reminder</p>
-                    <div className="mt-0.5">
-                      <BoolBadge yes={lead.follow_up_reminder_sent} yesLabel="Sent" noLabel="Not Sent" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 py-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
-                    <FiShield size={13} style={{ color: P }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Flags</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <BoolBadge yes={lead.is_active} yesLabel="Active" noLabel="Inactive" />
-                      {lead.is_duplicate && <BoolBadge yes={true} yesLabel="Duplicate" noLabel="" />}
-                      {lead.is_deleted   && <BoolBadge yes={false} yesLabel="" noLabel="Deleted" />}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </SectionBox>
-
-            {/* ── NOTES ── */}
-            <ListSection
-              icon={FiMessageSquare}
-              title="Private Notes"
-              items={notes}
-              defaultOpen={true}
-              emptyText="No notes yet."
-              renderItem={(n, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <p className="text-sm text-gray-700 leading-relaxed">{n.text || n}</p>
-                  {n.created_at && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                        style={{ background: '#F5F3FF', color: P }}>
-                        {(n.author?.[0] || 'A').toUpperCase()}
-                      </span>
-                      <span className="text-xs font-bold text-gray-600">{n.author || 'Agent'}</span>
-                      <span className="text-xs text-gray-400 ml-auto flex items-center gap-1">
-                        <FiClock size={10} /> {fmtDate(n.created_at || n.createdAt)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            />
-
-            {/* ── STATUS HISTORY ── */}
-            {statusHist.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <button
-                  className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors"
-                  onClick={function() { this.nextElementSibling?.classList.toggle('hidden'); }.bind(null)}
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: P, color: '#fff' }}>
-                    <FiActivity size={14} />
-                  </div>
-                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex-1 text-left">
-                    Status Timeline
-                    <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold">{statusHist.length}</span>
-                  </h4>
-                </button>
-                <StatusTimeline history={statusHist} />
-              </div>
-            )}
-
-            {/* ── ASSIGNMENT HISTORY ── */}
-            <ListSection
-              icon={FiGitBranch}
-              title="Assignment History"
-              items={assignHist}
-              defaultOpen={false}
-              renderItem={(h, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 text-sm text-gray-700">
-                  <pre className="whitespace-pre-wrap break-words text-xs">{JSON.stringify(h, null, 2)}</pre>
-                </div>
-              )}
-            />
-
-            {/* ── MATCHED LISTINGS ── */}
-            <ListSection
-              icon={FiHome}
-              title="Matched Listings"
-              items={matchedList}
-              defaultOpen={false}
-              renderItem={(m, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-gray-800 truncate">
-                      {m.listing_id?.propertyName || m.listing_id?.title || `Listing ${i + 1}`}
+            {/* ── Requirements visual card ── */}
+            <Card>
+              <CardHeader title="Requirements" icon={FiHome} />
+              <div style={{ padding: '16px 20px' }}>
+                {/* Pill tags row */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {req.property_type && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#F5F3FF', color: P, border: '1px solid #DDD6FE', borderRadius: '20px', padding: '5px 14px', fontSize: '12px', fontWeight: 700 }}>
+                      <FiHome size={11} /> {req.property_type}
                     </span>
-                    {m.client_interested === true  && <BoolBadge yes={true}  yesLabel="Interested" noLabel="" />}
-                    {m.client_interested === false && <BoolBadge yes={false} yesLabel="" noLabel="Not Interested" />}
-                  </div>
-                  {m.match_score != null && (
-                    <p className="text-xs text-gray-400 mt-1">Match score: {m.match_score}</p>
+                  )}
+                  {locs.map((l, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#ECFEFF', color: '#0891B2', border: '1px solid #A5F3FC', borderRadius: '20px', padding: '5px 14px', fontSize: '12px', fontWeight: 700 }}>
+                      <FiMapPin size={11} /> {l}
+                    </span>
+                  ))}
+                  {budgetStr && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', borderRadius: '20px', padding: '5px 14px', fontSize: '12px', fontWeight: 700 }}>
+                      <FiDollarSign size={11} /> {budgetStr}
+                    </span>
+                  )}
+                  {req.transaction_type && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A', borderRadius: '20px', padding: '5px 14px', fontSize: '12px', fontWeight: 700, textTransform: 'capitalize' }}>
+                      <FiFileText size={11} /> {req.transaction_type}
+                    </span>
                   )}
                 </div>
-              )}
-            />
-
-            {/* ── COMMUNICATIONS ── */}
-            <ListSection
-              icon={FiMessageSquare}
-              title="Communications"
-              items={comms}
-              defaultOpen={false}
-              renderItem={(c, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 text-xs text-gray-600">
-                  <pre className="whitespace-pre-wrap break-words">{JSON.stringify(c, null, 2)}</pre>
+                {/* Detail rows */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', borderTop: '1px solid #F1F5F9', paddingTop: '4px' }}>
+                  <InfoRow icon={FiHome}       label="Property Type" value={fmt(req.property_type)} />
+                  <InfoRow icon={FiMapPin}     label="Location"      value={locs.length > 0 ? locs.join(', ') : '—'} />
+                  <InfoRow icon={FiDollarSign} label="Budget"        value={budgetStr || '—'} />
+                  <InfoRow icon={FiFileText}   label="Transaction"   value={fmt(req.transaction_type)} />
                 </div>
-              )}
-            />
+              </div>
+            </Card>
 
-            {/* ── PRESENTATIONS ── */}
-            <ListSection
-              icon={FiFileText}
-              title="Presentations"
-              items={presentations}
-              defaultOpen={false}
-              renderItem={(p, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 text-xs text-gray-600">
-                  <pre className="whitespace-pre-wrap break-words">{JSON.stringify(p, null, 2)}</pre>
-                </div>
-              )}
-            />
+            {/* ── Notes ── */}
+            <Card>
+              <CardHeader title="Notes" icon={FiFileText} />
+              <div style={{ padding: '16px 20px' }}>
+                {notes.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                    No notes yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {notes.map((n, i) => (
+                      <div key={i} style={{ background: '#F8FAFC', borderRadius: '12px', padding: '14px 16px', border: '1px solid #E8ECF0' }}>
+                        <p style={{ fontSize: '13px', color: '#374151', margin: '0 0 8px', lineHeight: 1.6 }}>{n.text || n}</p>
+                        {(n.author || n.created_at) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid #E8ECF0', paddingTop: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#F5F3FF', color: P, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>
+                              {(n.author?.[0] || 'A').toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{n.author || 'Referral Partner'}</span>
+                            {(n.created_at || n.createdAt) && (
+                              <span style={{ fontSize: '11px', color: '#9CA3AF', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <FiClock size={10} /> {fmtDate(n.created_at || n.createdAt)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
 
-            {/* ── ADVISOR SUGGESTIONS ── */}
-            <ListSection
-              icon={FiCpu}
-              title="Advisor Suggestions"
-              items={advisors}
-              defaultOpen={false}
-              renderItem={(a, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 text-xs text-gray-600">
-                  <pre className="whitespace-pre-wrap break-words">{JSON.stringify(a, null, 2)}</pre>
+            {/* ── Status Timeline ── */}
+            {statusHist.length > 0 && (
+              <Card>
+                <div style={{ padding: '12px 20px 16px' }}>
+                  <StatusTimeline history={statusHist} />
                 </div>
-              )}
-            />
+              </Card>
+            )}
 
           </div>
         </div>
       </div>
+
+      {/* ── EDIT MODAL ── */}
+      <EditLeadModal
+        lead={lead}
+        visible={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSaved={fetchLead}
+      />
     </div>
-  );
-}
-
-// ─── STATUS TIMELINE (self-contained collapsible) ─────────────────────────────
-function StatusTimeline({ history }) {
-  const [open, setOpen] = useState(false);
-  const STATUS_CFG_LOCAL = {
-    new:                  { bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', label: 'New Lead'      },
-    contacted:            { bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe', label: 'Contacted'     },
-    qualified:            { bg: '#ecfeff', color: '#0891b2', border: '#a5f3fc', label: 'Qualified'     },
-    in_discussion:        { bg: '#fffbeb', color: '#d97706', border: '#fde68a', label: 'In Discussion' },
-    site_visit_scheduled: { bg: '#ecfeff', color: '#0891b2', border: '#a5f3fc', label: 'Site Visit'   },
-    offer_made:           { bg: '#fdf2f8', color: '#db2777', border: '#fbcfe8', label: 'Offer Made'    },
-    completed:            { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', label: 'Completed'     },
-    not_proceeding:       { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'Dropped'       },
-  };
-
-  return (
-    <>
-      <button
-        className="w-full flex items-center justify-end px-5 py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        onClick={() => setOpen(o => !o)}
-      >
-        {open ? <><FiChevronUp size={14} className="mr-1"/> Hide</> : <><FiChevronDown size={14} className="mr-1"/> Show timeline</>}
-      </button>
-      {open && (
-        <div className="px-5 pb-5">
-          <div className="relative">
-            <div className="absolute left-[15px] top-0 bottom-0 w-px bg-gray-100" />
-            <div className="space-y-4">
-              {[...history].reverse().map((h, i) => {
-                const cfg = STATUS_CFG_LOCAL[h.status] || { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0', label: h.status };
-                return (
-                  <div key={i} className="relative pl-10">
-                    <div className="absolute left-0 top-2 w-8 h-8 rounded-full border-4 border-white shadow-sm flex items-center justify-center" style={{ background: '#4A027C' }}>
-                      <div className="w-2 h-2 rounded-full bg-white" />
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide" style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                          {cfg.label}
-                        </span>
-                        <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                          <FiClock size={10}/>
-                          {h.changed_at ? new Date(h.changed_at).toLocaleDateString('en-AE', { day: '2-digit', month: 'short' }) : '—'}
-                        </span>
-                      </div>
-                      {h.notes && <p className="text-xs text-gray-500 leading-relaxed">{h.notes}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
