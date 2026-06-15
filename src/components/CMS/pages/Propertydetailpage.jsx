@@ -353,7 +353,7 @@ const PropertyDetailPage = () => {
               </Button>
             )}
 
-            {/* {(subType === 'secondary' || subType === 'rental') && (
+            {(subType === 'secondary' || subType === 'rental') && (
               <Button
                 icon={<EditOutlined />}
                 onClick={() => {
@@ -364,7 +364,7 @@ const PropertyDetailPage = () => {
               >
                 Edit Property
               </Button>
-            )} */}
+            )}
 
             <Button
               icon={<FireFilled />}
