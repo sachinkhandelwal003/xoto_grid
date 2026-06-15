@@ -284,23 +284,25 @@ const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeat
           </Button>
         </Tooltip>
 
-        {/* Edit Button */}
-        <Tooltip title="Edit Property">
-          {/* <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(property)}
-            style={{
-              fontSize: 11,
-              background: '#0ea5e910',
-              borderColor: '#0ea5e940',
-              color: '#0ea5e9',
-              fontWeight: 600,
-            }}
-          >
-            Edit
-          </Button> */}
-        </Tooltip>
+        {/* Edit Button — only for secondary and rental */}
+        {/* {(property.propertySubType === 'secondary' || property.propertySubType === 'rental') && (
+          <Tooltip title="Edit Property">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(property)}
+              style={{
+                fontSize: 11,
+                background: '#0ea5e910',
+                borderColor: '#0ea5e940',
+                color: '#0ea5e9',
+                fontWeight: 600,
+              }}
+            >
+              Edit
+            </Button>
+          </Tooltip>
+        )} */}
 
     {approvalStatus === 'pending' && (
   <>
@@ -554,12 +556,9 @@ const handleRequestChanges = async () => {
   const handleEdit = (property) => {
     const { _id, propertySubType } = property;
     if (propertySubType === 'rental') {
-      navigate(`/dashboard/${roleSlug}/rental/properties/edit/${_id}`);
+      navigate(`/rental/properties/edit/${_id}`);
     } else if (propertySubType === 'secondary') {
-      navigate(`/dashboard/${roleSlug}/secondary-properties/edit/${_id}`);
-    } else {
-      // off_plan and commercial use the same off-plan create/edit form
-      navigate(`/dashboard/${roleSlug}/properties/edit/${_id}`);
+      navigate(`/dashboard/${roleSlug}/create-secondary-plans/${_id}`);
     }
   };
 
@@ -818,7 +817,7 @@ const handleRequestChanges = async () => {
                 onToggleFeatured={handleToggleFeatured}
                 onDelete={handleDelete}
                 onView={handleView}
-                // onEdit={handleEdit}
+                onEdit={handleEdit}
               />
             ))}
           </div>

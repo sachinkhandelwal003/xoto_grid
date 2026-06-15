@@ -23,13 +23,8 @@ const getThumb = (photos, mainLogo) => {
 
 const formatPrice = (price, type, currency = "AED") => {
   if (!price) return `${currency} —`;
-  if (type === "rental") {
-    if (price >= 1_000_000) return `${currency} ${(price / 1_000_000).toFixed(1)}M/yr`;
-    return `${currency} ${price.toLocaleString()}/yr`;
-  }
-  if (price >= 1_000_000) return `${currency} ${(price / 1_000_000).toFixed(2)}M`;
-  if (price >= 1_000) return `${currency} ${(price / 1_000).toFixed(0)}K`;
-  return `${currency} ${price.toLocaleString()}`;
+  if (type === "rental") return `${currency} ${Number(price).toLocaleString()}/yr`;
+  return `${currency} ${Number(price).toLocaleString()}`;
 };
 
 const typeLabel = (t) =>
@@ -113,6 +108,21 @@ const buildPresentationProperty = (property) => ({
   ownershipType: property.ownershipType || "",
   parkingAllocation: property.parkingAllocation || "",
   mainLogo: property.mainLogo || property.media?.mainLogo || "",
+  documents: (() => {
+    const docs = [];
+    if (property.brochure || property.brochureUrl) docs.push({ label: "Project Brochure", url: property.brochure || property.brochureUrl, type: "brochure" });
+    if (property.floorPlan || property.floorPlanUrl) docs.push({ label: "Floor Plan", url: property.floorPlan || property.floorPlanUrl, type: "floor_plan" });
+    if (property.factSheet || property.factSheetUrl) docs.push({ label: "Fact Sheet", url: property.factSheet || property.factSheetUrl, type: "fact_sheet" });
+    if (property.paymentPlanDoc || property.paymentPlanUrl) docs.push({ label: "Payment Plan PDF", url: property.paymentPlanDoc || property.paymentPlanUrl, type: "payment_plan" });
+    if (property.masterplan || property.masterplanUrl) docs.push({ label: "Masterplan", url: property.masterplan || property.masterplanUrl, type: "masterplan" });
+    if (property.noc || property.nocUrl) docs.push({ label: "NOC / Title Deed", url: property.noc || property.nocUrl, type: "noc" });
+    if (Array.isArray(property.documents)) {
+      property.documents.forEach((d) => {
+        if (d?.url) docs.push({ label: d.label || d.name || "Document", url: d.url, type: d.type || "other" });
+      });
+    }
+    return docs;
+  })(),
   photos: (() => {
     const allPhotos = [];
     const mainLogo = property.mainLogo || property.media?.mainLogo;
@@ -154,6 +164,8 @@ const buildPresentationProperty = (property) => ({
   totalUnits: property.totalUnits || 0,
   soldUnits: property.soldUnits || property.inventoryStats?.sold || 0,
   reservedUnits: property.reservedUnits || property.inventoryStats?.reserved || 0,
+  availableUnits: property.availableUnits || property.inventoryStats?.available ||
+    Math.max(0, (property.totalUnits || 0) - (property.soldUnits || property.inventoryStats?.sold || 0) - (property.reservedUnits || property.inventoryStats?.reserved || 0)),
   description: property.description || property.overview || "",
   overview: property.overview || property.description || "",
   locality: property.locality || property.area || "",
@@ -568,7 +580,10 @@ const PropertyCard = ({ property, onView, onGeneratePresentation }) => {
       {/* Body */}
       <div style={{ padding: "14px 16px" }}>
         <div style={styles.cardPrice}>
-          {formatPrice(property.price || property.price_min, property.propertySubType, property.currency)}
+          {property.propertySubType === "off_plan" && property.price_min > 0 && property.price_max > 0 && property.price_min !== property.price_max
+            ? <>{formatPrice(property.price_min, "off_plan", property.currency)} <span style={{ fontSize: 13, fontWeight: 500, color: "#a1a1aa" }}>–</span> {formatPrice(property.price_max, "off_plan", property.currency)}</>
+            : formatPrice(property.price || property.price_min || property.price_max, property.propertySubType, property.currency)
+          }
         </div>
         <div style={styles.cardName} title={property.propertyName}>
           {property.propertyName}
@@ -735,7 +750,9 @@ const PropertyDetail = ({ property: p, onBack, onGeneratePresentation }) => {
             {p.description && p.description.trim().length > 2 && (
               <div style={styles.detailSection}>
                 <div style={styles.sectionTitle}>About this Property</div>
-                <p style={{ fontSize: 13, color: "#52525b", lineHeight: 1.8, margin: 0 }}>{p.description}</p>
+                <div style={{ maxHeight: 96, overflowY: "auto", overflowX: "hidden", paddingRight: 6 }}>
+                  <p style={{ fontSize: 13, color: "#52525b", lineHeight: 1.8, margin: 0, wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "pre-wrap" }}>{p.description}</p>
+                </div>
               </div>
             )}
 
@@ -780,6 +797,86 @@ const PropertyDetail = ({ property: p, onBack, onGeneratePresentation }) => {
                     ))}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Property Inventory */}
+            {(p.totalUnits > 0 || p.unitTypes?.length > 0) && (
+              <div style={styles.detailSection}>
+                <div style={styles.sectionTitle}>Property Inventory</div>
+
+                {/* Availability Stats */}
+                {p.totalUnits > 0 && (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                      {[
+                        { label: "Total Units", val: p.totalUnits, bg: "#f3e8ff", color: "#6d28d9" },
+                        { label: "Available", val: p.availableUnits, bg: "#d1fae5", color: "#059669" },
+                        { label: "Sold", val: p.soldUnits, bg: "#fee2e2", color: "#dc2626" },
+                        { label: "Reserved", val: p.reservedUnits, bg: "#fef3c7", color: "#d97706" },
+                      ].map(({ label, val, bg, color }) => (
+                        <div key={label} style={{ background: bg, borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color }}>{val}</div>
+                          <div style={{ fontSize: 11, color: "#71717a", marginTop: 3, fontWeight: 500 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Availability progress bar */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#71717a", marginBottom: 5, fontWeight: 500 }}>
+                        <span>Availability</span>
+                        <span>{p.totalUnits > 0 ? Math.round((p.availableUnits / p.totalUnits) * 100) : 0}% Available</span>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 8, background: "#f3e8ff", overflow: "hidden" }}>
+                        <div style={{ display: "flex", height: "100%" }}>
+                          <div style={{ width: `${p.totalUnits > 0 ? (p.soldUnits / p.totalUnits) * 100 : 0}%`, background: "#dc2626", transition: "width 0.5s" }} />
+                          <div style={{ width: `${p.totalUnits > 0 ? (p.reservedUnits / p.totalUnits) * 100 : 0}%`, background: "#d97706", transition: "width 0.5s" }} />
+                          <div style={{ flex: 1, background: "#059669", transition: "width 0.5s" }} />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11, color: "#71717a" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />Sold</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#d97706", display: "inline-block" }} />Reserved</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} />Available</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Unit Types Table */}
+                {p.unitTypes?.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#52525b", marginBottom: 8 }}>Unit Types</div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#faf5ff" }}>
+                          {["Type", "Area (sqft)", "Starting Price", "Status"].map((h) => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6d28d9", fontWeight: 700, fontSize: 11, borderBottom: "2px solid #f3e8ff" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {p.unitTypes.map((unit, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid rgba(109,40,217,0.06)" }}>
+                            <td style={{ padding: "9px 10px", color: "#18181b", fontWeight: 600 }}>{unit.type || "—"}</td>
+                            <td style={{ padding: "9px 10px", color: "#52525b" }}>{unit.area ? unit.area.toLocaleString() : "—"}</td>
+                            <td style={{ padding: "9px 10px", color: "#6d28d9", fontWeight: 600 }}>{unit.price ? formatPrice(unit.price, p.propertySubType, p.currency) : "—"}</td>
+                            <td style={{ padding: "9px 10px" }}>
+                              <span style={{
+                                padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                                background: unit.status === "available" ? "#d1fae5" : unit.status === "sold" ? "#fee2e2" : "#fef3c7",
+                                color: unit.status === "available" ? "#059669" : unit.status === "sold" ? "#dc2626" : "#d97706",
+                                textTransform: "capitalize",
+                              }}>
+                                {unit.status || "available"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
               </div>
             )}
 
@@ -830,17 +927,7 @@ const PropertyDetail = ({ property: p, onBack, onGeneratePresentation }) => {
               </button>
             </div>
 
-            {/* Add to Lead */}
-            <div style={styles.detailSection}>
-              <div style={styles.sectionTitle}>Add to Lead</div>
-              <button style={{ ...styles.btnPrimary, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Plus size={14} /> Add to Existing Lead
-              </button>
-              <button style={{ ...styles.btnOutline, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Plus size={14} /> Create New Lead
-              </button>
-            </div>
-
+ 
             {/* Developer info */}
             {p.developer && (
               <div style={styles.detailSection}>
@@ -864,16 +951,31 @@ const PropertyDetail = ({ property: p, onBack, onGeneratePresentation }) => {
               </div>
             )}
 
-            {/* Documents */}
-            {p.brochure && (
-              <div style={styles.detailSection}>
-                <div style={styles.sectionTitle}>Documents</div>
-                <a href={p.brochure} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6d28d9", textDecoration: "none", fontWeight: 600 }}>
-                  <FileText size={15} />
-                  Download Brochure
-                </a>
-              </div>
-            )}
+            {/* Property Documents */}
+            <div style={styles.detailSection}>
+              <div style={styles.sectionTitle}>Property Documents</div>
+              {p.documents?.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {p.documents.map((doc, i) => (
+                    <a key={i} href={doc.url} target="_blank" rel="noreferrer"
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#faf5ff", borderRadius: 10, border: "1px solid #ede9fe", textDecoration: "none", transition: "all 0.15s" }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f3e8ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <FileText size={15} color="#6d28d9" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#18181b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.label}</div>
+                        <div style={{ fontSize: 10, color: "#a1a1aa", marginTop: 1 }}>Tap to download</div>
+                      </div>
+                      <ChevronRight size={13} color="#a1a1aa" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "#a1a1aa", padding: "10px 0", textAlign: "center" }}>No documents attached</div>
+              )}
+            </div>
+
+  
 
             {/* Interest Stats */}
             <div style={styles.detailSection}>

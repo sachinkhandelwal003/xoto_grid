@@ -1,418 +1,397 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, Row, Col, Form, Input, InputNumber, Select, Button, message, Tabs, Spin } from 'antd';
-import {
-  UserOutlined, PhoneOutlined, MailOutlined, HomeOutlined, DollarOutlined,
-  PlusOutlined
-} from '@ant-design/icons';
+import React, { useState, useMemo } from 'react';
+import { Form, Input, InputNumber, Select, Button, message } from 'antd';
 import { Country } from 'country-state-city';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  FiUser, FiPhone, FiMail, FiMapPin, FiDollarSign,
+  FiHome, FiCheckCircle, FiArrowLeft, FiPlus, FiList,
+} from 'react-icons/fi';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
-const THEME = {
-  primary: '#5C039B',
-  primaryMid: '#7C3AED',
-  primaryLight: '#F5F0FF',
-  textDark: '#0F172A',
-  textMuted: '#64748B',
-  bgPage: '#F8FAFC',
-};
+const P = '#4A027C';
+const P2 = '#7C3AED';
+const GR = `linear-gradient(135deg, ${P} 0%, ${P2} 100%)`;
 
-const CreateReferralLead = () => {
+// ─── Confirmation Screen ──────────────────────────────────────────────────────
+function ConfirmationScreen({ result, onSubmitAnother, onViewLeads }) {
+  return (
+    <div style={{ background: '#F8FAFC', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 28px' }}>
+      <div style={{ maxWidth: '560px', width: '100%' }}>
+
+        {/* Success icon */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '50%',
+            background: GR, display: 'inline-flex', alignItems: 'center',
+            justifyContent: 'center', boxShadow: '0 8px 32px rgba(74,2,124,0.25)',
+          }}>
+            <FiCheckCircle size={36} color="#fff" />
+          </div>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', marginTop: '20px', marginBottom: '8px' }}>
+            Referral Submitted!
+          </h1>
+          <p style={{ color: '#64748B', fontSize: '14px', margin: 0 }}>
+            Your referral has been sent to the Xoto team.
+          </p>
+        </div>
+
+        {/* Reference card */}
+        <div style={{
+          background: '#fff', borderRadius: '20px', border: '1px solid #E2E8F0',
+          padding: '28px', marginBottom: '20px',
+          boxShadow: '0 4px 24px rgba(15,23,42,0.06)',
+        }}>
+          {/* Reference number */}
+          <div style={{
+            background: '#F5F3FF', borderRadius: '12px', padding: '16px',
+            textAlign: 'center', marginBottom: '24px', border: '1px solid #DDD6FE',
+          }}>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: P2, textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px' }}>
+              Referral Reference
+            </p>
+            <p style={{ fontSize: '22px', fontWeight: 800, color: P, margin: 0, letterSpacing: '2px' }}>
+              {result.reference}
+            </p>
+          </div>
+
+          {/* Lead summary — 2 columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <SummaryRow icon={<FiUser size={14} />} label="Client" value={result.client_name || '—'} />
+            <SummaryRow icon={<FiPhone size={14} />} label="Phone" value={result.phone || '—'} />
+            {result.interest_area && (
+              <SummaryRow icon={<FiMapPin size={14} />} label="Interest Area" value={result.interest_area} />
+            )}
+            {result.budget && (
+              <SummaryRow icon={<FiDollarSign size={14} />} label="Budget" value={`AED ${Number(result.budget).toLocaleString()}`} />
+            )}
+            {result.property_type && (
+              <SummaryRow icon={<FiHome size={14} />} label="Property Type" value={result.property_type} />
+            )}
+          </div>
+        </div>
+
+        {/* CTAs — side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Button
+            size="large"
+            icon={<FiList size={15} />}
+            onClick={onViewLeads}
+            style={{
+              height: '48px', borderRadius: '12px', fontWeight: 700,
+              fontSize: '14px', borderColor: P, color: P,
+            }}
+            block
+          >
+            View My Referrals
+          </Button>
+          <Button
+            type="primary"
+            size="large"
+            icon={<FiPlus size={15} />}
+            onClick={onSubmitAnother}
+            style={{
+              height: '48px', borderRadius: '12px', fontWeight: 700,
+              fontSize: '14px', background: GR, border: 'none',
+              boxShadow: '0 4px 14px rgba(74,2,124,0.3)',
+            }}
+            block
+          >
+            Submit Another Lead
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryRow({ icon, label, value }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{
+        width: '32px', height: '32px', borderRadius: '10px',
+        background: '#F5F3FF', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', flexShrink: 0, color: P,
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+        <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: 700 }}>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Form ────────────────────────────────────────────────────────────────
+export default function CreateReferralLead() {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('client');
-  const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [screen, setScreen] = useState('form'); // 'form' | 'success'
+  const [result, setResult] = useState(null);
   const navigate = useNavigate();
-  const leadId = searchParams.get('id');
 
-  const countryOptions = useMemo(() => {
-    return Country.getAllCountries()
-      .map((country) => ({
-        name: country.name,
-        code: `+${country.phonecode}`,
-        isoCode: country.isoCode,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
-
-  useEffect(() => {
-    if (leadId) {
-      fetchLeadData(leadId);
-    }
-  }, [leadId]);
-
-  const fetchLeadData = async (id) => {
-    setLoading(true);
-    try {
-      const res = await apiService.get(`/gridlead/${id}`);
-      const data = res?.data?.data || res?.data;
-      
-      form.setFieldsValue({
-        firstName: data.contact_info?.name?.first_name,
-        lastName: data.contact_info?.name?.last_name,
-        countryCode: data.contact_info?.mobile?.country_code || '+971',
-        phoneNumber: data.contact_info?.mobile?.number,
-        email: data.contact_info?.email?.address,
-        transactionType: data.requirements?.transaction_type,
-        propertyType: data.requirements?.property_type,
-        areaOfInterest: data.requirements?.location_preferences?.[0]?.area,
-        budgetMin: data.requirements?.budget_min,
-        budgetMax: data.requirements?.budget_max,
-        bedrooms: data.requirements?.bedrooms,
-        bathrooms: data.requirements?.bathrooms,
-        areaMin: data.requirements?.area_sqft_min,
-        areaMax: data.requirements?.area_sqft_max,
-        furnished: data.requirements?.furnished,
-        readyByDate: data.requirements?.ready_by_date,
-        additionalNotes: data.requirements?.additional_notes,
-      });
-    } catch (err) {
-      console.error('Failed to fetch lead data', err);
-      message.error('Failed to load lead for editing');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const countryOptions = useMemo(() =>
+    Country.getAllCountries()
+      .map(c => ({ name: c.name, code: `+${c.phonecode}`, iso: c.isoCode }))
+      .filter(c => c.code !== '+undefined')
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    []
+  );
 
   const handleSubmit = async (values) => {
     setSubmitting(true);
     try {
+      // Split full name into first / last
+      const nameParts = (values.customerName || '').trim().split(/\s+/);
+      const first_name = nameParts[0] || '';
+      const last_name  = nameParts.slice(1).join(' ') || '';
+
       const payload = {
-        first_name: values.firstName,
-        last_name: values.lastName,
-        phone_number: values.phoneNumber,
-        country_code: values.countryCode || '+971',
-        email: values.email,
-        property_type: values.propertyType,
-        transaction_type: values.transactionType,
-        location_preferences: values.areaOfInterest ? [{ area: values.areaOfInterest }] : [],
-        budget_min: values.budgetMin,
-        budget_max: values.budgetMax,
-        bedrooms: values.bedrooms,
-        bathrooms: values.bathrooms,
-        area_sqft_min: values.areaMin,
-        area_sqft_max: values.areaMax,
-        furnished: values.furnished,
-        ready_by_date: values.readyByDate,
-        additional_notes: values.additionalNotes,
+        first_name,
+        last_name,
+        phone_number:  values.phoneNumber,
+        country_code:  values.countryCode || '+971',
+        ...(values.email        && { email: values.email }),
+        ...(values.interestArea && { interest_area: values.interestArea }),
+        ...(values.budget       && { budget: values.budget }),
+        ...(values.propertyType && { property_type: values.propertyType }),
       };
 
-      if (leadId) {
-        await apiService.put(`/gridlead/referral/${leadId}/update-requirements`, {
-          requirements: payload,
-          reason: 'Updated by referral partner'
-        });
-        message.success('Referral lead updated successfully!');
-      } else {
-        await apiService.post('/gridlead/referral/create-lead', payload);
-        message.success('Referral lead submitted successfully!');
-        form.resetFields();
-      }
-      
-      setActiveTab('client');
-      navigate('/dashboard/gridreferralpartner/total-leads');
+      const res = await apiService.post('/gridlead/referral/create-lead', payload);
+      // apiService.post returns response.data (HTTP body)
+      const data = res?.data || res;
+
+      setResult({
+        reference:     data.reference || `REF-${String(data.lead_id || '').slice(-8).toUpperCase()}`,
+        client_name:   data.client_name || values.customerName,
+        phone:         data.phone       || `${values.countryCode || '+971'} ${values.phoneNumber}`,
+        interest_area: data.interest_area || values.interestArea || null,
+        budget:        data.budget || values.budget || null,
+        property_type: data.property_type || values.propertyType || null,
+        lead_id:       data.lead_id,
+      });
+      setScreen('success');
     } catch (err) {
-      console.error('Failed to submit/update referral lead', err);
-      message.error(err?.response?.data?.message || `Failed to ${leadId ? 'update' : 'submit'} referral lead.`);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to submit referral lead.';
+      message.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const items = [
-    {
-      key: 'client',
-      label: 'Client Info',
-    },
-    {
-      key: 'property',
-      label: 'Property Requirements',
-    },
-  ];
+  const handleSubmitAnother = () => {
+    form.resetFields();
+    form.setFieldsValue({ countryCode: '+971' });
+    setResult(null);
+    setScreen('form');
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  if (screen === 'success') {
+    return (
+      <ConfirmationScreen
+        result={result}
+        onSubmitAnother={handleSubmitAnother}
+        onViewLeads={() => navigate('/dashboard/gridreferralpartner/total-leads')}
+      />
+    );
+  }
+
   return (
-    <div style={{ backgroundColor: THEME.bgPage, minHeight: '100vh', padding: '24px 20px' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 700, color: THEME.textDark, margin: 0 }}>
-            {leadId ? 'Edit Referral' : 'Submit a New Referral'}
-          </h1>
-          <p style={{ color: THEME.textMuted, fontSize: '14px', marginTop: '6px', margin: 0 }}>
-            {leadId ? 'Update the referral details below.' : 'Fill in the details below to refer a client.'}
+    <div style={{ background: '#F8FAFC', padding: '24px 28px', height: '100%' }}>
+      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#64748B', fontSize: '12px', fontWeight: 600,
+                marginBottom: '6px', padding: 0,
+              }}
+            >
+              <FiArrowLeft size={13} /> Back
+            </button>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+              Add New Referral
+            </h1>
+          </div>
+          <p style={{ color: '#64748B', fontSize: '13px', margin: 0, maxWidth: '280px', textAlign: 'right' }}>
+            Fill in your client's details to submit a referral to Xoto.
           </p>
         </div>
 
-        <Card
-          bordered={false}
-          style={{ borderRadius: '16px', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.02)', border: '1px solid #E2E8F0' }}
-        >
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px 0' }}><Spin size="large" /></div>
-          ) : (
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-              preserve={true}
-              initialValues={{
-                countryCode: '+971',
-                transactionType: 'buy',
-                furnished: 'any',
-              }}
-            >
-              <Tabs activeKey={activeTab} onChange={setActiveTab} items={items} />
+        {/* Form card */}
+        <div style={{
+          background: '#fff', borderRadius: '20px', padding: '28px 32px',
+          border: '1px solid #E2E8F0', boxShadow: '0 4px 24px rgba(15,23,42,0.05)',
+        }}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            requiredMark={false}
+            initialValues={{ countryCode: '+971' }}
+          >
+            {/* Two-column grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 28px' }}>
 
-              <div style={{ padding: '24px 0' }}>
-              {activeTab === 'client' && (
-                <div>
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="firstName"
-                        label="First Name"
-                        rules={[{ required: true, message: 'First name is required' }]}
-                      >
-                        <Input placeholder="John" prefix={<UserOutlined />} />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="lastName"
-                        label="Last Name"
-                        rules={[{ required: true, message: 'Last name is required' }]}
-                      >
-                        <Input placeholder="Doe" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+              {/* LEFT: Customer Name */}
+              <Form.Item
+                name="customerName"
+                label={<FieldLabel text="Customer Name" required />}
+                rules={[{ required: true, message: 'Customer name is required' }]}
+                style={{ marginBottom: '18px' }}
+              >
+                <Input
+                  prefix={<FiUser size={14} color="#94A3B8" />}
+                  placeholder="e.g. Ahmed Al Mansouri"
+                  size="large"
+                  style={{ borderRadius: '10px', height: '44px' }}
+                />
+              </Form.Item>
 
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={8}>
-                      <Form.Item
-                        name="countryCode"
-                        label="Country Code"
-                        rules={[{ required: true, message: 'Required' }]}
-                      >
-                        <Select placeholder="Select Country Code" showSearch optionFilterProp="children">
-                          {countryOptions.map((country) => (
-                            <Option key={country.isoCode} value={country.code}>
-                              {country.name} ({country.code})
-                            </Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={16}>
-                      <Form.Item
-                        name="phoneNumber"
-                        label="Phone Number"
-                        rules={[{ required: true, message: 'Phone number is required' }]}
-                      >
-                        <Input placeholder="501234567" prefix={<PhoneOutlined />} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+              {/* RIGHT: Interest Area */}
+              <Form.Item
+                name="interestArea"
+                label={<FieldLabel text="Interest Area" />}
+                style={{ marginBottom: '18px' }}
+              >
+                <Input
+                  prefix={<FiMapPin size={14} color="#94A3B8" />}
+                  placeholder="e.g. Dubai Marina, Downtown"
+                  size="large"
+                  style={{ borderRadius: '10px', height: '44px' }}
+                />
+              </Form.Item>
 
-                  <Form.Item
-                    name="email"
-                    label="Email (Optional)"
-                  >
-                    <Input placeholder="john@example.com" prefix={<MailOutlined />} />
-                  </Form.Item>
-                </div>
-              )}
-
-              {activeTab === 'property' && (
-                <div>
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="transactionType"
-                        label="Looking to"
-                        rules={[{ required: true, message: 'Required' }]}
-                      >
-                        <Select placeholder="Select">
-                          <Option value="buy">Buy</Option>
-                          <Option value="rent">Rent</Option>
-                          <Option value="sell">Sell</Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="propertyType"
-                        label="Property Type"
-                        rules={[{ required: true, message: 'Property type is required' }]}
-                      >
-                        <Select placeholder="Select Property Type">
-                          <Option value="Apartment">Apartment</Option>
-                          <Option value="Villa">Villa</Option>
-                          <Option value="Townhouse">Townhouse</Option>
-                          <Option value="Commercial">Commercial</Option>
-                          <Option value="Land">Land</Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Form.Item
-                    name="areaOfInterest"
-                    label="Area of Interest"
-                  >
-                    <Input placeholder="e.g., Dubai Marina, Jumeirah" />
-                  </Form.Item>
-
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="budgetMin"
-                        label="Budget (Min) - AED"
-                      >
-                        <InputNumber
-                          style={{ width: '100%' }}
-                          placeholder="Minimum budget"
-                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="budgetMax"
-                        label="Budget (Max) - AED"
-                      >
-                        <InputNumber
-                          style={{ width: '100%' }}
-                          placeholder="Maximum budget"
-                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="bedrooms"
-                        label="Bedrooms"
-                      >
-                        <Select placeholder="Any">
-                          <Option value={0}>Studio</Option>
-                          <Option value={1}>1</Option>
-                          <Option value={2}>2</Option>
-                          <Option value={3}>3</Option>
-                          <Option value={4}>4</Option>
-                          <Option value={5}>5+</Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="bathrooms"
-                        label="Bathrooms"
-                      >
-                        <Select placeholder="Any">
-                          <Option value={1}>1</Option>
-                          <Option value={2}>2</Option>
-                          <Option value={3}>3</Option>
-                          <Option value={4}>4+</Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="areaMin"
-                        label="Area (Min) - Sq Ft"
-                      >
-                        <InputNumber
-                          style={{ width: '100%' }}
-                          placeholder="Minimum area"
-                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="areaMax"
-                        label="Area (Max) - Sq Ft"
-                      >
-                        <InputNumber
-                          style={{ width: '100%' }}
-                          placeholder="Maximum area"
-                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Form.Item
-                    name="furnished"
-                    label="Furnished"
-                  >
-                    <Select placeholder="Any">
-                      <Option value="any">Any</Option>
-                      <Option value="furnished">Furnished</Option>
-                      <Option value="semi">Semi-Furnished</Option>
-                      <Option value="unfurnished">Unfurnished</Option>
+              {/* LEFT: Phone */}
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{ marginBottom: '8px' }}><FieldLabel text="Customer Phone" required /></div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Form.Item name="countryCode" noStyle rules={[{ required: true, message: 'Required' }]}>
+                    <Select
+                      showSearch
+                      size="large"
+                      style={{ width: '140px', flexShrink: 0 }}
+                      optionFilterProp="children"
+                      dropdownStyle={{ borderRadius: '10px' }}
+                      filterOption={(input, option) =>
+                        option?.children?.toString().toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {countryOptions.map(c => (
+                        <Option key={c.iso} value={c.code}>{c.code} {c.name}</Option>
+                      ))}
                     </Select>
                   </Form.Item>
-
                   <Form.Item
-                    name="readyByDate"
-                    label="Ready By Date (Optional)"
+                    name="phoneNumber"
+                    noStyle
+                    rules={[
+                      { required: true, message: 'Phone number is required' },
+                      { pattern: /^\d{6,15}$/, message: 'Enter a valid phone number' },
+                    ]}
                   >
-                    <Input placeholder="e.g., Q1 2025" />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="additionalNotes"
-                    label="Additional Notes"
-                  >
-                    <TextArea
-                      rows={4}
-                      placeholder="Any other requirements or notes about the client..."
+                    <Input
+                      prefix={<FiPhone size={14} color="#94A3B8" />}
+                      placeholder="501234567"
+                      size="large"
+                      style={{ borderRadius: '10px', height: '44px', flex: 1 }}
                     />
                   </Form.Item>
                 </div>
-              )}
+              </div>
+
+              {/* RIGHT: Budget */}
+              <Form.Item
+                name="budget"
+                label={<FieldLabel text="Budget (AED)" />}
+                style={{ marginBottom: '18px' }}
+              >
+                <InputNumber
+                  placeholder="e.g. 1,500,000"
+                  size="large"
+                  style={{ width: '100%', borderRadius: '10px', height: '44px' }}
+                  formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={v => v?.replace(/,/g, '')}
+                  min={0}
+                />
+              </Form.Item>
+
+              {/* LEFT: Email */}
+              <Form.Item
+                name="email"
+                label={<FieldLabel text="Email" />}
+                rules={[{ type: 'email', message: 'Enter a valid email' }]}
+                style={{ marginBottom: '24px' }}
+              >
+                <Input
+                  prefix={<FiMail size={14} color="#94A3B8" />}
+                  placeholder="client@email.com"
+                  size="large"
+                  style={{ borderRadius: '10px', height: '44px' }}
+                />
+              </Form.Item>
+
+              {/* RIGHT: Property Type */}
+              <Form.Item
+                name="propertyType"
+                label={<FieldLabel text="Property Type" />}
+                style={{ marginBottom: '24px' }}
+              >
+                <Select
+                  placeholder="Select property type"
+                  size="large"
+                  allowClear
+                  style={{ borderRadius: '10px' }}
+                  dropdownStyle={{ borderRadius: '10px' }}
+                >
+                  <Option value="Apartment">Apartment</Option>
+                  <Option value="Villa">Villa</Option>
+                  <Option value="Townhouse">Townhouse</Option>
+                  <Option value="Penthouse">Penthouse</Option>
+                  <Option value="Commercial">Commercial</Option>
+                  <Option value="Land">Land</Option>
+                </Select>
+              </Form.Item>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                type="primary"
-                size="large"
-                htmlType="submit"
-                loading={submitting}
-                icon={<PlusOutlined />}
-                style={{
-                  backgroundColor: THEME.primary,
-                  borderColor: THEME.primary,
-                  borderRadius: '10px',
-                  height: '44px',
-                  fontWeight: 600,
-                  minWidth: '160px',
-                }}
-              >
-                {submitting ? (leadId ? 'Updating...' : 'Submitting...') : (leadId ? 'Update Referral' : 'Submit Referral')}
-              </Button>
-            </div>
+            {/* Submit — full width */}
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={submitting}
+              block
+              size="large"
+              style={{
+                height: '50px', borderRadius: '12px', fontWeight: 700,
+                fontSize: '15px', background: GR, border: 'none',
+                boxShadow: '0 4px 16px rgba(74,2,124,0.3)',
+              }}
+            >
+              {submitting ? 'Submitting Referral…' : 'Submit Referral'}
+            </Button>
           </Form>
-          )}
-        </Card>
+        </div>
+
+        <p style={{ textAlign: 'center', color: '#94A3B8', fontSize: '11px', marginTop: '12px' }}>
+          Client information is kept confidential and used only to process this referral.
+        </p>
       </div>
     </div>
   );
-};
+}
 
-export default CreateReferralLead;
+function FieldLabel({ text, required }) {
+  return (
+    <span style={{ fontSize: '13px', fontWeight: 700, color: '#374151' }}>
+      {text}
+      {required && <span style={{ color: '#EF4444', marginLeft: '3px' }}>*</span>}
+    </span>
+  );
+}

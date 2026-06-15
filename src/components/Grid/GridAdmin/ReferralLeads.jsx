@@ -642,7 +642,7 @@ const ReferralLeads = () => {
       if (extraFilters.status)  query.set('status',  extraFilters.status);
       if (extraFilters.type)    query.set('type',    extraFilters.type);
 
-      const res = await apiService.get(`/gridlead/referral/my-leads?${query.toString()}`);
+      const res = await apiService.get(`/gridlead?lead_type=referral_partner&${query.toString()}`);
 
       // handle both response shapes
       let list, pg;
