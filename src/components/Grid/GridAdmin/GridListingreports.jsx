@@ -6,8 +6,9 @@ import {
 import {
   ReloadOutlined, SearchOutlined, FilterOutlined,
   FileExcelOutlined, FilePdfOutlined, EyeOutlined,
-  HeartOutlined, HomeOutlined, BarChartOutlined
+  HeartOutlined, HomeOutlined, BarChartOutlined, EditOutlined
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, LineChart, Line
@@ -32,6 +33,7 @@ const APPROVAL_COLORS = {
 };
 
 export default function GridListingReports() {
+  const navigate = useNavigate();
   const [loading, setLoading]     = useState(false);
   const [data, setData]           = useState(null);
   const [dateRange, setDateRange] = useState(null);
@@ -428,6 +430,39 @@ export default function GridListingReports() {
                   {
                     key: "createdAt", title: "Created",
                     render: (v) => v ? <span style={{ fontSize: 11, color: "#6b7280" }}>{dayjs(v).format("DD MMM YYYY")}</span> : "—",
+                  },
+                  {
+                    key: "actions", title: "Actions", sortable: false,
+                    render: (_, r) => {
+                      const subType = r.propertySubType;
+                      if (subType === "secondary") {
+                        return (
+                          <Tooltip title="Edit Secondary Property">
+                            <Button
+                              size="small" type="primary" ghost icon={<EditOutlined />}
+                              onClick={() => navigate(`/create-secondary-plans/${r._id}`)}
+                              style={{ borderRadius: 6 }}
+                            >
+                              Edit
+                            </Button>
+                          </Tooltip>
+                        );
+                      }
+                      if (subType === "rental") {
+                        return (
+                          <Tooltip title="Edit Rental Property">
+                            <Button
+                              size="small" type="primary" ghost icon={<EditOutlined />}
+                              onClick={() => navigate(`/rental/properties/edit/${r._id}`)}
+                              style={{ borderRadius: 6 }}
+                            >
+                              Edit
+                            </Button>
+                          </Tooltip>
+                        );
+                      }
+                      return <span style={{ fontSize: 11, color: "#9ca3af" }}>—</span>;
+                    },
                   },
                 ]}
               />

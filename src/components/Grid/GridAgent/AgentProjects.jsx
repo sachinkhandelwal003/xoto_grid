@@ -47,13 +47,18 @@ const getTypeBg = (subType) => {
 };
 
 const getPriceDisplay = (p) => {
-  if (p.price_min && p.price_max)
+  if (p.price_min && p.price_max && Number(p.price_min) !== Number(p.price_max))
     return `${Number(p.price_min).toLocaleString()} – ${Number(p.price_max).toLocaleString()}`;
+  if (p.price_min) return Number(p.price_min).toLocaleString();
   if (p.price) return Number(p.price).toLocaleString();
   return "Contact Us";
 };
 
-const getPriceLabel = (subType) => (subType === "rental" ? "Rent / year" : "Price from");
+const getPriceLabel = (subType) => {
+  if (subType === "rental") return "Rent / year";
+  if (subType === "secondary") return "Price";
+  return "Price from";
+};
 
 // ─── PROPERTY CARD ─────────────────────────────────────────────────────────────
 function PropertyCard({ p, onClick }) {
@@ -153,7 +158,7 @@ function PropertyCard({ p, onClick }) {
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", color: "#9ca3af" }}>{devName}</span>
         </div>
 
-        {(p.bedroomType === "studio" || p.bedrooms > 0 || p.bathrooms > 0 || p.builtUpArea || p.builtUpArea_min) && (
+        {(p.bedroomType === "studio" || p.bedrooms > 0 || p.bathrooms > 0 || p.builtUpArea > 0 || p.builtUpArea_min > 0) && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
             {(p.bedroomType === "studio" || p.bedrooms > 0) && (
               <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>
@@ -161,7 +166,7 @@ function PropertyCard({ p, onClick }) {
               </span>
             )}
             {p.bathrooms > 0 && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{p.bathrooms} {p.bathrooms === 1 ? "Bath" : "Baths"}</span>}
-            {(p.builtUpArea || p.builtUpArea_min) && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{(p.builtUpArea || p.builtUpArea_min).toLocaleString()} sqft</span>}
+            {(p.builtUpArea > 0 || p.builtUpArea_min > 0) && <span style={{ padding: "3px 10px", background: "#f3f4f6", borderRadius: 20, fontSize: 12, color: "#374151", fontWeight: 500 }}>{(p.builtUpArea || p.builtUpArea_min).toLocaleString()} sqft</span>}
           </div>
         )}
 

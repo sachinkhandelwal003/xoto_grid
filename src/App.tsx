@@ -112,6 +112,7 @@ const Agreementdeveloper = lazy(() => import('./components/Grid/DeveloperGrid/Ag
 // Role 24 - Grid Advisor
 const GridAdvisorDashboard = lazy(() => import('./components/CMS/pages/GridAdvisorDashboard'));
 const AdvisorLeadsPage = lazy(() => import('./components/Grid/AdvisorGrid/Advisorleadspage'));
+const AdvisorLeaderboardPage = lazy(() => import('./components/Grid/AdvisorGrid/AdvisorLeaderboard'));
 const GridAdvisorLeadDetail = lazy(() => import('./components/Grid/AdvisorGrid/GridAdvisorLeadDetail'));
 const PropertyCatalogue = lazy(() => import('./components/Grid/AdvisorGrid/Propertycatalogue'));
 const FavouriteProperty = lazy(() => import('./components/Grid/Fav Property/FavouriteProperty'));
@@ -186,6 +187,7 @@ const App: React.FC = () => (
         {/* Property View with Role Slug Pattern */}
         <Route path="property/view/:id" element={<PropertyDetailPage />} />
         <Route path="secondary-properties" element={<CreateSecondaryProperty />} />
+        <Route path="secondary-properties/edit/:id" element={<CreateSecondaryProperty />} />
         <Route path="secondary-properties/:id" element={<Secondarypropertydetail />} />
         <Route path="secondary-plans" element={<SecondaryPlans />} />
         <Route path="grid/AllgridLeads" element={<AllgridLeads />} />
@@ -320,6 +322,7 @@ const App: React.FC = () => (
         <Route path="mortgages/calculator/affordability" element={<MortgageAffordabilityCalculatorPage />} />
         <Route path="mortgages/calculator/emi" element={<PerfectMortgageCalculator initialTab="mortgage" />} />
         <Route path="profile" element={<GridAdvisorProfile />} />
+        <Route path="leaderboard" element={<AdvisorLeaderboardPage />} />
         <Route path="*" element={<Navigate to="/dashboard/GridAdvisor" replace />} />
       </Route>
 

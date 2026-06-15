@@ -64,7 +64,7 @@ const RankBadge = ({ rank }) => {
 // ─── Main Leaderboard Component ───────────────────────────────────────────────
 const ReferralPartnerLeaderboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
-  const [activePeriod, setActivePeriod] = useState('all'); // week, month, all
+  const [activePeriod, setActivePeriod] = useState('monthly'); // weekly, monthly, quarterly, annual
   const [myRank, setMyRank] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -90,9 +90,9 @@ const ReferralPartnerLeaderboard = () => {
   }, [fetchLeaderboard]);
 
   const getRankIcon = (change) => {
-    if (change === 'up') return <ArrowUpOutlined style={{ color: THEME.success }} />;
+    if (change === 'up')   return <ArrowUpOutlined style={{ color: THEME.success }} />;
     if (change === 'down') return <ArrowDownOutlined style={{ color: THEME.danger }} />;
-    return null;
+    return null; // 'stable' or no change — show nothing
   };
 
   return (
@@ -109,29 +109,35 @@ const ReferralPartnerLeaderboard = () => {
         }}>
           <div>
             <Title level={3} style={{ margin: 0, color: THEME.textDark, fontWeight: 700 }}>
-              Leaderboard 🏆
+              Leaderboard
             </Title>
             <Text style={{ color: THEME.textMuted, fontSize: 14 }}>
-              Top referral partners ranked by performance
+              Ranked by earnings and conversion rate
             </Text>
           </div>
 
           {/* Period Selector */}
           <div style={{ display: 'flex', gap: 8 }}>
-            {['week', 'month', 'all'].map((period) => (
+            {[
+              { key: 'weekly',    label: 'Weekly' },
+              { key: 'monthly',   label: 'Monthly' },
+              { key: 'quarterly', label: 'Quarterly' },
+              { key: 'annual',    label: 'Annual' },
+            ].map(({ key, label }) => (
               <Button
-                key={period}
-                type={activePeriod === period ? 'primary' : 'default'}
-                onClick={() => setActivePeriod(period)}
+                key={key}
+                type={activePeriod === key ? 'primary' : 'default'}
+                onClick={() => setActivePeriod(key)}
                 style={{
                   borderRadius: 8,
                   height: 38,
                   fontWeight: 500,
-                  backgroundColor: activePeriod === period ? THEME.primary : 'white',
-                  borderColor: activePeriod === period ? THEME.primary : THEME.border
+                  backgroundColor: activePeriod === key ? THEME.primary : 'white',
+                  borderColor: activePeriod === key ? THEME.primary : THEME.border,
+                  color: activePeriod === key ? 'white' : THEME.textMuted,
                 }}
               >
-                {period.charAt(0).toUpperCase() + period.slice(1)}
+                {label}
               </Button>
             ))}
           </div>

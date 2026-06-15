@@ -14,7 +14,7 @@ import {
   FireFilled, StarFilled, EnvironmentOutlined,
   AppstoreOutlined, UnorderedListOutlined,
   CheckCircleFilled, ClockCircleFilled, CloseCircleFilled,
-  EyeOutlined, DeleteOutlined, ReloadOutlined,
+  EyeOutlined, DeleteOutlined, ReloadOutlined, EditOutlined,
   HomeOutlined, UserOutlined, ColumnWidthOutlined,QrcodeOutlined,
 } from '@ant-design/icons';
 
@@ -65,7 +65,7 @@ const typeLabels = {
 };
 
 // ─── Property Card ─────────────────────────────────────────────────────────────
-const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeatured, onDelete, onView, onRequestChanges, }) => {
+const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeatured, onDelete, onView, onEdit, onRequestChanges, }) => {
   const {
     _id, propertyName, area, city, propertySubType,
     approvalStatus, listingStatus, isFeatured, isHot,
@@ -283,6 +283,26 @@ const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeat
             View
           </Button>
         </Tooltip>
+
+        {/* Edit Button — only for secondary and rental */}
+        {/* {(property.propertySubType === 'secondary' || property.propertySubType === 'rental') && (
+          <Tooltip title="Edit Property">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(property)}
+              style={{
+                fontSize: 11,
+                background: '#0ea5e910',
+                borderColor: '#0ea5e940',
+                color: '#0ea5e9',
+                fontWeight: 600,
+              }}
+            >
+              Edit
+            </Button>
+          </Tooltip>
+        )} */}
 
     {approvalStatus === 'pending' && (
   <>
@@ -530,11 +550,16 @@ const handleRequestChanges = async () => {
   }
 };
   const handleView = (id) => {
-    console.log('=== handleView ===');
-    console.log('user:', user);
-    console.log('roleCode:', roleCode);
-    console.log('roleSlug:', roleSlug);
     navigate(`/dashboard/${roleSlug}/property/view/${id}`);
+  };
+
+  const handleEdit = (property) => {
+    const { _id, propertySubType } = property;
+    if (propertySubType === 'rental') {
+      navigate(`/rental/properties/edit/${_id}`);
+    } else if (propertySubType === 'secondary') {
+      navigate(`/dashboard/${roleSlug}/create-secondary-plans/${_id}`);
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -787,12 +812,12 @@ const handleRequestChanges = async () => {
                 property={p}
                 onApprove={handleApprove}
                 onReject={openRejectModal}
-                onRequestChanges={(id) => setRequestChangesModal({ open: true, id, comment: '' })} // ← add
+                onRequestChanges={(id) => setRequestChangesModal({ open: true, id, comment: '' })}
                 onToggleHot={handleToggleHot}
                 onToggleFeatured={handleToggleFeatured}
                 onDelete={handleDelete}
                 onView={handleView}
-                
+                onEdit={handleEdit}
               />
             ))}
           </div>

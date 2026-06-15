@@ -642,7 +642,7 @@ const ReferralLeads = () => {
       if (extraFilters.status)  query.set('status',  extraFilters.status);
       if (extraFilters.type)    query.set('type',    extraFilters.type);
 
-      const res = await apiService.get(`/gridlead/referral/my-leads?${query.toString()}`);
+      const res = await apiService.get(`/gridlead?lead_type=referral_partner&${query.toString()}`);
 
       // handle both response shapes
       let list, pg;
@@ -822,9 +822,9 @@ const ReferralLeads = () => {
           <Button icon={<ReloadOutlined />} onClick={() => fetchLeads(filters, pagination.page, pagination.limit)} style={{ borderColor: PRIMARY, color: PRIMARY }}>
             Refresh
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreate(true)} style={{ background: PRIMARY, borderColor: PRIMARY }}>
+          {/* <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreate(true)} style={{ background: PRIMARY, borderColor: PRIMARY }}>
             Add Lead
-          </Button>
+          </Button> */}
         </div>
       </div>
 
