@@ -35,29 +35,52 @@ const GridNotifications = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
 
-  // Fetch notifications
-  const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
-    setLoading(true);
-    try {
-      let url = `/grid/notifications?page=${pageNum}&limit=${LIMIT}`;
-      if (activeFilter === 'read') url += '&isRead=true';
-      if (activeFilter === 'unread') url += '&isRead=false';
-
-      const res = await apiService.get(url);
-      if (res.success) {
-        setNotifications(res.data || []);
-        setTotal(res.total || 0);
-      }
-    } catch (error) {
-      showErrorAlert('Error', 'Failed to fetch notifications');
-    } finally {
-      setLoading(false);
-    }
+  // Helper to get user role slug for display
+  const getUserRoleSlug = () => {
+    if (!user?.role) return 'user';
+    if (typeof user.role === 'object') return user.role.slug || user.role.code || 'user';
+    return String(user.role).toLowerCase();
   };
+
+  const isAdmin = ['admin', 'super-admin'].includes(getUserRoleSlug());
+
+  // Fetch notifications – always scoped to logged-in user
+ const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
+  if (!user?.id) return;
+  setLoading(true);
+  try {
+    // ✅ Remove userId from URL – backend will use token
+    let url = `/grid/notifications?page=${pageNum}&limit=${LIMIT}`;
+    if (activeFilter === 'read') url += '&isRead=true';
+    if (activeFilter === 'unread') url += '&isRead=false';
+
+    const res = await apiService.get(url);
+    if (res.success) {
+      setNotifications(res.data || []);
+      setTotal(res.total || 0);
+    } else {
+      showErrorAlert('Error', res.message || 'Failed to fetch notifications');
+    }
+  } catch (error) {
+    console.error('Fetch error:', error);
+    if (error.response?.status === 403 || error.response?.status === 401) {
+      showErrorAlert('Access Denied', 'You do not have permission to view notifications. Please contact admin.');
+    } else {
+      showErrorAlert('Error', 'Failed to fetch notifications');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    // Optional: refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchNotifications(page, filter);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]); // re-run if user changes
 
   const handleFilterChange = (val) => {
     setFilter(val);
@@ -71,7 +94,7 @@ const GridNotifications = () => {
   };
 
   const markSingleAsRead = async (id, e) => {
-    e.stopPropagation(); // Prevent modal from opening
+    if (e) e.stopPropagation();
     setActionLoading(id);
     try {
       const res = await apiService.put(`/grid/notifications/${id}/read`);
@@ -79,6 +102,10 @@ const GridNotifications = () => {
         setNotifications((prev) =>
           prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
         );
+        // Update selected notification if open
+        if (selectedNotification && selectedNotification._id === id) {
+          setSelectedNotification({ ...selectedNotification, isRead: true });
+        }
         showSuccessAlert('Updated', 'Notification marked as read');
       }
     } catch (error) {
@@ -118,7 +145,6 @@ const GridNotifications = () => {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  // Format date helper
   const formatDate = (date) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleString('en-GB', {
@@ -149,10 +175,14 @@ const GridNotifications = () => {
                 {unreadCount} unread
               </Tag>
             )}
+            {/* Role badge to confirm whose view */}
+            <Tag color={isAdmin ? 'red' : 'blue'} className="ml-2">
+              {isAdmin ? 'Admin View' : 'Agent View'}
+            </Tag>
           </div>
         }
         extra={
-          <Space className="pr-6 pt-6">
+          <Space className="pr-6 pt-6" wrap>
             <Button.Group size="middle">
               <Button
                 type={filter === 'all' ? 'primary' : 'default'}
@@ -178,7 +208,7 @@ const GridNotifications = () => {
             </Button.Group>
 
             <Tooltip title="Refresh">
-              <Button icon={<ReloadOutlined />} onClick={() => fetchNotifications()} loading={loading} />
+              <Button icon={<ReloadOutlined />} onClick={() => fetchNotifications(page, filter)} loading={loading} />
             </Tooltip>
 
             <Tooltip title="Mark all as read">
@@ -333,9 +363,6 @@ const GridNotifications = () => {
               style={{ background: PURPLE_THEME.primary }}
               onClick={async (e) => {
                 await markSingleAsRead(selectedNotification._id, e);
-                if (selectedNotification) {
-                  setSelectedNotification({ ...selectedNotification, isRead: true });
-                }
               }}
             >
               Mark as Read

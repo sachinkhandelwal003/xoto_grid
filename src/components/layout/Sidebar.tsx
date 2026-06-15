@@ -93,11 +93,11 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     title: 'Notifications', icon: 'fas fa-bell',
     to: '/dashboard/admin/gridnotification',
   },
-  {
-  title: 'Platform Configuration',
-  icon: 'fas fa-sliders',
-  to: '/dashboard/admin/setting',
-},
+//   {
+//   title: 'Platform Configuration',
+//   icon: 'fas fa-sliders',
+//   to: '/dashboard/admin/setting',
+// },
 ],
 
   // ── Grid Partner/Agency (15) ───────────────────────────────────────────────
@@ -117,6 +117,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
     { title: "My Agreements", icon: "fas fa-chalkboard-teacher", to: "/dashboard/agent/agent-agreement" },
+     {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/agent/gridnotification',
+  },
   ],
 
   // ── Grid Developer (17) ────────────────────────────────────────────────────

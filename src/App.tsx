@@ -277,6 +277,7 @@ const App: React.FC = () => (
         <Route path="favourite-properties" element={<FavouriteProperty />} />
         <Route path="property/view/:id" element={<PropertyDetailPage />} />
         <Route path="profile" element={<AgentProfile />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="*" element={<Navigate to="/dashboard/agent" replace />} />
       </Route>
 
