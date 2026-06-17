@@ -277,7 +277,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, mobileOpen, onCloseMobile 
 
           {/* Xoto Grid logo — big & centered */}
           <img
-            src="/KGT-RealEstate.png"
+            src="/logogrid.png"
             alt="Xoto Grid"
             style={{
               width: collapsed ? 44 : 110,
