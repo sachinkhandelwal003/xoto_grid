@@ -246,6 +246,7 @@ const App: React.FC = () => (
         <Route path="agency-agreements" element={<Agreementagency />} />
         <Route path="property/view/:id" element={<PropertyDetailPage />} />
         <Route path="profile" element={<AgencyProfile />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="*" element={<Navigate to="/dashboard/agency" replace />} />
       </Route>
 
@@ -304,6 +305,7 @@ const App: React.FC = () => (
         <Route path="developer-agreement" element={<Agreementdeveloper />} />
         <Route path="developer-properties/:id/documents" element={<DeveloperDocumentLibrary />} />
         <Route path="profile" element={<DeveloperProfile />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="*" element={<Navigate to="/dashboard/developer" replace />} />
       </Route>
 
@@ -337,6 +339,7 @@ const App: React.FC = () => (
         <Route path="leaderboard" element={<ReferralPartnerLeaderboard />} />
         <Route path="referral-leaderboard" element={<ReferralPartnerLeaderboard />} />
         <Route path="lead/:id" element={<ReferralPartnerLeadDetail />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="*" element={<Navigate to="/dashboard/gridreferralpartner" replace />} />
       </Route>
 

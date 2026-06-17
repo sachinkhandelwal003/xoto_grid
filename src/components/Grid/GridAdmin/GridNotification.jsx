@@ -26,7 +26,7 @@ const GridNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
-  const [filter, setFilter] = useState('all'); // 'all' | 'read' | 'unread'
+  const [filter, setFilter] = useState('all'); 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const LIMIT = 10;
@@ -42,7 +42,22 @@ const GridNotifications = () => {
     return String(user.role).toLowerCase();
   };
 
-  const isAdmin = ['admin', 'super-admin'].includes(getUserRoleSlug());
+  const roleCode = user?.role?.code || user?.role;
+const isAdmin = [0, 1, '0', '1'].includes(roleCode);
+const isDeveloper = [17, '17'].includes(roleCode);
+const isAgent = [16, '16'].includes(roleCode);
+const isReferralPartner = [25, '25'].includes(roleCode);
+const isPartner = [21,'21'].includes(roleCode); 
+
+
+const getRoleLabel = () => {
+  if (isAdmin) return { label: 'Admin View', color: 'red' };
+  if (isDeveloper) return { label: 'Developer View', color: 'green' };
+  if (isAgent) return { label: 'Agent View', color: 'blue' };
+  if (isReferralPartner) return { label: 'Referral Partner View', color: 'purple' };
+  if (isPartner) return { label: 'Partner View', color: 'orange' };
+  return { label: 'User View', color: 'default' };
+};
 
   // Fetch notifications – always scoped to logged-in user
  const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
@@ -176,9 +191,9 @@ const GridNotifications = () => {
               </Tag>
             )}
             {/* Role badge to confirm whose view */}
-            <Tag color={isAdmin ? 'red' : 'blue'} className="ml-2">
-              {isAdmin ? 'Admin View' : 'Agent View'}
-            </Tag>
+           <Tag color={getRoleLabel().color} className="ml-2">
+  {getRoleLabel().label}
+</Tag>
           </div>
         }
         extra={

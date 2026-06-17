@@ -107,6 +107,11 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: 'Commission', icon: 'fas fa-dollar-sign', to: '/dashboard/agency/partner/deals' },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/agency/agency-leaderboard' },
     { title: 'Agreement', icon: 'fas fa-file', to: '/dashboard/agency/agency-agreements' },
+    
+      {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/agency/gridnotification',
+  },
   ],
 
   // ── Grid Agent (16) ────────────────────────────────────────────────────────
@@ -128,6 +133,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: 'Projects', icon: 'fas fa-building', to: '/dashboard/developer/developer-properties' },
     { title: 'Listings', icon: 'fas fa-layer-group', to: '/dashboard/developer/developer-inventory' },
     { title: 'Agreements', icon: 'fas fa-file', to: '/dashboard/developer/developer-agreement' },
+     {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/developer/gridnotification',
+  },
   ],
 
   // ── Grid Advisor (24) ──────────────────────────────────────────────────────
@@ -163,6 +172,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       ],
     },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/gridreferralpartner/referral-leaderboard' },
+      {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/gridreferralpartner/gridnotification',
+  },
   ],
 };
 
