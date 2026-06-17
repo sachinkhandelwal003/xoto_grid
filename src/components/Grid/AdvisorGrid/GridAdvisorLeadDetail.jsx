@@ -929,9 +929,10 @@ const StatusModal = ({ lead, targetProperty, onClose, onSuccess }) => {
     let active = true;
     if (!propertyIds.length) { setFetchedInventory([]); return; }
     setInventoryLoading(true);
+    const cacheBust = Date.now();
     Promise.all(
       propertyIds.map(pid =>
-        apiService.get(`/properties/inventory?propertyId=${pid}`).catch(() => null)
+        apiService.get(`/properties/inventory?propertyId=${pid}&_t=${cacheBust}`).catch(() => null)
       )
     ).then(responses => {
       const units = responses.flatMap(res => {
@@ -1751,8 +1752,20 @@ const GridAdvisorLeadDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    if (id) { fetchLead(); fetchMatches(); }
-  }, [id, fetchLead, fetchMatches]);
+    if (id) fetchLead();
+  }, [id, fetchLead]);
+
+  // Fetch smart matches only after lead is loaded — and for website leads, only
+  // if the advisor has already added requirements (budget / type / location).
+  // Website leads come in with just contact + property ID; matches need real data.
+  useEffect(() => {
+    if (!lead) return;
+    const isWebsite = lead.source?.channel === 'website_form';
+    const r = lead.requirements || {};
+    const hasReqs = !!(r.budget_max || r.budget_min || r.property_type ||
+      (r.location_preferences || []).length > 0 || r.bedrooms != null);
+    if (!isWebsite || hasReqs) fetchMatches();
+  }, [lead, fetchMatches]);
 
   const handleGeneratePresentation = (property) => {
     setSelectedProperty(property);
@@ -1778,6 +1791,11 @@ const GridAdvisorLeadDetail = () => {
   const alreadySuggestedIds = suggestions.map(s => String(s.property_id?._id || s.property_id));
   const interestedCount = suggestions.filter(s => s.client_reaction === 'interested').length;
   const pendingCount    = suggestions.filter(s => s.client_reaction === 'pending').length;
+
+  const isWebsiteLead  = lead?.source?.channel === 'website_form';
+  const sourceProp     = isWebsiteLead && typeof lead?.source?.listing_id === 'object' ? lead.source.listing_id : null;
+  const hasRequirements = !!(req.budget_max || req.budget_min || req.property_type ||
+    locs.length > 0 || req.bedrooms != null);
 
   const handleReqsSuccess = (data) => {
     setShowReqs(false);
@@ -1889,6 +1907,25 @@ const GridAdvisorLeadDetail = () => {
           </div>
         )}
 
+        {/* ── WEBSITE LEAD BANNER ── */}
+        {isWebsiteLead && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-4">
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FiHome size={15} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-blue-800">Website Enquiry</p>
+                <p className="text-[11px] text-blue-600 mt-0.5">
+                  {sourceProp
+                    ? `Client enquired about "${sourceProp.propertyName || 'a property'}" via the website`
+                    : 'Client submitted this enquiry via the website contact form'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
@@ -1922,6 +1959,76 @@ const GridAdvisorLeadDetail = () => {
                 {email && <InfoRow icon={FiMail} label="Email"   value={email} />}
                 <InfoRow icon={FiMessageSquare} label="Preferred" value={lead.contact_info?.preferred_contact || '—'} />
               </SectionBox>
+
+              {/* Source Property — shown for website leads where a listing_id was captured */}
+              {sourceProp && (
+                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-blue-50" style={{ background: 'linear-gradient(135deg,#eff6ff,#f0f9ff)' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-600">
+                      <FiHome size={14} className="text-white" />
+                    </div>
+                    <h4 className="text-xs font-bold text-blue-700 uppercase tracking-widest flex-1">Enquired Property</h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">From Website</span>
+                  </div>
+
+                  {/* Property image */}
+                  {sourceProp.mainLogo && (
+                    <div className="w-full h-36 overflow-hidden bg-slate-100">
+                      <img src={sourceProp.mainLogo} alt={sourceProp.propertyName} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
+                  <div className="p-4 space-y-3">
+                    {/* Name */}
+                    <div>
+                      <p className="text-sm font-extrabold text-gray-900 leading-tight">{sourceProp.propertyName || '—'}</p>
+                      {(sourceProp.area || sourceProp.city) && (
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <FiMapPin size={10} /> {[sourceProp.area, sourceProp.city].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Key details row */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {(sourceProp.price_min || sourceProp.price) && (
+                        <div className="rounded-lg bg-purple-50 p-2.5">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price</p>
+                          <p className="text-xs font-extrabold mt-0.5" style={{ color: P }}>
+                            AED {Number(sourceProp.price_min || sourceProp.price).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+                      {(sourceProp.propertySubType || sourceProp.propertyType) && (
+                        <div className="rounded-lg bg-slate-50 p-2.5">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Type</p>
+                          <p className="text-xs font-bold text-gray-700 mt-0.5 capitalize">
+                            {(sourceProp.propertySubType || sourceProp.propertyType || '').replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bedrooms / area */}
+                    {(sourceProp.bedrooms != null || sourceProp.builtUpArea) && (
+                      <div className="flex items-center gap-3 text-xs text-gray-500 pt-1 border-t border-gray-50">
+                        {sourceProp.bedrooms != null && (
+                          <span>{sourceProp.bedrooms === 0 ? 'Studio' : `${sourceProp.bedrooms} BR`}</span>
+                        )}
+                        {sourceProp.builtUpArea && (
+                          <span>{Number(sourceProp.builtUpArea).toLocaleString()} sqft</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Suggest this property button */}
+                    <Btn variant="primary" size="sm" className="w-full"
+                      onClick={() => handleSuggestFromMatch(sourceProp)}>
+                      <FiSend size={12} /> Suggest to Client
+                    </Btn>
+                  </div>
+                </div>
+              )}
 
               {/* Requirements */}
               <SectionBox title="Client Requirements" icon={FiTag}
@@ -1967,7 +2074,13 @@ const GridAdvisorLeadDetail = () => {
 
               {/* Lead meta */}
               <SectionBox title="Lead Info" icon={FiLayers} accent="#475569">
-                <InfoRow icon={FiLayers} label="Source"  value={lead.source?.channel?.replace(/_/g, ' ') || '—'} />
+                <InfoRow icon={FiLayers} label="Source" value={
+                  lead.source?.channel === 'website_form' ? 'Website Form' :
+                  lead.source?.channel?.replace(/_/g, ' ') || '—'
+                } />
+                {isWebsiteLead && !sourceProp && lead.source?.listing_id && (
+                  <InfoRow icon={FiHome} label="Property ID" value={`...${String(lead.source.listing_id).slice(-8)}`} />
+                )}
                 <InfoRow icon={FiClock}  label="Created" value={lead.createdAt ? new Date(lead.createdAt).toLocaleString('en-AE', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'} />
                 {lead.assigned_at && <InfoRow icon={FiCalendar} label="Assigned" value={new Date(lead.assigned_at).toLocaleString('en-AE', { day:'2-digit', month:'short', year:'numeric' })} />}
                 {lead.classification_reason && <InfoRow icon={FiAlertCircle} label="Classification" value={lead.classification_reason} />}
@@ -2015,6 +2128,23 @@ const GridAdvisorLeadDetail = () => {
                   {/* ── SMART MATCHES ── */}
                   {activeTab === 'matches' && (
                     <div>
+                      {/* Website lead with no requirements yet — prompt advisor to fill them in */}
+                      {isWebsiteLead && !hasRequirements ? (
+                        <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+                          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: '#f5f3ff' }}>
+                            <FiAlertCircle size={28} style={{ color: P }} />
+                          </div>
+                          <p className="text-sm font-extrabold text-gray-800 mb-1">Requirements Needed</p>
+                          <p className="text-xs text-gray-400 max-w-xs leading-relaxed mb-5">
+                            This lead came from the website — only contact details were captured.
+                            Add the client's budget, property type, and preferred locations to find smart matches.
+                          </p>
+                          <Btn variant="primary" size="md" onClick={() => setShowReqs(true)}>
+                            <FiEdit3 size={13} /> Add Requirements
+                          </Btn>
+                        </div>
+                      ) : (
+                      <div>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           {mc && !matchLoading && (
@@ -2066,6 +2196,8 @@ const GridAdvisorLeadDetail = () => {
                         </>
                       )}
                     </div>
+                    )}
+                  </div>
                   )}
 
                   {/* ── SEARCH & SUGGEST ── */}
