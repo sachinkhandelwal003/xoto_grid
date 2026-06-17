@@ -277,8 +277,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, mobileOpen, onCloseMobile 
             src="/KGT-RealEstate.png"
             alt="Xoto Grid"
             style={{
-              width: collapsed ? 44 : 110,
-              height: collapsed ? 44 : 110,
+              width: collapsed ? 60 : 180,
+              height: collapsed ? 60 : 180,
               objectFit: 'contain',
               display: 'block',
               transition: 'all 0.3s',
