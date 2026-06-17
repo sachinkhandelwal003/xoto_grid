@@ -11,6 +11,7 @@ import {
 import { message, Spin } from 'antd';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
 import { StatusBadge, ClassBadge, EnquiryTag } from './GridAgentLead';
+import ScheduleViewingModal from '../shared/ScheduleViewingModal';
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const P  = '#4A027C';
@@ -1390,8 +1391,9 @@ const GridAgentLeadDetail = () => {
   const [showPresentation, setShowPresentation] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showEditLead,     setShowEditLead]     = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting,         setDeleting]         = useState(false);
+  const [showDeleteConfirm,  setShowDeleteConfirm]  = useState(false);
+  const [deleting,           setDeleting]           = useState(false);
+  const [showViewingModal,   setShowViewingModal]   = useState(false);
 
   // Collapsibles
   const [showHistory, setShowHistory] = useState(false);
@@ -1580,6 +1582,15 @@ const GridAgentLeadDetail = () => {
       {showReqs   && <UpdateRequirementsPanel lead={lead} onClose={() => setShowReqs(false)} onSuccess={handleReqsSuccess} />}
       {showNote   && <NotePanel leadId={id} onClose={() => setShowNote(false)} onAdded={handleNoteAdded} />}
       {showEditLead && <EditLeadModal lead={lead} onClose={() => setShowEditLead(false)} onSuccess={handleEditSuccess} />}
+      {showViewingModal && (
+        <ScheduleViewingModal
+          leadId={lead._id}
+          leadName={`${fn} ${ln}`.trim() || 'Client'}
+          leadPhone={`${cc} ${phone}`.trim()}
+          onClose={() => setShowViewingModal(false)}
+          onSuccess={() => message.success('Viewing request submitted! Admin will confirm shortly.')}
+        />
+      )}
 
       {/* ── DELETE CONFIRM ── */}
       {showDeleteConfirm && (
@@ -1766,6 +1777,9 @@ const GridAgentLeadDetail = () => {
                   )}
                   <Btn variant="ghost" onClick={() => setShowNote(true)} size="sm">
                     <FiFileText size={13} /> Add Note
+                  </Btn>
+                  <Btn variant="ghost" onClick={() => setShowViewingModal(true)} size="sm">
+                    <FiCalendar size={13} /> Schedule Viewing
                   </Btn>
                   <Btn variant="ghost" onClick={fetchMatches} loading={matchLoading} size="sm">
                     <FiRefreshCw size={13} /> Refresh Matches

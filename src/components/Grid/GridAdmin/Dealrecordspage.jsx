@@ -148,7 +148,13 @@ const getLeadAdvisor = (lead) =>
   lead?.advisorId || lead?.advisor_id || lead?.assigned_to || lead?.assignedAdvisor || '';
 
 const getLeadReferral = (lead) =>
-  lead?.referralPartnerId || lead?.referral_partner_id || lead?.referral?.partner_id || '';
+  lead?.referred_by_partner ||
+  lead?.source?.referralPartnerId ||
+  lead?.referral_info?.referral_partner_id ||
+  lead?.referralPartnerId ||
+  lead?.referral_partner_id ||
+  lead?.referral?.partner_id ||
+  '';
 
 const leadClientName = (lead) =>
   compactName(lead?.contact_info?.name?.first_name, lead?.contact_info?.name?.last_name) ||
@@ -678,7 +684,7 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
           advisors: [getLeadAdvisor(initialLead), ...asList(advisors)].filter(Boolean),
           agents: [getLeadAgent(initialLead), ...asList(agents)].filter(Boolean),
           agencies: [getLeadAgency(initialLead), ...asList(agencies)].filter(Boolean),
-          referralPartners: asList(referralPartners),
+          referralPartners: [getLeadReferral(initialLead), ...asList(referralPartners)].filter(p => p && typeof p === 'object'),
           inventory: [],
         });
       } catch {
@@ -982,8 +988,12 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
                 <LockedField icon={FiUserCheck} label="Assigned Advisor" value={leadContext?.advisorName} hint="From lead assignment" />
                 <LockedField icon={FiUser} label="Agent" value={leadContext?.agentName} hint="Lead creator" />
                 <LockedField icon={FiBriefcase} label="Agency" value={leadContext?.agencyNameStr} hint="Agent's agency" />
-                {leadContext?.referralName && (
-                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value={leadContext.referralName} hint="Commission applies" />
+                {leadContext?.referralName ? (
+                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value={leadContext.referralName} hint="From lead referral" />
+                ) : form.referralPartnerId ? (
+                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value="Referral partner linked" hint={`ID: ...${String(form.referralPartnerId).slice(-8)}`} />
+                ) : (
+                  <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
                 )}
               </>
             ) : (
@@ -991,9 +1001,9 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
                 <LookupSelect label="Advisor" value={form.advisorId} onChange={v => set('advisorId', v)} options={toOptions(lookups.advisors, userName)} loading={lookupLoading} placeholder="Select advisor" hint="Optional" />
                 <LookupSelect label="Agent" value={form.agentId} onChange={v => set('agentId', v)} options={toOptions(lookups.agents, userName)} loading={lookupLoading} placeholder="Select agent" hint="Optional" />
                 <LookupSelect label="Agency" value={form.agencyId} onChange={v => set('agencyId', v)} options={toOptions(lookups.agencies, a => a?.agency_name || a?.companyName || a?.name || a?.email || 'Unnamed agency')} loading={lookupLoading} placeholder="Select agency" hint="Optional" />
+                <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
               </>
             )}
-            <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1.5">Partner Agreement ID</label>
               <input value={form.partnerAgreementId} onChange={e => set('partnerAgreementId', e.target.value)} placeholder="Optional agreement reference" className={inp} />
