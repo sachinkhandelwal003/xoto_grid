@@ -87,6 +87,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       { title: 'Overview',          to: '/dashboard/admin/overview' },
       { title: 'Lead Reports',      to: '/dashboard/admin/leadreports' },
       { title: 'Listing Reports',   to: '/dashboard/admin/listingreports' },
+      { title: 'Leaderboard',       to: '/dashboard/admin/leaderboard' },
     ],
   },
   {
