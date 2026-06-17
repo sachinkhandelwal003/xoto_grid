@@ -296,9 +296,9 @@ const VaultLogin: React.FC = () => {
 
           <div style={{ position:'relative',zIndex:2 }}>
             {/* Logo */}
-            <motion.div initial={{ opacity:0,y:-16 }} animate={{ opacity:1,y:0 }} transition={{ duration:.7 }} style={{ marginBottom:48 }}>
-              <img src="/logogrid.png" alt="Xoto Grid"
-                style={{ height:68,maxWidth:240,objectFit:'contain',filter:'drop-shadow(0 6px 24px rgba(92,3,155,.6)) brightness(1.1)' }}
+            <motion.div initial={{ opacity:0,y:-16 }} animate={{ opacity:1,y:0 }} transition={{ duration:.7 }} style={{ marginBottom:8 }}>
+              <img src="/KGT-RealEstate.png" alt="Xoto Grid"
+                style={{ height:198,maxWidth:240,objectFit:'contain',filter:'drop-shadow(0 6px 24px rgba(92,3,155,.6)) brightness(1.1)' }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }}
               />
             </motion.div>
@@ -351,7 +351,7 @@ const VaultLogin: React.FC = () => {
         >
           {/* Mobile-only branding header */}
           <div className="vl-mob-hdr">
-            <img src="/logogrid.png" alt="Xoto Grid"
+            <img src="/KGT-RealEstate.png" alt="Xoto Grid"
               style={{ height:36,maxWidth:160,objectFit:'contain',filter:'brightness(1.2)' }}
               onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }}
             />
