@@ -285,7 +285,7 @@ const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeat
         </Tooltip>
 
         {/* Edit Button — only for secondary and rental */}
-        {/* {(property.propertySubType === 'secondary' || property.propertySubType === 'rental') && (
+        {(property.propertySubType === 'secondary' || property.propertySubType === 'rental') && (
           <Tooltip title="Edit Property">
             <Button
               size="small"
@@ -302,7 +302,7 @@ const PropertyCard = ({ property, onApprove, onReject, onToggleHot, onToggleFeat
               Edit
             </Button>
           </Tooltip>
-        )} */}
+        )}
 
     {approvalStatus === 'pending' && (
   <>

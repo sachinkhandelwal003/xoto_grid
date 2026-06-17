@@ -37,11 +37,12 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   {
     title: 'Lead Management', icon: 'fas fa-filter',
     submenus: [
-      { title: 'Leads Queue',    to: '/dashboard/admin/GridAdmin/propertyleads' },
-      { title: 'All Leads',      to: '/dashboard/admin/grid/AllgridLeads' },
-      { title: 'Agent Leads',    to: '/dashboard/admin/grid/agentleads' },
-      { title: 'Create Lead',  to: '/dashboard/admin/grid/generalleads' },
-      { title: 'Referral Leads', to: '/dashboard/admin/grid/referralleads' },
+      { title: 'Leads Queue',       to: '/dashboard/admin/GridAdmin/propertyleads' },
+      { title: 'All Leads',         to: '/dashboard/admin/grid/AllgridLeads' },
+      { title: 'Agent Leads',       to: '/dashboard/admin/grid/agentleads' },
+      { title: 'Create Lead',       to: '/dashboard/admin/grid/generalleads' },
+      { title: 'Referral Leads',    to: '/dashboard/admin/grid/referralleads' },
+      // { title: 'Viewing Requests',  to: '/dashboard/admin/viewing-requests' },
     ],
   },
   {
@@ -119,6 +120,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   '16': [
     { title: "My Leads", icon: "fas fa-calendar-check", to: "/dashboard/agent/GridAgent-lead" },
     { title: "Property Catalogue", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
+    // { title: "My Viewings", icon: "fas fa-eye", to: "/dashboard/agent/visits" },
     { title: "My Presentations", icon: "fas fa-file-powerpoint", to: "/dashboard/agent/presentations" },
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
@@ -159,6 +161,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
         },
       ],
     },
+    // { title: 'My Viewings', icon: 'fas fa-eye', to: '/dashboard/GridAdvisor/my-viewings' },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/GridAdvisor/leaderboard' },
 
   ],
