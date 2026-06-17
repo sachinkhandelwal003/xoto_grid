@@ -3,24 +3,21 @@ import { useSelector } from 'react-redux';
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 import {
   Card, List, Avatar, Typography, Tag, Button, Space, Spin, Empty,
-  Pagination, Modal, Tooltip
+  Divider, Badge, Pagination, Modal, Descriptions, Tooltip
 } from 'antd';
 import {
-  BellOutlined, ClockCircleOutlined, MailOutlined,
+  BellOutlined, ClockCircleOutlined, MailOutlined, HistoryOutlined,
   CheckCircleOutlined, ReloadOutlined, EyeOutlined, UserOutlined,
-  FileTextOutlined, ThunderboltOutlined
+  TagOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { showErrorAlert, showSuccessAlert } from '../../../manageApi/utils/sweetAlert';
 
 const { Title, Text, Paragraph } = Typography;
 
-// Modernized color palette
-const THEME = {
-  primary: '#6366f1', // Premium Indigo
-  primaryHover: '#4f46e5',
-  bg: '#e0e7ff',
-  lightBg: '#eef2ff',
-  success: '#10b981',
+const PURPLE_THEME = {
+  primary: '#722ed1',
+  bg: '#f9f0ff',
+  lightBg: '#faf5ff',
 };
 
 const GridNotifications = () => {
@@ -34,31 +31,71 @@ const GridNotifications = () => {
   const [total, setTotal] = useState(0);
   const LIMIT = 10;
 
+  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
 
-  const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
-    setLoading(true);
-    try {
-      let url = `/grid/notifications?page=${pageNum}&limit=${LIMIT}`;
-      if (activeFilter === 'read') url += '&isRead=true';
-      if (activeFilter === 'unread') url += '&isRead=false';
-
-      const res = await apiService.get(url);
-      if (res.success) {
-        setNotifications(res.data || []);
-        setTotal(res.total || 0);
-      }
-    } catch (error) {
-      showErrorAlert('Error', 'Failed to fetch notifications');
-    } finally {
-      setLoading(false);
-    }
+  // Helper to get user role slug for display
+  const getUserRoleSlug = () => {
+    if (!user?.role) return 'user';
+    if (typeof user.role === 'object') return user.role.slug || user.role.code || 'user';
+    return String(user.role).toLowerCase();
   };
+
+  const roleCode = user?.role?.code || user?.role;
+const isAdmin = [0, 1, '0', '1'].includes(roleCode);
+const isDeveloper = [17, '17'].includes(roleCode);
+const isAgent = [16, '16'].includes(roleCode);
+const isReferralPartner = [25, '25'].includes(roleCode);
+const isPartner = [21,'21'].includes(roleCode); 
+
+
+const getRoleLabel = () => {
+  if (isAdmin) return { label: 'Admin View', color: 'red' };
+  if (isDeveloper) return { label: 'Developer View', color: 'green' };
+  if (isAgent) return { label: 'Agent View', color: 'blue' };
+  if (isReferralPartner) return { label: 'Referral Partner View', color: 'purple' };
+  if (isPartner) return { label: 'Partner View', color: 'orange' };
+  return { label: 'User View', color: 'default' };
+};
+
+  // Fetch notifications – always scoped to logged-in user
+ const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
+  if (!user?.id) return;
+  setLoading(true);
+  try {
+    // ✅ Remove userId from URL – backend will use token
+    let url = `/grid/notifications?page=${pageNum}&limit=${LIMIT}`;
+    if (activeFilter === 'read') url += '&isRead=true';
+    if (activeFilter === 'unread') url += '&isRead=false';
+
+    const res = await apiService.get(url);
+    if (res.success) {
+      setNotifications(res.data || []);
+      setTotal(res.total || 0);
+    } else {
+      showErrorAlert('Error', res.message || 'Failed to fetch notifications');
+    }
+  } catch (error) {
+    console.error('Fetch error:', error);
+    if (error.response?.status === 403 || error.response?.status === 401) {
+      showErrorAlert('Access Denied', 'You do not have permission to view notifications. Please contact admin.');
+    } else {
+      showErrorAlert('Error', 'Failed to fetch notifications');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    // Optional: refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchNotifications(page, filter);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]); // re-run if user changes
 
   const handleFilterChange = (val) => {
     setFilter(val);
@@ -69,7 +106,6 @@ const GridNotifications = () => {
   const handlePageChange = (newPage) => {
     setPage(newPage);
     fetchNotifications(newPage, filter);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const markSingleAsRead = async (id, e) => {
@@ -81,6 +117,10 @@ const GridNotifications = () => {
         setNotifications((prev) =>
           prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
         );
+        // Update selected notification if open
+        if (selectedNotification && selectedNotification._id === id) {
+          setSelectedNotification({ ...selectedNotification, isRead: true });
+        }
         showSuccessAlert('Updated', 'Notification marked as read');
       }
     } catch (error) {
@@ -123,288 +163,282 @@ const GridNotifications = () => {
   const formatDate = (date) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   };
 
   return (
-    <div className="p-4 md:p-8 bg-[#fafafa] min-h-screen font-sans">
-      <div className="max-w-[1200px] mx-auto">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center border border-indigo-100 shadow-sm">
-              <ThunderboltOutlined style={{ fontSize: '20px', color: THEME.primary }} />
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+      <Card
+        className="shadow-xl rounded-2xl border-0 overflow-hidden"
+        bodyStyle={{ padding: 0 }}
+        title={
+          <div className="flex items-center gap-3 px-6 pt-6">
+            <div className="p-2 rounded-full" style={{ backgroundColor: PURPLE_THEME.bg }}>
+              <HistoryOutlined style={{ fontSize: '20px', color: PURPLE_THEME.primary }} />
             </div>
-            <div>
-              <Title level={3} style={{ margin: 0, fontWeight: 700, color: '#111827' }}>
-                Notifications
-              </Title>
-              <Text className="text-gray-500">
-                You have {unreadCount} unread messages today.
-              </Text>
-            </div>
+            <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+              Notification History
+            </Title>
+            {unreadCount > 0 && (
+              <Tag color="purple" style={{ borderRadius: 99, fontWeight: 500 }}>
+                {unreadCount} unread
+              </Tag>
+            )}
+            {/* Role badge to confirm whose view */}
+           <Tag color={getRoleLabel().color} className="ml-2">
+  {getRoleLabel().label}
+</Tag>
           </div>
-
-          <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm">
-            {['all', 'unread', 'read'].map((f) => (
-              <button
-                key={f}
-                onClick={() => handleFilterChange(f)}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 capitalize ${
-                  filter === f 
-                    ? 'bg-indigo-50 text-indigo-600 shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+        }
+        extra={
+          <Space className="pr-6 pt-6" wrap>
+            <Button.Group size="middle">
+              <Button
+                type={filter === 'all' ? 'primary' : 'default'}
+                onClick={() => handleFilterChange('all')}
+                style={filter === 'all' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
               >
-                {f}
-              </button>
-            ))}
+                All
+              </Button>
+              <Button
+                type={filter === 'unread' ? 'primary' : 'default'}
+                onClick={() => handleFilterChange('unread')}
+                style={filter === 'unread' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
+              >
+                Unread
+              </Button>
+              <Button
+                type={filter === 'read' ? 'primary' : 'default'}
+                onClick={() => handleFilterChange('read')}
+                style={filter === 'read' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
+              >
+                Read
+              </Button>
+            </Button.Group>
+
+            <Tooltip title="Refresh">
+              <Button icon={<ReloadOutlined />} onClick={() => fetchNotifications(page, filter)} loading={loading} />
+            </Tooltip>
+
+            <Tooltip title="Mark all as read">
+              <Button
+                icon={<MailOutlined />}
+                onClick={markAllAsRead}
+                disabled={notifications.every((n) => n.isRead)}
+              >
+                Mark all read
+              </Button>
+            </Tooltip>
+          </Space>
+        }
+      >
+        {loading ? (
+          <div className="py-20 text-center">
+            <Spin size="large" tip="Loading notifications..." />
           </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex justify-end gap-3 mb-6">
-          <Tooltip title="Refresh Feed">
-            <Button 
-              shape="circle" 
-              icon={<ReloadOutlined />} 
-              onClick={() => fetchNotifications()} 
-              loading={loading}
-              className="border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-600 flex items-center justify-center"
-            />
-          </Tooltip>
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={markAllAsRead}
-            disabled={notifications.every((n) => n.isRead)}
-            style={{ background: THEME.primary, borderRadius: '8px', fontWeight: 600 }}
-            className="shadow-md hover:shadow-lg transition-all"
-          >
-            Mark all as read
-          </Button>
-        </div>
-
-        {/* Notification Feed */}
-        <div className="bg-transparent">
-          {loading ? (
-            <div className="py-32 flex flex-col items-center justify-center bg-white rounded-3xl border border-gray-100 shadow-sm">
-              <Spin size="large" />
-              <Text className="mt-4 text-gray-400">Syncing your feed...</Text>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="py-32 flex flex-col items-center justify-center bg-white rounded-3xl border border-gray-100 shadow-sm">
-              <Empty description={<span className="text-gray-400 font-medium">All caught up! No notifications found.</span>} />
-            </div>
-          ) : (
-            // FIX IS HERE: Added React Fragment <> ... </> around List and Pagination
-            <>
-              <List
-                itemLayout="horizontal"
-                dataSource={notifications}
-                split={false}
-                renderItem={(item) => (
-                  <div 
-                    className={`group relative mb-4 p-5 md:p-6 rounded-2xl transition-all duration-300 cursor-pointer border ${
-                      !item.isRead 
-                        ? 'bg-white border-indigo-100 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.1)]' 
-                        : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm'
-                    }`}
-                    onClick={() => openNotificationModal(item)}
-                  >
-                    {/* Unread Indicator Bar */}
-                    {!item.isRead && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-indigo-500 rounded-r-full" />
-                    )}
-
-                    <div className="flex items-start gap-5">
-                      <Avatar
-                        size={52}
-                        icon={<BellOutlined />}
-                        className={`${!item.isRead ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-50 text-gray-400'}`}
-                      />
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <Text className={`text-base tracking-tight ${!item.isRead ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>
-                              {item.title}
-                            </Text>
-                            {item.eventType && (
-                              <span className={`text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full font-bold ${!item.isRead ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {item.eventType}
-                              </span>
-                            )}
-                          </div>
-                          <Text className="text-xs text-gray-400 font-medium flex items-center whitespace-nowrap">
-                            <ClockCircleOutlined className="mr-1.5" /> 
-                            {formatDate(item.createdAt)}
-                          </Text>
-                        </div>
-
-                        <Paragraph 
-                          className={`mb-3 mt-1 ${!item.isRead ? 'text-gray-600' : 'text-gray-500'}`}
-                          ellipsis={{ rows: 2 }}
+        ) : notifications.length === 0 ? (
+          <div className="py-16">
+            <Empty description="No notifications found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          </div>
+        ) : (
+          <>
+            <List
+              itemLayout="horizontal"
+              dataSource={notifications}
+              renderItem={(item) => (
+                <List.Item
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-md px-6 py-4 border-b border-gray-100 ${
+                    !item.isRead ? 'hover:bg-purple-50' : 'hover:bg-gray-50'
+                  }`}
+                  style={{ backgroundColor: !item.isRead ? PURPLE_THEME.lightBg : 'white' }}
+                  onClick={() => openNotificationModal(item)}
+                  actions={[
+                    !item.isRead ? (
+                      <Button
+                        key="mark-read"
+                        type="link"
+                        size="small"
+                        icon={<CheckCircleOutlined />}
+                        loading={actionLoading === item._id}
+                        onClick={(e) => markSingleAsRead(item._id, e)}
+                        style={{ color: PURPLE_THEME.primary }}
+                      >
+                        Mark Read
+                      </Button>
+                    ) : (
+                      <Tooltip title="Already read">
+                        <CheckCircleOutlined key="done" style={{ color: '#52c41a', fontSize: 16 }} />
+                      </Tooltip>
+                    ),
+                    <Tooltip title="View details">
+                      <EyeOutlined key="view" style={{ color: PURPLE_THEME.primary, fontSize: 16 }} />
+                    </Tooltip>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Badge
+                        dot={!item.isRead}
+                        color={PURPLE_THEME.primary}
+                        offset={[-4, 32]}
+                      >
+                        <Avatar
+                          size={48}
+                          icon={<BellOutlined />}
+                          style={{
+                            backgroundColor: PURPLE_THEME.bg,
+                            color: PURPLE_THEME.primary,
+                            boxShadow: '0 2px 6px rgba(114,46,209,0.15)'
+                          }}
+                        />
+                      </Badge>
+                    }
+                    title={
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Text strong={!item.isRead} className="text-base">
+                          {item.title}
+                        </Text>
+                        {item.eventType && (
+                          <Tag color="purple" bordered={false} className="rounded-full px-3">
+                            {item.eventType}
+                          </Tag>
+                        )}
+                        {item.recipientRole && (
+                          <Tag color="cyan" bordered={false} className="rounded-full px-3">
+                            {item.recipientRole}
+                          </Tag>
+                        )}
+                      </div>
+                    }
+                    description={
+                      <div className="flex flex-col gap-1">
+                        <Text
+                          className={`${item.isRead ? 'text-gray-500' : 'text-gray-700'}`}
+                          ellipsis={{ rows: 2, expandable: false }}
                         >
                           {item.message}
-                        </Paragraph>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-xs font-medium text-gray-400">
-                            <span className="flex items-center gap-1.5">
-                              <UserOutlined /> {item.createdByName || 'System'}
-                            </span>
-                            {item.recipientRole && (
-                              <>
-                                <div className="w-1 h-1 rounded-full bg-gray-300" />
-                                <span className="text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">
-                                  For: {item.recipientRole}
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <Space>
-                              {!item.isRead && (
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  icon={<CheckCircleOutlined />}
-                                  loading={actionLoading === item._id}
-                                  onClick={(e) => markSingleAsRead(item._id, e)}
-                                  className="text-indigo-600 hover:bg-indigo-50 font-semibold"
-                                >
-                                  Mark Read
-                                </Button>
-                              )}
-                              <Button type="text" size="small" icon={<EyeOutlined />} className="text-gray-500">
-                                View
-                              </Button>
-                            </Space>
-                          </div>
-                        </div>
+                        </Text>
+                        <Space className="text-xs text-gray-400 mt-2" split={<Divider type="vertical" />}>
+                          <span><ClockCircleOutlined className="mr-1" /> {formatDate(item.createdAt)}</span>
+                          <span><UserOutlined className="mr-1" /> By: {item.createdByName || 'System'}</span>
+                          {item.recipientRole && (
+                            <span>Role: {item.recipientRole.toUpperCase()}</span>
+                          )}
+                        </Space>
                       </div>
-                    </div>
-                  </div>
-                )}
-              />
-
-              {/* Pagination */}
-              {total > LIMIT && (
-                <div className="flex justify-center mt-8 pb-8">
-                  <Pagination
-                    current={page}
-                    total={total}
-                    pageSize={LIMIT}
-                    onChange={handlePageChange}
-                    showSizeChanger={false}
-                    className="custom-pagination"
+                    }
                   />
-                </div>
+                </List.Item>
               )}
-            </>
-          )}
-        </div>
-      </div>
+            />
 
-      {/* Modern Detailed Modal */}
+            {total > LIMIT && (
+              <div className="flex justify-end pt-4 px-6 pb-6 bg-white">
+                <Pagination
+                  current={page}
+                  total={total}
+                  pageSize={LIMIT}
+                  onChange={handlePageChange}
+                  showSizeChanger={false}
+                  showTotal={(t) => <span className="text-gray-500">Total {t} notifications</span>}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+
+      {/* Detailed Modal */}
       <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <BellOutlined style={{ color: PURPLE_THEME.primary, fontSize: 20 }} />
+            <span>Notification Details</span>
+            {selectedNotification && !selectedNotification.isRead && (
+              <Tag color="purple" className="ml-2">Unread</Tag>
+            )}
+          </div>
+        }
         open={modalVisible}
         onCancel={closeModal}
-        centered
-        width={600}
-        closeIcon={<span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500 transition-colors">✕</span>}
-        footer={null}
-        className="rounded-3xl overflow-hidden"
+        footer={[
+          <Button key="close" onClick={closeModal}>
+            Close
+          </Button>,
+          selectedNotification && !selectedNotification.isRead && (
+            <Button
+              key="mark-read-modal"
+              type="primary"
+              style={{ background: PURPLE_THEME.primary }}
+              onClick={async (e) => {
+                await markSingleAsRead(selectedNotification._id, e);
+              }}
+            >
+              Mark as Read
+            </Button>
+          )
+        ]}
+        width={700}
+        className="notification-modal"
       >
         {selectedNotification && (
-          <div className="pt-2">
-            <div className="flex items-start gap-4 mb-6">
-               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${!selectedNotification.isRead ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-50 text-gray-400'}`}>
-                  <BellOutlined style={{ fontSize: '24px' }} />
-               </div>
-               <div>
-                 <h3 className="text-xl font-bold text-gray-900 leading-tight mb-1">
-                   {selectedNotification.title}
-                 </h3>
-                 <Text className="text-sm text-gray-500 flex items-center gap-2">
-                   <ClockCircleOutlined /> {formatDate(selectedNotification.createdAt)}
-                 </Text>
-               </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-2xl p-5 mb-6 text-gray-700 text-[15px] leading-relaxed border border-gray-100">
-              {selectedNotification.message}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="p-4 rounded-xl border border-gray-100 bg-white">
-                <Text className="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Sender</Text>
-                <Text className="font-semibold text-gray-900">{selectedNotification.createdByName || 'System'}</Text>
-                {selectedNotification.createdByRole && <Text className="block text-xs text-gray-500 mt-0.5">{selectedNotification.createdByRole}</Text>}
-              </div>
-              <div className="p-4 rounded-xl border border-gray-100 bg-white">
-                <Text className="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Recipient Info</Text>
-                <Text className="font-semibold text-indigo-600 capitalize">{selectedNotification.recipientRole || 'All'}</Text>
-                {selectedNotification.recipientId && <Text className="block text-xs text-gray-500 mt-0.5 font-mono">{selectedNotification.recipientId}</Text>}
-              </div>
-              
+          <Descriptions bordered column={1} size="middle" labelStyle={{ fontWeight: 600, width: '30%' }}>
+            <Descriptions.Item label="Title">{selectedNotification.title}</Descriptions.Item>
+            <Descriptions.Item label="Message">
+              <Paragraph copyable>{selectedNotification.message}</Paragraph>
+            </Descriptions.Item>
+            <Descriptions.Item label="Event Type">
+              <Tag color="purple">{selectedNotification.eventType || '—'}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Status">
+              {selectedNotification.isRead ? (
+                <Tag color="green">Read</Tag>
+              ) : (
+                <Tag color="orange">Unread</Tag>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Entity">
               {selectedNotification.entityModel && (
-                <div className="col-span-2 p-4 rounded-xl border border-gray-100 bg-white flex items-center justify-between">
-                  <div>
-                    <Text className="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Related Record</Text>
-                    <div className="flex items-center gap-2">
-                      <FileTextOutlined className="text-gray-400" />
-                      <Text className="font-semibold text-gray-900">{selectedNotification.entityModel}</Text>
-                    </div>
-                  </div>
-                  {selectedNotification.entityId && (
-                    <Text copyable className="text-xs font-mono bg-gray-50 px-2 py-1 rounded text-gray-500 border border-gray-200">
-                      {selectedNotification.entityId}
-                    </Text>
-                  )}
-                </div>
+                <Tag icon={<FileTextOutlined />} color="geekblue">
+                  {selectedNotification.entityModel}
+                </Tag>
               )}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-              <Button size="large" onClick={closeModal} className="rounded-xl font-semibold text-gray-600 border-gray-200 hover:bg-gray-50">
-                Close
-              </Button>
-              {selectedNotification && !selectedNotification.isRead && (
-                <Button
-                  size="large"
-                  type="primary"
-                  style={{ background: THEME.primary }}
-                  className="rounded-xl font-semibold shadow-md hover:shadow-lg"
-                  loading={actionLoading === selectedNotification._id}
-                  onClick={async (e) => {
-                    await markSingleAsRead(selectedNotification._id, e);
-                    setSelectedNotification({ ...selectedNotification, isRead: true });
-                  }}
-                >
-                  Mark as Read
-                </Button>
+              {selectedNotification.entityId && (
+                <Text code className="ml-2">{selectedNotification.entityId}</Text>
               )}
-            </div>
-          </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Recipient">
+              <div>
+                <div>Role: <Tag color="cyan">{selectedNotification.recipientRole || '—'}</Tag></div>
+                {selectedNotification.recipientId && (
+                  <div>ID: <Text code>{selectedNotification.recipientId}</Text></div>
+                )}
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Created By">
+              <div>
+                <div>Name: {selectedNotification.createdByName || 'System'}</div>
+                <div>Role: <Tag color="default">{selectedNotification.createdByRole || '—'}</Tag></div>
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Timestamps">
+              <div>Created: {formatDate(selectedNotification.createdAt)}</div>
+              {selectedNotification.updatedAt && selectedNotification.updatedAt !== selectedNotification.createdAt && (
+                <div>Updated: {formatDate(selectedNotification.updatedAt)}</div>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Notification ID">
+              <Text copyable>{selectedNotification._id}</Text>
+            </Descriptions.Item>
+          </Descriptions>
         )}
       </Modal>
-
-      {/* Global styles override for pagination if needed */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-pagination .ant-pagination-item-active {
-          border-color: ${THEME.primary} !important;
-          background-color: ${THEME.primary} !important;
-        }
-        .custom-pagination .ant-pagination-item-active a {
-          color: white !important;
-        }
-      `}} />
     </div>
   );
 };

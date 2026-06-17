@@ -31,84 +31,158 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
   const displayName = typeof user?.role === 'object' ? user.role.name : slug.replace(/-/g, ' ');
   const initials = (user?.name || displayName).charAt(0).toUpperCase();
 
-  // Notification state
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const lastCountRef = useRef(0);
+  // ── Notification state ──────────────────────────────────────────
+  const [notifOpen, setNotifOpen]         = useState(false);
+const [notifications, setNotifications] = useState<any[]>([]);
+const [selectedNotif, setSelectedNotif] = useState<any>(null);
+const [modalOpen, setModalOpen]         = useState(false);
+const lastCountRef = useRef(0);
 
+  // ── Fetch notifications from correct endpoint ───────────────────
   const fetchNotifications = async () => {
-    if (!user?.id) return;
-
     try {
-      const res = await apiService.get(`/notifications/receiver-notification/${user.id}`);
+      const res = await apiService.get(`/grid/notifications?page=1&limit=20`);
       if (res?.success && Array.isArray(res.data)) {
-        if (res.data.length !== lastCountRef.current) {
-          lastCountRef.current = res.data.length;
-          setNotifications(res.data);
-        }
+        setNotifications(res.data);
+        lastCountRef.current = res.data.length;
       }
     } catch (err) {
-      console.error('Notification error:', err);
+      console.error('Notification fetch error:', err);
     }
   };
 
+  // Poll every 30 seconds
   useEffect(() => {
     fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, [user?.id]);
+
+  // ── Mark single notification as read ───────────────────────────
+const openNotifModal = (item: any) => {
+  setSelectedNotif(item);
+  setModalOpen(true);
+  setNotifOpen(false);
+  if (!item.isRead) markOneRead(item._id);
+};
+
+const markOneRead = async (id: string) => {
+  try {
+    setNotifications(prev =>
+      prev.map(n => n._id === id ? { ...n, isRead: true } : n)
+    );
+    try {
+      await apiService.put(`/grid/notifications/${id}/read`);
+    } catch {
+      // silent
+    }
+  } catch (err) {
+    console.error('Mark read error:', err);
+  }
+};
+  // ── Mark all notifications as read ─────────────────────────────
+  const markAllRead = async () => {
+    try {
+      await apiService.put(`/grid/notifications/read-all`);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error('Mark all read error:', err);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  // ── Notification dropdown panel ─────────────────────────────────
   const notificationDropdown = (
     <Card
       title={
-        <div className="flex justify-between items-center">
-          <span style={{ color: '#000' }}>Notifications</span>
-          <Badge count={unreadCount} size="small" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#000', fontWeight: 600 }}>
+            Notifications
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Badge count={unreadCount} size="small" />
+            {/* ✅ Mark all read button */}
+            {unreadCount > 0 && (
+              <Button
+                type="link"
+                size="small"
+                onClick={markAllRead}
+                style={{ color: '#5c039b', padding: 0, fontSize: 11, height: 'auto' }}
+              >
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
       }
-      style={{ width: 320 }}
+      style={{ width: 340 }}
       bodyStyle={{ padding: 0, backgroundColor: '#fff' }}
       className="shadow-lg"
     >
-      <div className="max-h-96 overflow-y-auto" style={{ backgroundColor: '#fff' }}>
+      <div style={{ maxHeight: 380, overflowY: 'auto', backgroundColor: '#fff' }}>
         {notifications.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span style={{ color: '#000' }}>No notifications</span>}
+            description={<span style={{ color: '#666' }}>No notifications</span>}
+            style={{ padding: '24px 0' }}
           />
         ) : (
           <List
             dataSource={notifications.slice(0, 10)}
-            renderItem={(item) => (
+            renderItem={(item: any) => (
               <List.Item
-                className={`px-4 hover:bg-gray-100 ${!item.isRead ? 'bg-gray-100' : ''}`}
-                style={{ backgroundColor: '#fff' }}
+                // ✅ Click to mark as read
+              onClick={() => openNotifModal(item)}
+                style={{
+                  padding: '10px 16px',
+                  cursor: 'pointer',
+                  backgroundColor: item.isRead ? '#fff' : '#f5f3ff',
+                  borderBottom: '1px solid #f0f0f0',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => {
+                  if (!item.isRead) (e.currentTarget as HTMLElement).style.backgroundColor = '#ede9fe';
+                }}
+                onMouseLeave={e => {
+                  if (!item.isRead) (e.currentTarget as HTMLElement).style.backgroundColor = '#f5f3ff';
+                  else (e.currentTarget as HTMLElement).style.backgroundColor = '#fff';
+                }}
               >
                 <List.Item.Meta
                   avatar={
                     <Avatar
                       icon={<FiBell />}
                       style={{
-                        backgroundColor: '#f3f4f6',
-                        color: '#000'
+                        backgroundColor: item.isRead ? '#f3f4f6' : '#ede9fe',
+                        color: item.isRead ? '#6b7280' : '#5c039b',
                       }}
                     />
                   }
                   title={
-                    <Text strong style={{ fontSize: 13, color: '#000' }}>
-                      {item.title}
-                    </Text>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text strong style={{ fontSize: 13, color: '#111827' }}>
+                        {item.title}
+                      </Text>
+                      {/* ✅ Unread dot */}
+                      {!item.isRead && (
+                        <span style={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: '#5c039b', flexShrink: 0,
+                        }} />
+                      )}
+                    </div>
                   }
                   description={
-                    <>
-                      <Text type="secondary" className="text-xs line-clamp-2" style={{ color: '#666' }}>
+                    <div>
+                      <Text style={{ fontSize: 12, color: '#6b7280', display: 'block' }}>
                         {item.message}
                       </Text>
-                      <Text type="secondary" style={{ fontSize: 10, color: '#888' }}>
-                        <ClockCircleOutlined />{' '}
-                        {new Date(item.createdAt).toLocaleTimeString()}
+                      <Text style={{ fontSize: 10, color: '#9ca3af', marginTop: 2, display: 'block' }}>
+                        <ClockCircleOutlined style={{ marginRight: 4 }} />
+                        {new Date(item.createdAt).toLocaleString()}
                       </Text>
-                    </>
+                    </div>
                   }
                 />
               </List.Item>
@@ -117,15 +191,16 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
         )}
       </div>
 
-      <div className="p-2 border-t text-center" style={{ borderColor: '#e5e7eb' }}>
+      {/* ✅ View all button */}
+      <div style={{ padding: '10px 16px', borderTop: '1px solid #f0f0f0', textAlign: 'center' }}>
         <Button
           type="link"
           size="small"
           onClick={() => {
-            setNotifOpen(false);
-            navigate(`/dashboard/${slug}/notifications/view`);
-          }}
-          style={{ color: '#000' }}
+  setNotifOpen(false);
+  navigate(`/dashboard/${slug}/gridnotification`);
+}}
+          style={{ color: '#5c039b', fontWeight: 500 }}
         >
           View all notifications
         </Button>
@@ -133,6 +208,7 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
     </Card>
   );
 
+  // ── User menu ───────────────────────────────────────────────────
   const userMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -152,9 +228,7 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
           <span>Settings</span>
         </div>
       ),
-      onClick: () => {
-        navigate(`/dashboard/${slug}/profile`);
-      }
+      onClick: () => navigate(`/dashboard/${slug}/profile`),
     },
     { type: 'divider' },
     {
@@ -186,7 +260,7 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
     >
       <div className="h-full flex items-center justify-between px-4 lg:px-6">
 
-        {/* ── Left: Hamburger + Branding ─────────────────────────── */}
+        {/* ── Left: Hamburger + Branding ── */}
         <div className="flex items-center gap-3">
           {/* Mobile hamburger */}
           <button
@@ -228,10 +302,159 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
           </div>
         </div>
 
-        {/* ── Right: Notifications + User ────────────────────────── */}
+        {/* ── Right: Notifications + User ── */}
         <div className="flex items-center gap-4">
 
-          {/* Notification Bell */}
+          {/* ── Notification Detail Modal ── */}
+          {modalOpen && selectedNotif && (
+            <div
+              onClick={() => setModalOpen(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 16,
+              }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: '#fff', borderRadius: 20,
+                  width: '100%', maxWidth: 480,
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Header */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #5c039b, #7c3aed)',
+                  padding: '20px 24px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <FiBell size={18} color="#fff" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Notification
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginTop: 2 }}>
+                        {selectedNotif.title}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', border: 'none',
+                      borderRadius: '50%', width: 32, height: 32,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: '#fff', fontSize: 18,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: 24 }}>
+                  {/* Tags */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {selectedNotif.type && (
+                      <span style={{
+                        background: '#f3e8ff', color: '#5c039b',
+                        fontSize: 11, fontWeight: 700, padding: '3px 10px',
+                        borderRadius: 20, border: '1px solid #e9d5ff',
+                        textTransform: 'uppercase', letterSpacing: 0.5,
+                      }}>
+                        {selectedNotif.type.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                    {selectedNotif.role && (
+                      <span style={{
+                        background: '#ecfdf5', color: '#059669',
+                        fontSize: 11, fontWeight: 700, padding: '3px 10px',
+                        borderRadius: 20, border: '1px solid #a7f3d0',
+                        textTransform: 'uppercase', letterSpacing: 0.5,
+                      }}>
+                        {selectedNotif.role}
+                      </span>
+                    )}
+                    <span style={{
+                      background: selectedNotif.isRead ? '#f3f4f6' : '#fef3c7',
+                      color: selectedNotif.isRead ? '#6b7280' : '#d97706',
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px',
+                      borderRadius: 20,
+                      border: `1px solid ${selectedNotif.isRead ? '#e5e7eb' : '#fde68a'}`,
+                    }}>
+                      {selectedNotif.isRead ? '✓ Read' : '● Unread'}
+                    </span>
+                  </div>
+
+                  {/* Message box */}
+                  <div style={{
+                    background: '#fafafa', borderRadius: 12,
+                    padding: 16, marginBottom: 16,
+                    border: '1px solid #f0f0f0',
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+                      Message
+                    </div>
+                    <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+                      {selectedNotif.message}
+                    </p>
+                  </div>
+
+                  {/* Meta */}
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ClockCircleOutlined />
+                      {new Date(selectedNotif.createdAt).toLocaleString()}
+                    </div>
+                    {selectedNotif.createdBy && (
+                      <div style={{ fontSize: 12, color: '#9ca3af' }}>
+                        👤 By: {selectedNotif.createdBy}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                  padding: '16px 24px', borderTop: '1px solid #f0f0f0',
+                  display: 'flex', justifyContent: 'flex-end', gap: 10,
+                }}>
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    style={{
+                      padding: '8px 20px', borderRadius: 10,
+                      border: '1px solid #e5e7eb', background: '#fff',
+                      fontSize: 13, fontWeight: 600, color: '#6b7280', cursor: 'pointer',
+                    }}
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => { setModalOpen(false); navigate(`/dashboard/${slug}/gridnotification`); }}
+                    style={{
+                      padding: '8px 20px', borderRadius: 10, border: 'none',
+                      background: 'linear-gradient(135deg, #5c039b, #7c3aed)',
+                      fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                    }}
+                  >
+                    View All Notifications →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Notification Bell with unread count badge */}
           <Dropdown
             open={notifOpen}
             onOpenChange={setNotifOpen}
@@ -239,8 +462,14 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
             trigger={['click']}
             placement="bottomRight"
           >
-            <Badge count={unreadCount} size="small">
-              <button className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+            <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+              <button
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  color: unreadCount > 0 ? '#5c039b' : '#6b7280',
+                  background: unreadCount > 0 ? '#f5f3ff' : 'transparent',
+                }}
+              >
                 <FiBell size={20} />
               </button>
             </Badge>
@@ -254,7 +483,6 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
               onMouseEnter={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
               onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
             >
-              {/* Avatar */}
               <div
                 className="flex-shrink-0 flex items-center justify-center rounded-full text-white font-bold"
                 style={{
@@ -265,8 +493,6 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
               >
                 {initials}
               </div>
-
-              {/* Name + Role */}
               <div className="hidden sm:block text-left">
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', lineHeight: 1.2, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.name || displayName}
@@ -275,12 +501,11 @@ const TopBar: React.FC<TopBarProps> = ({ collapsed, onToggleCollapse, onToggleMo
                   {displayName}
                 </div>
               </div>
-
               <FiChevronDown size={14} style={{ color: '#9ca3af', flexShrink: 0 }} />
             </button>
           </Dropdown>
-        </div>
 
+        </div>
       </div>
     </header>
   );

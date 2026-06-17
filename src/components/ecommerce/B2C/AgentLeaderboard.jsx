@@ -343,7 +343,28 @@ const AgentLeaderboard = () => {
             )}
           </div>
         </Card>
-
+{/* ── Commission Over Time (Line Chart) ── */}
+<Card
+  style={{ borderRadius: 10, border: '1px solid #e8edf5', boxShadow: '0 6px 20px rgba(15,23,42,0.04)', marginBottom: 20 }}
+  bodyStyle={{ padding: 20 }}
+>
+  <Title level={5} style={{ margin: '0 0 16px', color: '#0f172a' }}>
+    Commission Over Time
+  </Title>
+  {data?.commission_trend?.length > 0 ? (
+    <ResponsiveContainer width="100%" height={200}>
+      <LineChart data={data.commission_trend}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 11 }} />
+        <YAxis tick={{ fill: '#64748b', fontSize: 11 }} width={60} tickFormatter={(v) => `AED ${v}`} />
+        <Tooltip formatter={(val) => `AED ${val}`} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+        <Line type="monotone" dataKey="commission" stroke="#f59e0b" strokeWidth={3} name="Commission" />
+      </LineChart>
+    </ResponsiveContainer>
+  ) : (
+    <Empty description="No commission data yet" />
+  )}
+</Card>
         {/* ── Period Trend Chart ────────────────────────────────────── */}
         <Card
           style={{ borderRadius: 10, border: '1px solid #e8edf5', boxShadow: '0 6px 20px rgba(15,23,42,0.04)' }}

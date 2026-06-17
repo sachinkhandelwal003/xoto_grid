@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Avatar, Col, Progress, Row, Spin, Table, Tag, Typography } from "antd";
-import { FireOutlined, TrophyOutlined, UserOutlined } from "@ant-design/icons";
+import { Avatar, Col, Progress, Row, Spin, Table, Tag, Typography, Space } from "antd";
+import { FireOutlined, TrophyOutlined, UserOutlined, CalendarOutlined, FileTextOutlined } from "@ant-design/icons";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 
 const { Title, Text } = Typography;
 const fmtAED = (value = 0) => `AED ${Number(value || 0).toLocaleString()}`;
+const fmtDate = (date) => date ? new Date(date).toLocaleDateString("en-AE", { day: "2-digit", month: "short", year: "numeric" }) : "-";
 
 const agentName = (agent) =>
   agent.name ||
@@ -219,7 +220,7 @@ const AgencyLeaderboard = () => {
     const loadPerformance = async () => {
       setLoading(true);
       try {
-        const res = await apiService.get("agency/performance", { limit: 100 });
+        const res = await apiService.get("/agency/performance", { limit: 100 });
         const leaderboardData = res?.data?.leaderboard;
         setRows(Array.isArray(leaderboardData) ? leaderboardData : []);
       } catch (error) {
@@ -261,57 +262,57 @@ const AgencyLeaderboard = () => {
         </div>
       ),
     },
-    { title: "Total Leads", dataIndex: "totalLeads", sorter: (a, b) => a.totalLeads - b.totalLeads },
-    { title: "Active Leads", dataIndex: "activeLeads", sorter: (a, b) => a.activeLeads - b.activeLeads },
-    { title: "Converted", dataIndex: "convertedLeads", sorter: (a, b) => a.convertedLeads - b.convertedLeads },
-    { title: "Presentations", dataIndex: "presentationsCreated", sorter: (a, b) => a.presentationsCreated - b.presentationsCreated },
     {
-      title: "Conversion",
-      dataIndex: "conversionRate",
-      width: 170,
-      render: (value = 0) => (
-        <Progress 
-          percent={value} 
-          size="small" 
-          strokeColor={{
-            '0%': 'var(--pur-mid)',
-            '100%': 'var(--sb-accent)',
-          }}
-          trailColor="var(--pur-soft)"
-        />
+      title: "Registration Date",
+      dataIndex: "createdAt",
+      render: (date) => (
+        <Space>
+          <CalendarOutlined style={{ color: 'var(--tx-muted)' }} />
+          <Text>{fmtDate(date)}</Text>
+        </Space>
       ),
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: "Commission",
+      title: "RERA Status",
+      dataIndex: "reraStatus",
+      render: (status) => {
+        const colorMap = {
+          approved: 'green',
+          pending: 'orange',
+          rejected: 'red',
+          not_submitted: 'default',
+        };
+        return (
+          <Tag color={colorMap[status] || 'default'} style={{ borderRadius: '4px', fontWeight: 500 }}>
+            {status?.toUpperCase() || 'NOT SUBMITTED'}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Total Leads",
+      dataIndex: "totalLeads",
+      sorter: (a, b) => a.totalLeads - b.totalLeads,
+    },
+    {
+      title: "Active Leads",
+      dataIndex: "activeLeads",
+      sorter: (a, b) => a.activeLeads - b.activeLeads,
+    },
+    {
+      title: "Listings Created",
+      dataIndex: "listingsCreated",
+      render: (val) => val || 0,
+      sorter: (a, b) => (a.listingsCreated || 0) - (b.listingsCreated || 0),
+    },
+    {
+      title: "Commission Earned",
       dataIndex: "commissionEarned",
       sorter: (a, b) => a.commissionEarned - b.commissionEarned,
       render: (value) => <Text strong style={{ color: "var(--sb-accent)" }}>{fmtAED(value)}</Text>,
     },
-    {
-      title: "Paid to Agency",
-      dataIndex: "paidCommission",
-      sorter: (a, b) => a.paidCommission - b.paidCommission,
-      render: (value) => <Text strong style={{ color: "var(--sb-accent)" }}>{fmtAED(value)}</Text>,
-    },
-    {
-      title: "Status",
-      dataIndex: "isActive",
-      render: (active) => {
-        return (
-          <Tag 
-            style={{
-              backgroundColor: active ? "rgba(92, 3, 155, 0.08)" : "rgba(192, 132, 252, 0.08)",
-              color: active ? "var(--sb-accent)" : "var(--pur-mid)",
-              borderColor: active ? "rgba(92, 3, 155, 0.2)" : "rgba(192, 132, 252, 0.2)",
-              borderRadius: "4px",
-              fontWeight: 500,
-            }}
-          >
-            {active ? "Active" : "Inactive"}
-          </Tag>
-        );
-      }
-    },
+    // Optional: you can include an "Actions" column if needed, but not required.
   ];
 
   return (
@@ -320,8 +321,8 @@ const AgencyLeaderboard = () => {
       <div className="xp-root">
         <div className="xp-header">
           <div>
-            <Title className="xp-title">Leaderboard</Title>
-            <p className="xp-subtitle">Internal agency ranking by total leads, conversions, presentations, and commission.</p>
+            <Title className="xp-title">Agency Leaderboard</Title>
+            <p className="xp-subtitle">Performance ranking of your affiliated agents based on leads, conversions, and commission.</p>
           </div>
         </div>
 
@@ -345,9 +346,14 @@ const AgencyLeaderboard = () => {
                         <div style={{ flex: 1 }}>
                           <Text style={{ fontSize: 12, fontWeight: 600, color: 'inherit', opacity: 0.85 }}>Rank #{agent.rank}</Text>
                           <Title level={5} style={{ margin: "2px 0", fontFamily: 'Sora, sans-serif' }}>{agentName(agent)}</Title>
-                          <Text strong className="xp-card-leads" style={{ color: 'inherit' }}>
-                            <FireOutlined /> {agent.totalLeads} leads
-                          </Text>
+                          <Space size="large">
+                            <Text strong className="xp-card-leads" style={{ color: 'inherit' }}>
+                              <FireOutlined /> {agent.totalLeads} leads
+                            </Text>
+                            <Text strong className="xp-card-leads" style={{ color: 'inherit' }}>
+                              <FileTextOutlined /> {fmtAED(agent.commissionEarned)}
+                            </Text>
+                          </Space>
                         </div>
                       </div>
                     </div>
@@ -362,7 +368,7 @@ const AgencyLeaderboard = () => {
                   dataSource={rows} 
                   rowKey="_id" 
                   pagination={{ pageSize: 10 }} 
-                  scroll={{ x: 1200 }} 
+                  scroll={{ x: 1100 }} 
                   locale={{
                     emptyText: (
                       <div style={{ padding: 32, textAlign: 'center' }}>

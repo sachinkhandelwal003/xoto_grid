@@ -94,11 +94,11 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     title: 'Notifications', icon: 'fas fa-bell',
     to: '/dashboard/admin/gridnotification',
   },
-  {
-  title: 'Platform Configuration',
-  icon: 'fas fa-sliders',
-  to: '/dashboard/admin/setting',
-},
+//   {
+//   title: 'Platform Configuration',
+//   icon: 'fas fa-sliders',
+//   to: '/dashboard/admin/setting',
+// },
 ],
 
   // ── Grid Partner/Agency (15) ───────────────────────────────────────────────
@@ -108,6 +108,11 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: 'Commission', icon: 'fas fa-dollar-sign', to: '/dashboard/agency/partner/deals' },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/agency/agency-leaderboard' },
     { title: 'Agreement', icon: 'fas fa-file', to: '/dashboard/agency/agency-agreements' },
+    
+      {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/agency/gridnotification',
+  },
   ],
 
   // ── Grid Agent (16) ────────────────────────────────────────────────────────
@@ -119,6 +124,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
     { title: "My Agreements", icon: "fas fa-chalkboard-teacher", to: "/dashboard/agent/agent-agreement" },
+     {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/agent/gridnotification',
+  },
   ],
 
   // ── Grid Developer (17) ────────────────────────────────────────────────────
@@ -126,6 +135,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: 'Projects', icon: 'fas fa-building', to: '/dashboard/developer/developer-properties' },
     { title: 'Listings', icon: 'fas fa-layer-group', to: '/dashboard/developer/developer-inventory' },
     { title: 'Agreements', icon: 'fas fa-file', to: '/dashboard/developer/developer-agreement' },
+     {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/developer/gridnotification',
+  },
   ],
 
   // ── Grid Advisor (24) ──────────────────────────────────────────────────────
@@ -162,6 +175,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       ],
     },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/gridreferralpartner/referral-leaderboard' },
+      {
+    title: 'Notifications', icon: 'fas fa-bell',
+    to: '/dashboard/gridreferralpartner/gridnotification',
+  },
   ],
 };
 
@@ -260,7 +277,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, mobileOpen, onCloseMobile 
 
           {/* Xoto Grid logo — big & centered */}
           <img
-            src="/logogrid.png"
+            src="/KGT-RealEstate.png"
             alt="Xoto Grid"
             style={{
               width: collapsed ? 44 : 110,
