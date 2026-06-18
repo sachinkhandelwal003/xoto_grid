@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid,
-  Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
+  Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,LineChart, Line,
 } from "recharts";
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 

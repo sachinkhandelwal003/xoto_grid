@@ -15,7 +15,8 @@ import {
   FiBarChart2, FiSliders, FiCornerUpRight, FiShield, FiAward,
   FiBriefcase, FiUserCheck, FiZap, FiInfo,
 } from 'react-icons/fi';
-import { message, Select, Spin } from 'antd';
+import { message, Select, Spin, Table, Input, Tag, Tooltip, Space, Badge } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -148,7 +149,13 @@ const getLeadAdvisor = (lead) =>
   lead?.advisorId || lead?.advisor_id || lead?.assigned_to || lead?.assignedAdvisor || '';
 
 const getLeadReferral = (lead) =>
-  lead?.referralPartnerId || lead?.referral_partner_id || lead?.referral?.partner_id || '';
+  lead?.referred_by_partner ||
+  lead?.source?.referralPartnerId ||
+  lead?.referral_info?.referral_partner_id ||
+  lead?.referralPartnerId ||
+  lead?.referral_partner_id ||
+  lead?.referral?.partner_id ||
+  '';
 
 const leadClientName = (lead) =>
   compactName(lead?.contact_info?.name?.first_name, lead?.contact_info?.name?.last_name) ||
@@ -678,7 +685,7 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
           advisors: [getLeadAdvisor(initialLead), ...asList(advisors)].filter(Boolean),
           agents: [getLeadAgent(initialLead), ...asList(agents)].filter(Boolean),
           agencies: [getLeadAgency(initialLead), ...asList(agencies)].filter(Boolean),
-          referralPartners: asList(referralPartners),
+          referralPartners: [getLeadReferral(initialLead), ...asList(referralPartners)].filter(p => p && typeof p === 'object'),
           inventory: [],
         });
       } catch {
@@ -982,8 +989,12 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
                 <LockedField icon={FiUserCheck} label="Assigned Advisor" value={leadContext?.advisorName} hint="From lead assignment" />
                 <LockedField icon={FiUser} label="Agent" value={leadContext?.agentName} hint="Lead creator" />
                 <LockedField icon={FiBriefcase} label="Agency" value={leadContext?.agencyNameStr} hint="Agent's agency" />
-                {leadContext?.referralName && (
-                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value={leadContext.referralName} hint="Commission applies" />
+                {leadContext?.referralName ? (
+                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value={leadContext.referralName} hint="From lead referral" />
+                ) : form.referralPartnerId ? (
+                  <LockedField icon={FiCornerUpRight} label="Referral Partner" value="Referral partner linked" hint={`ID: ...${String(form.referralPartnerId).slice(-8)}`} />
+                ) : (
+                  <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
                 )}
               </>
             ) : (
@@ -991,9 +1002,9 @@ const CreateDealModal = ({ onClose, onSuccess, initialLead = null }) => {
                 <LookupSelect label="Advisor" value={form.advisorId} onChange={v => set('advisorId', v)} options={toOptions(lookups.advisors, userName)} loading={lookupLoading} placeholder="Select advisor" hint="Optional" />
                 <LookupSelect label="Agent" value={form.agentId} onChange={v => set('agentId', v)} options={toOptions(lookups.agents, userName)} loading={lookupLoading} placeholder="Select agent" hint="Optional" />
                 <LookupSelect label="Agency" value={form.agencyId} onChange={v => set('agencyId', v)} options={toOptions(lookups.agencies, a => a?.agency_name || a?.companyName || a?.name || a?.email || 'Unnamed agency')} loading={lookupLoading} placeholder="Select agency" hint="Optional" />
+                <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
               </>
             )}
-            <LookupSelect label="Referral Partner" value={form.referralPartnerId} onChange={v => set('referralPartnerId', v)} options={toOptions(lookups.referralPartners, userName)} loading={lookupLoading} placeholder="Select referral partner" hint="Optional" />
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1.5">Partner Agreement ID</label>
               <input value={form.partnerAgreementId} onChange={e => set('partnerAgreementId', e.target.value)} placeholder="Optional agreement reference" className={inp} />
@@ -1719,10 +1730,10 @@ const DealRecordsPage = () => {
   const LIMIT = 12;
 
   const [filters, setFilters] = useState({
-    commissionStatus: '', dealType: '', isFlagged: '',
+    search: '', commissionStatus: '', dealType: '', isFlagged: '',
     isVoided: '', sortOrder: 'desc',
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [prefillLead, setPrefillLead] = useState(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
@@ -1734,10 +1745,11 @@ const DealRecordsPage = () => {
     try {
       const params = new URLSearchParams({
         page: pg, limit: LIMIT, sortOrder: filters.sortOrder,
+        ...(filters.search         && { search: filters.search }),
         ...(filters.commissionStatus && { commissionStatus: filters.commissionStatus }),
-        ...(filters.dealType && { dealType: filters.dealType }),
-        ...(filters.isFlagged && { isFlagged: filters.isFlagged }),
-        ...(filters.isVoided && { isVoided: filters.isVoided }),
+        ...(filters.dealType       && { dealType: filters.dealType }),
+        ...(filters.isFlagged      && { isFlagged: filters.isFlagged }),
+        ...(filters.isVoided       && { isVoided: filters.isVoided }),
       });
       const res = await apiService.get(`/deal-record?${params}`);
       const data = res?.data?.success !== undefined ? res.data : res;
@@ -1746,6 +1758,37 @@ const DealRecordsPage = () => {
     } catch { message.error('Failed to load deal records'); }
     finally { setLoading(false); }
   }, [filters]);
+
+  const handleExportCSV = async () => {
+    setExportLoading(true);
+    try {
+      const params = new URLSearchParams({ sortOrder: filters.sortOrder });
+      if (filters.search)           params.set('search', filters.search);
+      if (filters.commissionStatus) params.set('commissionStatus', filters.commissionStatus);
+      if (filters.dealType)         params.set('dealType', filters.dealType);
+      if (filters.isFlagged)        params.set('isFlagged', filters.isFlagged);
+      if (filters.isVoided)         params.set('isVoided', filters.isVoided);
+
+      const base  = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('grid_token') || localStorage.getItem('token');
+      const url   = `${base}/deal-records/export?${params.toString()}`;
+
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Export failed');
+
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `deal_records_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      message.success('CSV exported');
+    } catch {
+      message.error('Export failed. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const fetchStats = useCallback(async () => {
     setStatsLoad(true);
@@ -1851,8 +1894,6 @@ const DealRecordsPage = () => {
     ];
   })();
 
-  const totalPages = Math.ceil(total / LIMIT);
-
   return (
     <>
       {/* ── SINGLE DEAL CREATION MODAL ── */}
@@ -1893,9 +1934,12 @@ const DealRecordsPage = () => {
               <Btn variant="ghost" size="sm" onClick={handleRefreshAll}>
                 <FiRefreshCw size={13} /> Refresh
               </Btn>
-              {/* <Btn variant="primary" size="sm" onClick={() => { setPrefillLead(null); setShowCreate(true); }}>
-                <FiPlus size={13}/> New Deal
-              </Btn> */}
+              <Btn variant="primary" size="sm" onClick={handleExportCSV} disabled={exportLoading}>
+                {exportLoading
+                  ? <FiLoader size={13} className="animate-spin" />
+                  : <FiDownload size={13} />}
+                {exportLoading ? 'Exporting…' : 'Export CSV'}
+              </Btn>
             </div>
           </div>
         </div>
@@ -1977,103 +2021,242 @@ const DealRecordsPage = () => {
             </div>
           )}
 
-          {/* ── FILTERS ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-50">
-              <div className="flex items-center gap-1.5 flex-wrap flex-1">
-                {['', 'pending', 'confirmed', 'paid'].map(s => (
-                  <button key={s} onClick={() => setFilter('commissionStatus', s)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all
-                      ${filters.commissionStatus === s
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-200 text-gray-500 hover:border-purple-200'}`}>
-                    {s === '' ? 'All' : COM_STATUS[s]?.label}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setShowFilters(p => !p)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all flex-shrink-0
-                  ${showFilters ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                <FiSliders size={13} />
-                Filters
-                {showFilters ? <FiChevronUp size={11} /> : <FiChevronDown size={11} />}
+          {/* ── FILTER BAR ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <Input
+                prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
+                placeholder="Search deal ref, property, agent…"
+                value={filters.search}
+                onChange={e => setFilter('search', e.target.value)}
+                onPressEnter={() => { setPage(1); fetchDeals(1); }}
+                allowClear
+                style={{ width: 240, borderRadius: 10 }}
+              />
+              {/* Status */}
+              <Select value={filters.commissionStatus} onChange={v => setFilter('commissionStatus', v)} style={{ width: 140 }}>
+                <Select.Option value="">All Status</Select.Option>
+                <Select.Option value="pending">Pending</Select.Option>
+                <Select.Option value="confirmed">Confirmed</Select.Option>
+                <Select.Option value="paid">Paid</Select.Option>
+              </Select>
+              {/* Deal Type */}
+              <Select value={filters.dealType} onChange={v => setFilter('dealType', v)} style={{ width: 120 }}>
+                <Select.Option value="">All Types</Select.Option>
+                <Select.Option value="sale">Sale</Select.Option>
+                <Select.Option value="lease">Lease</Select.Option>
+              </Select>
+              {/* Flagged */}
+              <Select value={filters.isFlagged} onChange={v => setFilter('isFlagged', v)} style={{ width: 130 }}>
+                <Select.Option value="">All Deals</Select.Option>
+                <Select.Option value="true">Flagged Only</Select.Option>
+                <Select.Option value="false">Not Flagged</Select.Option>
+              </Select>
+              {/* Voided */}
+              <Select value={filters.isVoided} onChange={v => setFilter('isVoided', v)} style={{ width: 130 }}>
+                <Select.Option value="">Active Only</Select.Option>
+                <Select.Option value="true">Voided Too</Select.Option>
+              </Select>
+              {/* Sort */}
+              <Select value={filters.sortOrder} onChange={v => setFilter('sortOrder', v)} style={{ width: 140 }}>
+                <Select.Option value="desc">Newest First</Select.Option>
+                <Select.Option value="asc">Oldest First</Select.Option>
+              </Select>
+              {/* Reset */}
+              <button
+                onClick={() => { setFilters({ search: '', commissionStatus: '', dealType: '', isFlagged: '', isVoided: '', sortOrder: 'desc' }); setPage(1); }}
+                className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-gray-50 transition-all">
+                Reset
               </button>
             </div>
-            {showFilters && (
-              <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 border-b border-gray-100">
-                {[
-                  { label: 'Deal Type', key: 'dealType', opts: [['', 'All Types'], ['sale', 'Sale'], ['lease', 'Lease']] },
-                  { label: 'Flagged', key: 'isFlagged', opts: [['', 'Any'], ['true', 'Flagged'], ['false', 'Not Flagged']] },
-                  { label: 'Voided', key: 'isVoided', opts: [['', 'Active Only'], ['true', 'Voided']] },
-                  { label: 'Sort Order', key: 'sortOrder', opts: [['desc', 'Newest First'], ['asc', 'Oldest First']] },
-                ].map(({ label, key, opts }) => (
-                  <div key={key}>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{label}</label>
-                    <select value={filters[key]} onChange={e => setFilter(key, e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white outline-none focus:border-purple-400 transition-all">
-                      {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* ── DEALS GRID ── */}
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse space-y-3">
-                  <div className="flex justify-between"><div className="h-4 bg-gray-100 rounded w-1/3" /><div className="h-4 bg-gray-100 rounded w-1/4" /></div>
-                  <div className="h-3 bg-gray-100 rounded w-2/3" /><div className="h-3 bg-gray-100 rounded w-1/2" />
-                  <div className="pt-2 border-t border-gray-50 grid grid-cols-3 gap-2"><div className="h-6 bg-gray-100 rounded" /><div className="h-6 bg-gray-100 rounded" /><div className="h-6 bg-gray-100 rounded" /></div>
-                </div>
-              ))}
+          {/* ── DEALS TABLE ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Table header info bar */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-50">
+              <span className="text-sm font-bold text-gray-700">
+                {total} deal record{total !== 1 ? 's' : ''}
+              </span>
+              <span className="text-xs text-gray-400">Click a row to view details</span>
             </div>
-          ) : deals.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-              <FiFileText size={40} className="mx-auto mb-3 text-gray-200" />
-              <p className="text-gray-500 font-semibold">No deal records found</p>
-              <p className="text-gray-400 text-sm mt-1 mb-5">Create your first deal record to get started</p>
-              <Btn variant="primary" size="sm" onClick={() => { setPrefillLead(null); setShowCreate(true); }}>
-                <FiPlus size={12} /> Create Deal Record
-              </Btn>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {deals.map((deal, i) => (
-                <DealCard key={deal._id || i} deal={deal} onClick={() => handleOpenDeal(deal)} />
-              ))}
-            </div>
-          )}
 
-          {/* ── PAGINATION ── */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 px-5 py-3.5 shadow-sm">
-              <p className="text-xs text-gray-400 font-medium">Page {page} of {totalPages} · {total} total</p>
-              <div className="flex items-center gap-2">
-                <Btn variant="ghost" size="sm" disabled={page <= 1} onClick={() => { setPage(p => p - 1); fetchDeals(page - 1); }}>
-                  <FiArrowLeft size={13} /> Prev
-                </Btn>
-                <div className="flex gap-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    const pg = page <= 3 ? i + 1 : page - 2 + i;
-                    if (pg > totalPages) return null;
-                    return (
-                      <button key={pg} onClick={() => { setPage(pg); fetchDeals(pg); }}
-                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${pg === page ? 'text-white shadow-sm' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                        style={pg === page ? { background: GR } : {}}>
-                        {pg}
-                      </button>
-                    );
-                  })}
-                </div>
-                <Btn variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => { setPage(p => p + 1); fetchDeals(page + 1); }}>
-                  Next <FiArrowRight size={13} />
+            {deals.length === 0 && !loading ? (
+              <div className="py-16 text-center">
+                <FiFileText size={40} className="mx-auto mb-3 text-gray-200" />
+                <p className="text-gray-500 font-semibold">No deal records found</p>
+                <p className="text-gray-400 text-sm mt-1 mb-5">Adjust your filters or create a new deal record</p>
+                <Btn variant="primary" size="sm" onClick={() => { setPrefillLead(null); setShowCreate(true); }}>
+                  <FiPlus size={12} /> Create Deal Record
                 </Btn>
               </div>
-            </div>
-          )}
+            ) : (
+              <Table
+                dataSource={deals}
+                rowKey="_id"
+                loading={loading}
+                scroll={{ x: 1200 }}
+                size="middle"
+                onRow={(deal) => ({
+                  onClick: () => handleOpenDeal(deal),
+                  style: { cursor: 'pointer' },
+                })}
+                rowClassName={(deal) =>
+                  deal.isVoided ? 'opacity-50' :
+                  deal.isFlagged ? 'bg-amber-50/40' : ''
+                }
+                pagination={{
+                  current: page,
+                  pageSize: LIMIT,
+                  total,
+                  showSizeChanger: false,
+                  showTotal: (t) => `${t} total`,
+                  onChange: (pg) => { setPage(pg); fetchDeals(pg); },
+                  style: { padding: '12px 20px' },
+                }}
+                columns={[
+                  {
+                    title: 'Deal Ref',
+                    dataIndex: 'dealReference',
+                    key: 'dealReference',
+                    width: 170,
+                    render: (ref, deal) => (
+                      <div>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 800, color: P, fontSize: 12 }}>
+                          {ref || '—'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                          <Pill status={deal.commissionStatus} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                          {deal.dealType && <Pill status={deal.dealType} type="deal" />}
+                          {deal.isLocked && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}>
+                              <FiLock size={8} /> Locked
+                            </span>
+                          )}
+                          {deal.isFlagged && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' }}>
+                              <FiFlag size={8} /> Flagged
+                            </span>
+                          )}
+                          {deal.isVoided && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                              <FiXCircle size={8} /> Voided
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'Property',
+                    key: 'property',
+                    ellipsis: true,
+                    render: (_, deal) => {
+                      const prop = typeof deal.propertyId === 'object' ? deal.propertyId : null;
+                      return (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>
+                            {prop ? propertyName(prop) : '—'}
+                          </div>
+                          {prop?.area && (
+                            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                              <FiMapPin size={9} style={{ display: 'inline', marginRight: 3 }} />{prop.area}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    title: 'Agent / Advisor',
+                    key: 'agent',
+                    render: (_, deal) => {
+                      const agent = typeof deal.agentId === 'object' ? deal.agentId : null;
+                      const advisor = typeof deal.advisorId === 'object' ? deal.advisorId : null;
+                      const name = agent ? userName(agent) : advisor ? userName(advisor) : null;
+                      const agency = typeof deal.agencyId === 'object' ? deal.agencyId : null;
+                      if (!name) return <span style={{ color: '#d1d5db' }}>—</span>;
+                      return (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
+                          {agency && <div style={{ fontSize: 11, color: '#9ca3af' }}>{agencyName(agency)}</div>}
+                          {advisor && !agent && <div style={{ fontSize: 10, color: '#7c3aed', fontWeight: 600 }}>Advisor</div>}
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    title: 'Transaction Value',
+                    dataIndex: 'transactionValue',
+                    key: 'transactionValue',
+                    align: 'right',
+                    render: (v) => (
+                      <span style={{ fontWeight: 700, color: '#111', fontSize: 13 }}>{fmt(v)}</span>
+                    ),
+                  },
+                  {
+                    title: 'Commission',
+                    key: 'commission',
+                    align: 'right',
+                    render: (_, deal) => {
+                      const com = deal.commission || {};
+                      return (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 800, color: P2, fontSize: 13 }}>{fmt(com.grossAmount)}</div>
+                          <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>
+                            XOTO {fmt(com.xotoRetained)} · Partner {fmt(com.partnerShare)}
+                          </div>
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    title: 'Evidence',
+                    key: 'evidence',
+                    align: 'center',
+                    width: 90,
+                    render: (_, deal) => deal.evidenceUploaded ? (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#166534', background: '#f0fdf4', padding: '2px 8px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                        <FiCheckCircle size={10} style={{ display: 'inline', marginRight: 3 }} />Yes
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#92400e', background: '#fffbeb', padding: '2px 8px', borderRadius: 8, border: '1px solid #fde68a' }}>
+                        <FiAlertCircle size={10} style={{ display: 'inline', marginRight: 3 }} />No
+                      </span>
+                    ),
+                  },
+                  {
+                    title: 'Date',
+                    dataIndex: 'createdAt',
+                    key: 'createdAt',
+                    width: 100,
+                    render: (v) => (
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>{fmtDate(v)}</span>
+                    ),
+                  },
+                  {
+                    title: '',
+                    key: 'action',
+                    align: 'center',
+                    width: 70,
+                    render: (_, deal) => (
+                      <Tooltip title="View Details">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleOpenDeal(deal); }}
+                          style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}
+                        >
+                          <FiEye size={14} />
+                        </button>
+                      </Tooltip>
+                    ),
+                  },
+                ]}
+              />
+            )}
+          </div>
         </div>
       </div>
     </>

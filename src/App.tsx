@@ -53,12 +53,16 @@ const Dealrecordspage = lazy(() => import('./components/Grid/GridAdmin/Dealrecor
 const DealRecordDetailPage = lazy(() => import('./components/Grid/GridAdmin/Dealrecorddetailpage'));
 const AdminAgreements = lazy(() => import('./components/Grid/GridAdmin/Agreement'));
 
+const ViewingRequests = lazy(() => import('./components/Grid/GridAdmin/ViewingRequests'));
+
 // Grid Analytics Pages
 const GridOverview = lazy(() => import('./components/Grid/GridAdmin/GridOverview'));
 const GridLeadReports = lazy(() => import('./components/Grid/GridAdmin/GridLeadreports'));
 const GridListingReports = lazy(() => import('./components/Grid/GridAdmin/GridListingreports'));
 const GridSetting = lazy(() => import('./components/Grid/GridAdmin/GridSetting'));
+const GridLeaderboard = lazy(() => import('./components/Grid/GridAdmin/GridLeaderboard'));
 const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin/PropertyDocumentLibrary'));
+const AuditLogs = lazy(() => import('./components/CMS/pages/AuditLogs'));
 
 // Role 15 - Agency
 const AgencyDashboard = lazy(() => import('./components/ecommerce/B2C/AgencyDashboard'));
@@ -115,6 +119,7 @@ const AdvisorLeadsPage = lazy(() => import('./components/Grid/AdvisorGrid/Adviso
 const AdvisorLeaderboardPage = lazy(() => import('./components/Grid/AdvisorGrid/AdvisorLeaderboard'));
 const GridAdvisorLeadDetail = lazy(() => import('./components/Grid/AdvisorGrid/GridAdvisorLeadDetail'));
 const PropertyCatalogue = lazy(() => import('./components/Grid/AdvisorGrid/Propertycatalogue'));
+const AdvisorViewings = lazy(() => import('./components/Grid/AdvisorGrid/AdvisorViewings'));
 const FavouriteProperty = lazy(() => import('./components/Grid/Fav Property/FavouriteProperty'));
 
 // Profile Pages
@@ -226,9 +231,12 @@ const App: React.FC = () => (
         <Route path="overview" element={<GridOverview />} />
         <Route path="leadreports" element={<GridLeadReports />} />
         <Route path="listingreports" element={<GridListingReports />} />
+        <Route path="viewing-requests" element={<ViewingRequests />} />
         <Route path="setting" element={<GridSetting />} />
+        <Route path="leaderboard" element={<GridLeaderboard />} />
         <Route path="properties/:id/documents" element={<PropertyDocumentLibrary />} />
         <Route path="profile" element={<AdminProfile />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="*" element={<Navigate to="/dashboard/admin" replace />} />
       </Route>
 
@@ -325,6 +333,7 @@ const App: React.FC = () => (
         <Route path="mortgages/calculator/emi" element={<PerfectMortgageCalculator initialTab="mortgage" />} />
         <Route path="profile" element={<GridAdvisorProfile />} />
         <Route path="leaderboard" element={<AdvisorLeaderboardPage />} />
+        <Route path="my-viewings" element={<AdvisorViewings />} />
         <Route path="*" element={<Navigate to="/dashboard/GridAdvisor" replace />} />
       </Route>
 
