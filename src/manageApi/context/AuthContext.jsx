@@ -80,10 +80,10 @@ const login = async (endpoint, credentials) => {
 
 
   // Logout with optional backend call
-  const logout = async (logoutEndpoint = '/auth/logout') => {
+  const logout = async (logoutEndpoint = '/grid/audit/logout') => {
     hasFetchedPermissions.current = false;
     const fullEndpoint = `${API_BASE}${logoutEndpoint}`;
-    
+
     try {
       await dispatch(logoutUser(fullEndpoint));
     } catch (err) {

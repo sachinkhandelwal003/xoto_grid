@@ -62,6 +62,7 @@ const GridListingReports = lazy(() => import('./components/Grid/GridAdmin/GridLi
 const GridSetting = lazy(() => import('./components/Grid/GridAdmin/GridSetting'));
 const GridLeaderboard = lazy(() => import('./components/Grid/GridAdmin/GridLeaderboard'));
 const PropertyDocumentLibrary = lazy(() => import('./components/Grid/GridAdmin/PropertyDocumentLibrary'));
+const AuditLogs = lazy(() => import('./components/CMS/pages/AuditLogs'));
 
 // Role 15 - Agency
 const AgencyDashboard = lazy(() => import('./components/ecommerce/B2C/AgencyDashboard'));
@@ -235,6 +236,7 @@ const App: React.FC = () => (
         <Route path="leaderboard" element={<GridLeaderboard />} />
         <Route path="properties/:id/documents" element={<PropertyDocumentLibrary />} />
         <Route path="profile" element={<AdminProfile />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="*" element={<Navigate to="/dashboard/admin" replace />} />
       </Route>
 
