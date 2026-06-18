@@ -1,17 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Card, Row, Col, Typography, Statistic, Table, Tag, Button, Select, Input, Space, message
+  Card, Row, Col, Typography, Statistic, Table, Tag, Button,
+  Select, Input, Space, message, DatePicker, Tooltip,
 } from "antd";
 import {
-  DollarOutlined, ClockCircleOutlined, CheckCircleOutlined, WalletOutlined,
-  ReloadOutlined, SearchOutlined, FilterOutlined,
+  DollarOutlined, ClockCircleOutlined, CheckCircleOutlined,
+  WalletOutlined, ReloadOutlined, SearchOutlined, FilterOutlined,
+  DownloadOutlined, TeamOutlined,
 } from "@ant-design/icons";
-import { apiService } from "../../../manageApi/utils/custom.apiservice"; // adjust path if needed
+import { useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
+import { apiService } from "../../../manageApi/utils/custom.apiservice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
-// ─── Xoto Theme ──────────────────────────────────────────────────────────────
+// ─── Theme ────────────────────────────────────────────────────────────────────
 const T = {
   primary:      "#5c039b",
   primaryLight: "#f3e8ff",
@@ -25,343 +30,461 @@ const T = {
   border:       "#ede9fe",
 };
 
-// ─── Commission status config ────────────────────────────────────────────────
 const COMMISSION_STATUS = {
-  pending:   { label: "Pending",   icon: <ClockCircleOutlined />, color: T.warning, bg: T.warningLight },
-  confirmed: { label: "Confirmed", icon: <CheckCircleOutlined />, color: T.info,    bg: T.infoLight    },
-  paid:      { label: "Paid",      icon: <WalletOutlined />,     color: T.success, bg: T.successLight },
+  pending:   { label: "Pending",   color: T.warning, bg: T.warningLight, icon: <ClockCircleOutlined /> },
+  confirmed: { label: "Confirmed", color: T.info,    bg: T.infoLight,    icon: <CheckCircleOutlined /> },
+  paid:      { label: "Paid",      color: T.success, bg: T.successLight, icon: <WalletOutlined /> },
 };
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-const AdminCommissionDashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState([]);
-  const [stats, setStats] = useState({
-    totalPool: 0,
-    pending: 0,
-    confirmed: 0,
-    paid: 0,
-  });
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [searchText, setSearchText] = useState("");
+const DEAL_TYPE_CFG = {
+  sale:  { label: "Sale",  color: "#7c3aed", bg: "#f5f3ff" },
+  lease: { label: "Lease", color: "#9a3412", bg: "#fff7ed" },
+};
 
-  // ── Fetch commissions from backend ─────────────────────────────────────────
-  const fetchCommissions = async (page = 1, limit = 10, status = "all", search = "") => {
+const fmt = (n) => `AED ${(n || 0).toLocaleString("en-AE")}`;
+
+// ─── Export helper ─────────────────────────────────────────────────────────────
+const exportCSV = async (filters) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.status && filters.status !== "all") params.set("commissionStatus", filters.status);
+    if (filters.dealType)   params.set("dealType", filters.dealType);
+    if (filters.agentType)  params.set("agentType", filters.agentType);
+    if (filters.dateFrom)   params.set("dateFrom", filters.dateFrom);
+    if (filters.dateTo)     params.set("dateTo", filters.dateTo);
+    if (filters.search)     params.set("search", filters.search);
+
+    const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+    const token = localStorage.getItem("grid_token") || localStorage.getItem("token");
+    const url = `${base}/deal-records/export?${params.toString()}`;
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error("Export failed");
+
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `commission_report_${dayjs().format("YYYY-MM-DD")}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    message.success("CSV exported successfully");
+  } catch {
+    message.error("Export failed. Please try again.");
+  }
+};
+
+// ─── Stat Card ─────────────────────────────────────────────────────────────────
+const StatCard = ({ label, icon, color, bg, value, sub }) => (
+  <Card
+    bordered={false}
+    style={{ borderRadius: 14, border: `1px solid ${T.border}`, boxShadow: "0 1px 4px rgba(92,3,155,0.06)" }}
+    bodyStyle={{ padding: "16px 20px" }}
+  >
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div>
+        <div style={{ fontSize: 12, color: T.gray, marginBottom: 4, fontWeight: 500 }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+        {sub && <div style={{ fontSize: 11, color: T.gray, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, background: bg,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color, fontSize: 20,
+      }}>
+        {icon}
+      </div>
+    </div>
+  </Card>
+);
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+const AdminCommissionDashboard = () => {
+  const navigate = useNavigate();
+
+  const [loading, setLoading]   = useState(true);
+  const [exporting, setExp]     = useState(false);
+  const [data, setData]         = useState([]);
+  const [stats, setStats]       = useState({ totalPool: 0, pending: 0, confirmed: 0, paid: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+
+  const [filters, setFilters] = useState({
+    status:    "all",
+    dealType:  "",
+    agentType: "",
+    search:    "",
+    dateFrom:  null,
+    dateTo:    null,
+  });
+
+  const setF = (key, val) => setFilters(f => ({ ...f, [key]: val }));
+
+  const fetchCommissions = useCallback(async (page = 1, limit = 10) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit });
-      if (status !== "all") params.append("status", status); 
-      if (search) params.append("search", search);
+      if (filters.status !== "all") params.append("status",    filters.status);
+      if (filters.dealType)         params.append("dealType",  filters.dealType);
+      if (filters.agentType)        params.append("agentType", filters.agentType);
+      if (filters.search)           params.append("search",    filters.search);
+      if (filters.dateFrom)         params.append("dateFrom",  filters.dateFrom);
+      if (filters.dateTo)           params.append("dateTo",    filters.dateTo);
 
       const response = await apiService.get(`/commissions?${params}`);
       const res = response.data || response;
-      const list = Array.isArray(res.data) ? res.data : [];
-      setData(list);
-      setStats(res.stats || {});
+      setData(Array.isArray(res.data) ? res.data : []);
+      setStats(res.stats || { totalPool: 0, pending: 0, confirmed: 0, paid: 0 });
       setPagination({
-        current: res.pagination?.page || page,
+        current:  res.pagination?.page  || page,
         pageSize: res.pagination?.limit || limit,
-        total: res.pagination?.total || 0,
+        total:    res.pagination?.total || 0,
       });
-    } catch (err) {
+    } catch {
       message.error("Failed to load commissions");
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
-  useEffect(() => {
-    fetchCommissions();
-  }, []);
+  useEffect(() => { fetchCommissions(1, pagination.pageSize); }, [filters]);
 
-  // ── Action handlers ────────────────────────────────────────────────────────
-  const handleConfirm = async (record) => {
+  const handleStatusAction = async (record, newStatus) => {
     try {
-      await apiService.put(`/commissions/${record._id}/status`, { status: "confirmed" });
-      message.success(`Commission #${record.dealId} confirmed`);
-      fetchCommissions(pagination.current, pagination.pageSize, statusFilter, searchText);
-    } catch (err) {
-      message.error("Failed to confirm commission");
+      await apiService.put(`/commissions/${record._id}/status`, { status: newStatus });
+      message.success(`Commission ${newStatus === "confirmed" ? "confirmed" : "marked as paid"}`);
+      fetchCommissions(pagination.current, pagination.pageSize);
+    } catch {
+      message.error("Action failed");
     }
   };
 
-  const handlePay = async (record) => {
-    try {
-      await apiService.put(`/commissions/${record._id}/status`, { status: "paid" });
-      message.success(`Commission #${record.dealId} marked as paid`);
-      fetchCommissions(pagination.current, pagination.pageSize, statusFilter, searchText);
-    } catch (err) {
-      message.error("Failed to update status");
+  const handleExport = async () => {
+    setExp(true);
+    await exportCSV(filters);
+    setExp(false);
+  };
+
+  const handleRowClick = (record) => {
+    if (record.dealRecordId) {
+      navigate(`/dashboard/admin/deal-records/${record.dealRecordId}`);
+    } else {
+      message.info("Deal record detail not available");
     }
   };
 
-  // ── Table columns ──────────────────────────────────────────────────────────
+  const handleDateChange = (dates) => {
+    setFilters(f => ({
+      ...f,
+      dateFrom: dates?.[0] ? dates[0].startOf("day").toISOString() : null,
+      dateTo:   dates?.[1] ? dates[1].endOf("day").toISOString()   : null,
+    }));
+  };
+
+  const handleReset = () => {
+    setFilters({ status: "all", dealType: "", agentType: "", search: "", dateFrom: null, dateTo: null });
+  };
+
+  // ── Columns ──────────────────────────────────────────────────────────────────
   const columns = [
     {
-      title: "Deal ID",
+      title: "Deal Ref",
       dataIndex: "dealId",
       key: "dealId",
-      width: 90,
-      render: (text) => <span style={{ fontWeight: 600, color: T.primary }}>{text || "—"}</span>,
+      width: 100,
+      render: (text, record) => (
+        <div>
+          <span style={{ fontWeight: 700, color: T.primary, cursor: "pointer" }}
+            onClick={() => handleRowClick(record)}>
+            {text || "—"}
+          </span>
+          {record.dealType && (
+            <div style={{ marginTop: 2 }}>
+              <Tag style={{
+                fontSize: 10, padding: "0 5px", lineHeight: "16px",
+                background: DEAL_TYPE_CFG[record.dealType]?.bg || "#f5f5f5",
+                color: DEAL_TYPE_CFG[record.dealType]?.color || "#555",
+                border: "none", borderRadius: 4,
+              }}>
+                {DEAL_TYPE_CFG[record.dealType]?.label || record.dealType}
+              </Tag>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
-      title: "Agent / Agency",
+      title: "Agent / Advisor",
       key: "agent",
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{record.agentName || "—"}</div>
-          {record.agencyName && <div style={{ fontSize: 12, color: T.gray }}>{record.agencyName}</div>}
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{record.agentName || "—"}</div>
+          {record.agencyName && (
+            <div style={{ fontSize: 11, color: T.gray }}>{record.agencyName}</div>
+          )}
         </div>
       ),
     },
     {
       title: "Referral Partner",
-      dataIndex: "partnerName",
-      key: "partnerName",
-      render: (text) => text || "—",
+      key: "referral",
+      render: (_, record) => {
+        if (!record.partnerName) return <span style={{ color: "#ccc" }}>—</span>;
+        const refStatus = record.referralCommissionStatus;
+        const refCfg = refStatus ? COMMISSION_STATUS[refStatus] : null;
+        return (
+          <div>
+            <div style={{ fontWeight: 500, fontSize: 13 }}>{record.partnerName}</div>
+            {record.referralAmount > 0 && (
+              <div style={{ fontSize: 11, color: T.success, fontWeight: 700 }}>
+                {fmt(record.referralAmount)}
+              </div>
+            )}
+            {refCfg && (
+              <Tag style={{
+                fontSize: 10, padding: "0 5px", lineHeight: "16px",
+                background: refCfg.bg, color: refCfg.color,
+                border: `1px solid ${refCfg.color}30`, borderRadius: 4,
+              }}>
+                {refCfg.label}
+              </Tag>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Property",
       dataIndex: "propertyName",
       key: "propertyName",
       ellipsis: true,
+      render: (text, record) => (
+        <div>
+          <div style={{ fontSize: 13 }}>{text || "—"}</div>
+          {record.propertySubType && (
+            <div style={{ fontSize: 11, color: T.gray, textTransform: "capitalize" }}>
+              {record.propertySubType.replace(/_/g, " ")}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Transaction Value",
       dataIndex: "transactionValue",
       key: "transactionValue",
       align: "right",
-      render: (val) => `AED ${(val || 0).toLocaleString()}`,
+      render: (val) => <span style={{ fontSize: 13 }}>{fmt(val)}</span>,
     },
     {
-      title: "Comm. %",
-      dataIndex: "commissionRate",
-      key: "commissionRate",
-      align: "center",
-      render: (val) => val ? `${val}%` : "—",
-    },
-    {
-      title: "Commission Amount",
-      dataIndex: "commissionAmount",
-      key: "commissionAmount",
+      title: "Commission",
+      key: "commission",
       align: "right",
-      render: (val) => (
-        <span style={{ fontWeight: 700, color: T.success }}>
-          AED {(val || 0).toLocaleString()}
-        </span>
+      render: (_, record) => (
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontWeight: 700, color: T.success, fontSize: 14 }}>
+            {fmt(record.commissionAmount)}
+          </div>
+          {record.commissionRate && (
+            <div style={{ fontSize: 11, color: T.gray }}>{record.commissionRate}%</div>
+          )}
+        </div>
       ),
     },
     {
       title: "Status",
       dataIndex: "commissionStatus",
       key: "commissionStatus",
+      width: 110,
       render: (status) => {
         const cfg = COMMISSION_STATUS[status] || COMMISSION_STATUS.pending;
         return (
-          <Tag
-            style={{
-              borderRadius: 12, fontWeight: 600,
-              background: cfg.bg, color: cfg.color,
-              border: `1px solid ${cfg.color}30`,
-            }}
-          >
+          <Tag style={{
+            borderRadius: 12, fontWeight: 600, fontSize: 11,
+            background: cfg.bg, color: cfg.color,
+            border: `1px solid ${cfg.color}30`,
+          }}>
             {cfg.icon} {cfg.label}
           </Tag>
         );
       },
     },
     {
+      title: "Closed",
+      dataIndex: "closedAt",
+      key: "closedAt",
+      width: 90,
+      render: (v) => v ? (
+        <span style={{ fontSize: 11, color: T.gray }}>
+          {dayjs(v).format("DD MMM YY")}
+        </span>
+      ) : "—",
+    },
+    {
       title: "Actions",
       key: "actions",
       align: "center",
-      width: 150,
-      render: (_, record) => {
-        if (record.commissionStatus === "pending") {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handleConfirm(record)}
-              style={{ background: T.info, borderColor: T.info, borderRadius: 6 }}
-            >
+      width: 140,
+      render: (_, record) => (
+        <Space size={4}>
+          {record.commissionStatus === "pending" && (
+            <Button size="small" type="primary"
+              onClick={(e) => { e.stopPropagation(); handleStatusAction(record, "confirmed"); }}
+              style={{ background: T.info, borderColor: T.info, borderRadius: 6, fontSize: 11 }}>
               Confirm
             </Button>
-          );
-        }
-        if (record.commissionStatus === "confirmed") {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handlePay(record)}
-              style={{ background: T.success, borderColor: T.success, borderRadius: 6 }}
-            >
+          )}
+          {record.commissionStatus === "confirmed" && (
+            <Button size="small" type="primary"
+              onClick={(e) => { e.stopPropagation(); handleStatusAction(record, "paid"); }}
+              style={{ background: T.success, borderColor: T.success, borderRadius: 6, fontSize: 11 }}>
               Mark Paid
             </Button>
-          );
-        }
-        return null;
-      },
+          )}
+          <Tooltip title="View Details">
+            <Button size="small" icon={<SearchOutlined />}
+              onClick={(e) => { e.stopPropagation(); handleRowClick(record); }}
+              style={{ borderRadius: 6 }} />
+          </Tooltip>
+        </Space>
+      ),
     },
   ];
 
-  // ── Stats card configuration ───────────────────────────────────────────────
-  const statsCards = [
-    {
-      key: "totalPool",
-      label: "Total Commission Pool",
-      icon: <DollarOutlined />,
-      color: T.primary,
-      bg: T.primaryLight,
-    },
-    {
-      key: "pending",
-      label: "Pending",
-      icon: <ClockCircleOutlined />,
-      color: T.warning,
-      bg: T.warningLight,
-    },
-    {
-      key: "confirmed",
-      label: "Confirmed",
-      icon: <CheckCircleOutlined />,
-      color: T.info,
-      bg: T.infoLight,
-    },
-    {
-      key: "paid",
-      label: "Paid",
-      icon: <WalletOutlined />,
-      color: T.success,
-      bg: T.successLight,
-    },
+  // ── Stats cards ───────────────────────────────────────────────────────────────
+  const statCards = [
+    { label: "Total Pool",  icon: <DollarOutlined />,      color: T.primary, bg: T.primaryLight, value: fmt(stats.totalPool) },
+    { label: "Pending",     icon: <ClockCircleOutlined />, color: T.warning, bg: T.warningLight, value: fmt(stats.pending),   sub: "Awaiting confirmation" },
+    { label: "Confirmed",   icon: <CheckCircleOutlined />, color: T.info,    bg: T.infoLight,    value: fmt(stats.confirmed), sub: "Awaiting payment" },
+    { label: "Paid",        icon: <WalletOutlined />,      color: T.success, bg: T.successLight, value: fmt(stats.paid),      sub: "Disbursed" },
   ];
 
   return (
     <div style={{ padding: "28px 32px", background: "#faf5ff", minHeight: "100vh" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <Title level={3} style={{ color: T.primary, margin: 0 }}>
-            <DollarOutlined style={{ marginRight: 8 }} /> Commission Management
+            <DollarOutlined style={{ marginRight: 8 }} />Commission Ledger
           </Title>
-          <Text type="secondary">Approve, track and pay out all commissions</Text>
+          <Text type="secondary">
+            Track, confirm and pay all commissions · {pagination.total} records
+          </Text>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchCommissions(1, 10, statusFilter, searchText)}>
+          <Button icon={<ReloadOutlined />}
+            onClick={() => fetchCommissions(1, pagination.pageSize)}>
             Refresh
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            onClick={handleExport}
+            style={{ background: T.primary, borderColor: T.primary, color: "#fff", borderRadius: 8 }}
+          >
+            Export CSV
           </Button>
         </Space>
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stats ── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {statsCards.map((card) => (
-          <Col xs={24} sm={12} lg={6} key={card.key}>
-            <Card
-              bordered={false}
-              style={{
-                borderRadius: 14,
-                border: `1px solid ${T.border}`,
-                boxShadow: "0 1px 4px rgba(92,3,155,0.06)",
-              }}
-              bodyStyle={{ padding: "16px 20px" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 12, color: T.gray, marginBottom: 4, fontWeight: 500 }}>
-                    {card.label}
-                  </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: card.color }}>
-                    AED {(stats[card.key] || 0).toLocaleString()}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: card.bg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: card.color,
-                    fontSize: 20,
-                  }}
-                >
-                  {card.icon}
-                </div>
-              </div>
-            </Card>
+        {statCards.map((c) => (
+          <Col xs={24} sm={12} lg={6} key={c.label}>
+            <StatCard {...c} />
           </Col>
         ))}
       </Row>
 
-      {/* Filters */}
-      <Card
-        bordered={false}
-        style={{
-          borderRadius: 14, border: `1px solid ${T.border}`,
-          marginBottom: 20, padding: "12px 20px",
-        }}
-        bodyStyle={{ padding: 0 }}
-      >
-        <Space wrap>
-          <Input
-            prefix={<SearchOutlined style={{ color: T.gray }} />}
-            placeholder="Search by agent, partner, property..."
-            style={{ width: 280, borderRadius: 8 }}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onPressEnter={() => fetchCommissions(1, 10, statusFilter, searchText)}
-            allowClear
-          />
-          <Select
-            style={{ width: 150, borderRadius: 8 }}
-            value={statusFilter}
-            onChange={(val) => {
-              setStatusFilter(val);
-              fetchCommissions(1, 10, val, searchText);
-            }}
-          >
-            <Option value="all">All Statuses</Option>
-            <Option value="pending">Pending</Option>
-            <Option value="confirmed">Confirmed</Option>
-            <Option value="paid">Paid</Option>
-          </Select>
-          <Button
-            type="primary"
-            icon={<FilterOutlined />}
-            onClick={() => fetchCommissions(1, 10, statusFilter, searchText)}
-            style={{ background: T.primary, borderColor: T.primary, borderRadius: 8 }}
-          >
-            Apply
-          </Button>
-        </Space>
+      {/* ── Filters ── */}
+      <Card bordered={false}
+        style={{ borderRadius: 14, border: `1px solid ${T.border}`, marginBottom: 20 }}
+        bodyStyle={{ padding: "14px 20px" }}>
+        <Row gutter={[10, 10]} align="middle">
+          <Col xs={24} sm={10} md={7}>
+            <Input
+              prefix={<SearchOutlined style={{ color: T.gray }} />}
+              placeholder="Search agent, partner, property..."
+              value={filters.search}
+              onChange={(e) => setF("search", e.target.value)}
+              onPressEnter={() => fetchCommissions(1, pagination.pageSize)}
+              allowClear
+              style={{ borderRadius: 8 }}
+            />
+          </Col>
+
+          <Col xs={12} sm={6} md={3}>
+            <Select style={{ width: "100%" }} value={filters.status}
+              onChange={(v) => setF("status", v)}>
+              <Option value="all">All Status</Option>
+              <Option value="pending">Pending</Option>
+              <Option value="confirmed">Confirmed</Option>
+              <Option value="paid">Paid</Option>
+            </Select>
+          </Col>
+
+          <Col xs={12} sm={6} md={3}>
+            <Select style={{ width: "100%" }} value={filters.dealType}
+              onChange={(v) => setF("dealType", v)} placeholder="Deal Type">
+              <Option value="">All Types</Option>
+              <Option value="sale">Sale</Option>
+              <Option value="lease">Lease</Option>
+            </Select>
+          </Col>
+
+          <Col xs={12} sm={6} md={3}>
+            <Select style={{ width: "100%" }} value={filters.agentType}
+              onChange={(v) => setF("agentType", v)} placeholder="Agent Type">
+              <Option value="">All Roles</Option>
+              <Option value="agent">Agent</Option>
+              <Option value="advisor">Advisor</Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY"
+              onChange={handleDateChange}
+              placeholder={["From Date", "To Date"]} />
+          </Col>
+
+          <Col xs={12} sm={4} md={2}>
+            <Button onClick={handleReset} style={{ borderRadius: 8 }}>Reset</Button>
+          </Col>
+        </Row>
       </Card>
 
-      {/* Table */}
-      <Card
-        bordered={false}
-        style={{ borderRadius: 16, border: `1px solid ${T.border}`, boxShadow: "0 1px 4px rgba(92,3,155,0.06)" }}
-      >
+      {/* ── Table ── */}
+      <Card bordered={false}
+        style={{ borderRadius: 16, border: `1px solid ${T.border}`, boxShadow: "0 1px 4px rgba(92,3,155,0.06)" }}>
         <Table
           columns={columns}
           dataSource={data}
           rowKey="_id"
           loading={loading}
+          scroll={{ x: 1300 }}
+          onRow={(record) => ({
+            onClick: () => handleRowClick(record),
+            style: { cursor: record.dealRecordId ? "pointer" : "default" },
+          })}
+          rowClassName={(_, i) => i % 2 === 0 ? "" : "comm-row-alt"}
           pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: (page, pageSize) => fetchCommissions(page, pageSize, statusFilter, searchText),
+            current:        pagination.current,
+            pageSize:       pagination.pageSize,
+            total:          pagination.total,
             showSizeChanger: true,
             pageSizeOptions: ["10", "20", "50"],
+            showTotal:      (t) => `${t} total records`,
+            onChange: (page, size) => {
+              setPagination(p => ({ ...p, current: page, pageSize: size }));
+              fetchCommissions(page, size);
+            },
           }}
-          scroll={{ x: 1200 }}
         />
       </Card>
+
+      <style>{`
+        .comm-row-alt { background: #faf5ff; }
+        .comm-row-alt:hover td { background: #f3e8ff !important; }
+      `}</style>
     </div>
   );
 };

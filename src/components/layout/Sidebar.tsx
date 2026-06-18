@@ -76,12 +76,10 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       { title: 'Leaderboard',     to: '/dashboard/admin/referral-leaderboard' },
     ],
   },
-  // {
-  //   title: 'Audit Logs', icon: 'fas fa-clipboard-list',
-  //   submenus: [
-  //     { title: 'All Logs', to: '/dashboard/admin/audit-logs' },
-  //   ],
-  // },
+  {
+    title: 'Audit Logs', icon: 'fas fa-shield-alt',
+    to: '/dashboard/admin/audit-logs',
+  },
   {
     title: 'Analytics & Reporting', icon: 'fas fa-chart-line',
     submenus: [
@@ -223,6 +221,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, mobileOpen, onCloseMobile 
   }, [location.pathname, navItems]);
 
   const handleLogout = async () => {
+    try {
+      await apiService.post('/grid/audit/logout', {});
+    } catch { /* fire-and-forget */ }
     await dispatch(logoutUser(undefined));
     toast.success('Logged out successfully');
     navigate('/login', { replace: true });

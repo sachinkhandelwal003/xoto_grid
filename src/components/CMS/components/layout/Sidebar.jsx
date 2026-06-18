@@ -210,6 +210,13 @@ const CUSTOM_ROLE_LINKS = {
       ]
     },
 
+    /* ── Audit Logs ── */
+    {
+      title: "Audit Logs",
+      path: "/dashboard/{roleSlug}/audit-logs",
+      icon: "fas fa-shield-alt",
+    },
+
     /* ── Content Management ── */
     // {
     //   title: "Content Management",
@@ -731,7 +738,7 @@ const roleSlugMap = {
 
 const ROLE_MODULE_ORDER = {
   '0': ['Dashboard', "All Estimation", "Deals", 'Xoto Partners', 'Projects', 'Customers', 'Packages', 'Estimate master', 'Consultation Bookings', 'All Users', 'Products', 'Seller B2C', 'Request', 'Payout', 'Module', 'properties', 'Permission', 'Role', 'Inventory', 'Settings'],
-  '1': ['Dashboard', 'Grid Admin'],
+  '1': ['Dashboard', 'Grid Admin', 'Audit Logs'],
   '5': ['Dashboard', 'Products', 'My Products', 'Inventory', 'Orders', 'Payout', 'Settings'],
   '6': ['Dashboard', 'Products', 'Projects', 'Inventory', 'Payout'],
   '7': ['Dashboard', 'My Projects', 'All Projects', 'Add Projects', 'Payout'],
