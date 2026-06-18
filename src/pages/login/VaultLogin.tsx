@@ -16,7 +16,7 @@ import { GRID_ROLE_SLUG_MAP } from '../../types/auth';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
 
-const PHONE_LENGTH_RULES = { "AE": 9, "IN": 10, "SA": 9, "US": 10, "CA": 10, "GB": 10, "AU": 9 };
+const PHONE_LENGTH_RULES: Record<string, number> = { AE: 9, IN: 10, SA: 9, US: 10, CA: 10, GB: 10, AU: 9 };
 
 interface VaultRole {
   id: string;
@@ -28,8 +28,6 @@ interface VaultRole {
   apiEndpoint: string;
   roleCode: string;
 }
-
-
 
 const GRID_ROLES: VaultRole[] = [
   {
@@ -106,8 +104,6 @@ const VaultLogin: React.FC = () => {
   const { login, isAuthenticated, user, token } = useAuth();
   const { loading } = useSelector((s: RootState) => s.auth);
 
-  const rolesList = GRID_ROLES;
-
   const [view, setView] = useState<'select' | 'login'>('select');
   const [selectedRole, setSelectedRole] = useState<VaultRole | null>(null);
   const [error, setError] = useState('');
@@ -144,15 +140,14 @@ const VaultLogin: React.FC = () => {
     form.resetFields();
   };
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: { email?: string; password: string; agent_phone?: string }) => {
     if (!selectedRole) return;
     setError('');
     try {
       if (selectedRole.id === 'admin') {
-        // Grid Admin login - exactly as requested
-        await login("/auth/login", { 
-          email: values.email.trim(), 
-          password: values.password, 
+        await login('/auth/login', {
+          email: values.email!.trim(),
+          password: values.password,
         });
       } else if (selectedRole.id === 'agent' || selectedRole.id === 'gridreferralpartner') {
         const selectedCountryData = Country.getCountryByCode(countryIso);
@@ -161,7 +156,7 @@ const VaultLogin: React.FC = () => {
         await login(selectedRole.apiEndpoint, { phone: fullPhone, password: values.password });
       } else {
         await login(selectedRole.apiEndpoint, {
-          email: values.email.trim().toLowerCase(),
+          email: values.email!.trim().toLowerCase(),
           password: values.password,
         });
       }
@@ -379,7 +374,7 @@ const VaultLogin: React.FC = () => {
                   </div>
 
                   <div className="vl-role-gap" style={{ display:'flex',flexDirection:'column',gap:11 }}>
-                    {rolesList.map((role,i) => (
+                    {GRID_ROLES.map((role, i) => (
                       <motion.div
                         key={role.id}
                         initial={{ opacity:0,y:14 }} animate={{ opacity:1,y:0 }}
