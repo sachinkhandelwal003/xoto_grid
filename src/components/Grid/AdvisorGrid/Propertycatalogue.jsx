@@ -292,7 +292,7 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Generation failed");
     } finally {
-      setGenerating(false);
+      setGenerating(false); 
     }
   };
 
