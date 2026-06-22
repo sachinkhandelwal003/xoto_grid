@@ -174,7 +174,7 @@ const VaultLogin: React.FC = () => {
       } else {
         toast.error(msg, { position: 'top-center' });
       }
-      setError(msg);
+      setError(msg);  
     }
   };
 
