@@ -798,14 +798,15 @@ export default function AgentProjectDetails() {
       />
 
       {/* Schedule Viewing Modal */}
-      {showViewingModal && property && (
-        <ScheduleViewingModal
-          propertyId={property._id}
-          propertyName={property.propertyName || property.projectName}
-          onClose={() => setShowViewingModal(false)}
-          onSuccess={() => message.success("Viewing request submitted! Admin will confirm shortly.")}
-        />
-      )}
+     {showViewingModal && property && (
+  <ScheduleViewingModal
+    property={property}
+    propertyId={property._id}
+    propertyName={property.propertyName || property.projectName}
+    onClose={() => setShowViewingModal(false)}
+    onSuccess={() => message.success("Viewing request submitted! Admin will confirm shortly.")}
+  />
+)}
 
       {/* Top Bar */}
       <div style={{ background: "#fff", borderBottom: "1px solid #f1f5f9", position: "sticky", top: 0, zIndex: 30, boxShadow: "0 1px 8px rgba(0,0,0,0.04)", padding: "14px 32px", marginBottom: 32 }}>
@@ -1167,10 +1168,12 @@ export default function AgentProjectDetails() {
                   style={{ width: "100%", height: 52, borderRadius: 16, border: `1px solid ${P}`, background: "#fff", color: P, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <UserOutlined /> Add Lead
                 </button>
-                <button onClick={() => setShowViewingModal(true)}
-                  style={{ width: "100%", height: 52, borderRadius: 16, border: `1px solid #0369a1`, background: "#f0f9ff", color: "#0369a1", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <ScheduleOutlined /> Schedule Viewing
-                </button>
+              {property.canVisit && (
+  <button onClick={() => setShowViewingModal(true)}
+    style={{ width: "100%", height: 52, borderRadius: 16, border: `1px solid #0369a1`, background: "#f0f9ff", color: "#0369a1", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+    <ScheduleOutlined /> Schedule Viewing
+  </button>
+)}
               </div>
 
               {/* Compliance Card */}

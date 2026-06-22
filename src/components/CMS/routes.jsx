@@ -307,6 +307,7 @@ import GridListingreports from "../Grid/GridAdmin/GridListingreports";
 import GridLeaderboard from "../Grid/GridAdmin/GridLeaderboard";
 import GridSetting from "../Grid/GridAdmin/Gridsetting";
 import GridNotification from "../Grid/GridAdmin/GridNotification";
+import AdminViewingRequests from "../Grid/GridAdmin/AdminViewingRequests";
 
 
 
@@ -663,7 +664,7 @@ const CmsRoutes = () => {
       <Route path="developer/property/:id" element={<PropertyDetailPage />} />
       <Route path="/admin/inventory" element={<DeveloperInventory />} />
       <Route path="gridnotification" element={<GridNotification/>}/>
-
+<Route path="viewing-requests" element={<AdminViewingRequests />} />
       
       <Route path="/grid/allusers" element={<AllUsers/>}/>
       <Route path="/GridAdmin/propertyleads" element={<PlatformLeads />} />
@@ -785,6 +786,7 @@ const CmsRoutes = () => {
       <Route path="dashboard/myprofile" element={<GridAdvisorProfile />} />
       <Route path="gridAdvisorLeads" element={<AdvisorLeadsPage />} />
       <Route path="property-catalogue" element={<PropertyCatalogue />} />
+      
 
 
 

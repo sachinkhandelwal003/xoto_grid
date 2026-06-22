@@ -12,16 +12,8 @@ import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
 const PRIMARY = '#5c039b';
 const PRIMARY_LIGHT = '#fdf4f8';
-// const GRADIENT = 'linear-gradient(135deg, #5c039b 0%, #9d174d 100%)';
 
-// Custom AED Icon/Text for Budget Inputs
-const AEDIcon = ({ className }) => (
-  <span className={`${className} text-[10px] font-extrabold tracking-widest mt-0.5`}>AED</span>
-);
-
-// ─────────────────────────────────────────────────────────────
-// FORM FIELD COMPONENTS
-// ─────────────────────────────────────────────────────────────
+// ─── Components ─────────────────────────────────────────────────────────────
 const Label = ({ children, required }) => (
   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">
     {children} {required && <span className="text-red-500 normal-case">*</span>}
@@ -88,9 +80,7 @@ const SectionCard = ({ title, icon: Icon, children, headerExtra }) => (
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────
-// LIVE MATCH PANEL COMPONENTS
-// ─────────────────────────────────────────────────────────────
+// ─── Match Panel ─────────────────────────────────────────────────────────────
 const MATCH_CONFIG = {
   exact:   { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', badge: '#16a34a', label: 'Exact Match',   icon: FiCheckCircle },
   relaxed: { bg: '#fffbeb', color: '#d97706', border: '#fde68a', badge: '#d97706', label: 'Relaxed Match', icon: FiActivity },
@@ -98,29 +88,32 @@ const MATCH_CONFIG = {
   none:    { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', badge: '#dc2626', label: 'No Matches',    icon: FiXCircle },
 };
 
-const PropertyMatchCard = ({ property, matchType, onSelect }) => {
+const PropertyMatchCard = ({ property, matchType, selected, onToggle }) => {
   const price = property.price_min || property.price || 0;
   const loc   = [property.area, property.city].filter(Boolean).join(', ');
   const mc    = MATCH_CONFIG[matchType] || MATCH_CONFIG.broad;
-  const inventory = getInventoryList(property);
-  const selectedUnit = property.interested_inventory_unit || null;
 
   return (
-<div
-  onClick={() => onSelect?.(property)}
-  className="border border-gray-100 rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow duration-200 group cursor-pointer"
->      <div className="h-20 bg-slate-100 relative overflow-hidden flex items-center justify-center">
+    <div
+      onClick={() => onToggle(property)}
+      className={`border rounded-xl overflow-hidden bg-white hover:shadow-md transition-all duration-200 group cursor-pointer relative
+        ${selected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-50' : 'border-gray-100 hover:border-purple-300'}`}
+    >
+      {selected && (
+        <div className="absolute top-2 right-2 z-10 bg-purple-600 text-white rounded-full p-1 shadow-lg">
+          <FiCheckCircle size={14} />
+        </div>
+      )}
+      <div className="h-20 bg-slate-100 relative overflow-hidden flex items-center justify-center">
         {property.mainLogo ? (
           <img src={property.mainLogo} alt={property.propertyName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <FiImage size={24} className="text-slate-300" />
         )}
-        
-        <span className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1"
+        <span className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm"
           style={{ background: mc.badge, color: '#fff' }}>
           {matchType}
         </span>
-        
         {property.isFeatured && (
           <span className="absolute top-2 left-2 bg-amber-900 text-amber-100 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
             <FiStar size={8} /> Featured
@@ -143,7 +136,6 @@ const PropertyMatchCard = ({ property, matchType, onSelect }) => {
             {property.bedrooms > 0 ? `${property.bedrooms} BR` : property.bedroomType === 'studio' ? 'Studio' : ''}
           </div>
         </div>
-        <InventorySummary units={inventory} selectedUnit={selectedUnit} />
       </div>
     </div>
   );
@@ -155,14 +147,14 @@ const LiveMatchPanel = ({
   matchType,
   matchNote,
   hasFiltered,
-  onSelectProperty
+  selectedProperties,
+  onToggleProperty
 }) => {
   const mc = MATCH_CONFIG[matchType] || null;
   const McIcon = mc?.icon;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden sticky top-24">
-      
       {/* Header */}
       <div className="px-5 py-4 text-white flex items-center justify-between bg-[#5c039b]">
         <div>
@@ -182,8 +174,6 @@ const LiveMatchPanel = ({
 
       {/* Body */}
       <div className="p-4 bg-slate-50/50 min-h-[300px]">
-        
-        {/* Empty state */}
         {!hasFiltered && (
           <div className="text-center py-12 px-4">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: PRIMARY_LIGHT, color: PRIMARY }}>
@@ -196,7 +186,6 @@ const LiveMatchPanel = ({
           </div>
         )}
 
-        {/* Loading */}
         {hasFiltered && loading && (
           <div className="text-center py-12 px-4">
             <FiLoader size={28} className="animate-spin mx-auto mb-4" style={{ color: PRIMARY }} />
@@ -204,7 +193,6 @@ const LiveMatchPanel = ({
           </div>
         )}
 
-        {/* Results */}
         {hasFiltered && !loading && (
           <>
             {mc && (
@@ -236,48 +224,30 @@ const LiveMatchPanel = ({
               </div>
             )}
 
-           {matches.length > 0 && (
-<div>
+            {matches.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    Showing {matches.length} Properties
+                  </div>
+                  <div className="text-[10px] bg-purple-50 text-purple-700 px-2 py-1 rounded-full font-bold">
+                    Click to select
+                  </div>
+                </div>
 
-{/* Summary */}
-
-<div className="flex items-center justify-between mb-3 px-1">
-<div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-Showing {matches.length} Properties
-</div>
-
-<div className="text-[10px] bg-purple-50 text-purple-700 px-2 py-1 rounded-full font-bold">
-Smart AI Match
-</div>
-</div>
-
-{/* Grid */}
-
-<div className="
-grid
-grid-cols-1
-gap-3
-max-h-[650px]
-overflow-y-auto
-pr-2
-scrollbar-thin
-scrollbar-thumb-purple-200
-scrollbar-track-transparent
-">
-
-{matches.map((p,i)=>(
- <PropertyMatchCard
-  key={p._id || i}
-  property={p}
-  matchType={matchType}
-  onSelect={onSelectProperty}
-/>
-))}
-
-</div>
-
-</div>
-)}
+                <div className="grid grid-cols-1 gap-3 max-h-[650px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-purple-200 scrollbar-track-transparent">
+                  {matches.map((p) => (
+                    <PropertyMatchCard
+                      key={p._id || p.id}
+                      property={p}
+                      matchType={matchType}
+                      selected={selectedProperties.some(sp => sp._id === p._id)}
+                      onToggle={onToggleProperty}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -285,9 +255,7 @@ scrollbar-track-transparent
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// DATA
-// ─────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 const UAE_POPULAR_AREAS = [
   'Dubai Marina', 'Downtown Dubai', 'Business Bay', 'Jumeirah Village Circle',
   'Jumeirah Lake Towers', 'Palm Jumeirah', 'Dubai Hills Estate', 'Arabian Ranches',
@@ -352,10 +320,12 @@ const InventorySummary = ({ units = [], selectedUnit }) => {
   );
 };
 
+// ─── AED Icon ────────────────────────────────────────────────────────────────
+const AEDIcon = ({ className }) => (
+  <span className={`${className} text-[10px] font-extrabold tracking-widest mt-0.5`}>AED</span>
+);
 
-// ─────────────────────────────────────────────────────────────
-// MAIN: CREATE LEAD PAGE
-// ─────────────────────────────────────────────────────────────
+// ─── MAIN ────────────────────────────────────────────────────────────────────
 const CreateAgentLead = ({ navigate }) => {
   const routerNavigate = useNavigate();
   const goTo = navigate || routerNavigate;
@@ -368,20 +338,25 @@ const CreateAgentLead = ({ navigate }) => {
     bedrooms: '', bathrooms: '',
     area_sqft_min: '', area_sqft_max: '',
     furnished: 'any', ready_by_date: '', additional_notes: '',
-    enquiry_type: '', listing_id: '', inventory_unit_id: '',
+    enquiry_type: '', 
+    // We'll keep listing_id for backward compatibility (first selected)
+    listing_id: '', 
+    // We'll add a new field for all selected property IDs
+    listing_ids: [],
   });
+
+  // Selected properties (full objects) for display
+  const [selectedProperties, setSelectedProperties] = useState([]);
 
   const [locationInputs, setLocationInputs] = useState(['']);
   const [properties, setProperties]         = useState([]);
   const [propertyInventory, setPropertyInventory] = useState([]);
-  const [selectedProperty, setSelectedProperty] = useState(null);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [errors, setErrors]       = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError]   = useState('');
 
-  // ── Live matching state ───────────────────────────────────
   const [liveMatches,  setLiveMatches]  = useState([]);
   const [matchLoading, setMatchLoading] = useState(false);
   const [matchType,    setMatchType]    = useState('');
@@ -394,6 +369,7 @@ const CreateAgentLead = ({ navigate }) => {
     return [...new Set([...UAE_POPULAR_AREAS, ...cities])].sort((a, b) => a.localeCompare(b));
   }, []);
 
+  // ── Fetch properties for dropdown ────────────────────────────────────────
   useEffect(() => {
     const fetchProperties = async () => {
       setLoadingProperties(true);
@@ -409,7 +385,7 @@ const CreateAgentLead = ({ navigate }) => {
     fetchProperties();
   }, []);
 
-
+  // ── Fetch inventory when a single property is selected ──────────────────
   useEffect(() => {
     const fetchInventoryForSelectedProperty = async () => {
       if (!form.listing_id) {
@@ -431,6 +407,7 @@ const CreateAgentLead = ({ navigate }) => {
     fetchInventoryForSelectedProperty();
   }, [form.listing_id]);
 
+  // ── Live matching debounce ──────────────────────────────────────────────
   useEffect(() => {
     const hasAnyCriteria =
       form.property_type || form.budget_max || form.budget_min ||
@@ -540,6 +517,43 @@ const CreateAgentLead = ({ navigate }) => {
   const removeLocation = (i) => setLocationInputs((prev) => prev.filter((_, idx) => idx !== i));
   const updateLocation = (i, val) => setLocationInputs((prev) => prev.map((v, idx) => idx === i ? val : v));
 
+  // ── Toggle property selection ────────────────────────────────────────────
+  const toggleProperty = (property) => {
+    const isSelected = selectedProperties.some(p => p._id === property._id);
+    let newSelected = [];
+    let newIds = [];
+
+    if (isSelected) {
+      // Remove
+      newSelected = selectedProperties.filter(p => p._id !== property._id);
+    } else {
+      // Add
+      newSelected = [...selectedProperties, property];
+    }
+
+    // Update state
+    setSelectedProperties(newSelected);
+    newIds = newSelected.map(p => p._id);
+    setForm(prev => ({
+      ...prev,
+      listing_ids: newIds,
+      listing_id: newIds.length > 0 ? newIds[0] : '', // first one for backward compatibility
+    }));
+  };
+
+  // ── Remove a selected property via chip ─────────────────────────────────
+  const removeSelectedProperty = (propertyId) => {
+    const newSelected = selectedProperties.filter(p => p._id !== propertyId);
+    setSelectedProperties(newSelected);
+    const newIds = newSelected.map(p => p._id);
+    setForm(prev => ({
+      ...prev,
+      listing_ids: newIds,
+      listing_id: newIds.length > 0 ? newIds[0] : '',
+    }));
+  };
+
+  // ── Validation ───────────────────────────────────────────────────────────
   const validate = () => {
     const errs = {};
     if (!form.first_name.trim()) errs.first_name = 'First name is required';
@@ -548,6 +562,7 @@ const CreateAgentLead = ({ navigate }) => {
     return errs;
   };
 
+  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
@@ -574,7 +589,11 @@ const CreateAgentLead = ({ navigate }) => {
         ...(form.ready_by_date    && { ready_by_date:    form.ready_by_date    }),
         ...(form.additional_notes && { additional_notes: form.additional_notes }),
         ...(form.enquiry_type && { enquiry_type: form.enquiry_type }),
-        ...(form.listing_id   && { listing_id:   form.listing_id   }),
+        // Send all selected property IDs as an array
+        listing_ids: form.listing_ids,
+        // Keep listing_id for backward compatibility (first selected)
+        ...(form.listing_id && { listing_id: form.listing_id }),
+        // If you want to send inventory unit for the first property, you can keep that too
         ...(form.inventory_unit_id && { inventory_unit_id: form.inventory_unit_id }),
       };
 
@@ -601,7 +620,7 @@ const CreateAgentLead = ({ navigate }) => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-gray-800">
 
-      {/* ── Top Bar ── */}
+      {/* Top Bar */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -616,8 +635,7 @@ const CreateAgentLead = ({ navigate }) => {
               <p className="text-xs font-medium text-gray-400 mt-0.5 tracking-wider uppercase">Add a new client requirement</p>
             </div>
           </div>
-
-          {/* Match count chip in header */}
+          {/* Match count */}
           {hasFiltered && !matchLoading && matchType && matchType !== 'none' && (
             <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs uppercase tracking-wider shadow-sm"
               style={{ background: MATCH_CONFIG[matchType]?.bg, color: MATCH_CONFIG[matchType]?.color, border: `1px solid ${MATCH_CONFIG[matchType]?.border}` }}>
@@ -770,89 +788,108 @@ const CreateAgentLead = ({ navigate }) => {
                 </div>
               </div>
 
-              {/* Mobile — live match panel */}
+              {/* Selected Properties Chips (shown when any selected) */}
+              {selectedProperties.length > 0 && (
+                <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FiCheckCircle className="text-green-600" size={16} />
+                    <span className="text-sm font-bold text-green-800">Selected Properties</span>
+                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full ml-auto">{selectedProperties.length} selected</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProperties.map((p) => (
+                      <div key={p._id} className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1 text-xs font-medium text-purple-700">
+                        <span className="truncate max-w-[120px]">{p.propertyName}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedProperty(p._id)}
+                          className="hover:text-red-500 transition-colors"
+                        >
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile live match panel */}
               <div className="xl:hidden mt-2">
-               <LiveMatchPanel
-  matches={liveMatches}
-  loading={matchLoading}
-  matchType={matchType}
-  matchNote={matchNote}
-  hasFiltered={hasFiltered}
-  onSelectProperty={(property) => {
-    console.log("Selected Property:", property);
-
-    setSelectedProperty(property);
-
-    setForm(prev => ({
-      ...prev,
-      listing_id: property._id
-    }));
-  }}
-/>
+                <LiveMatchPanel
+                  matches={liveMatches}
+                  loading={matchLoading}
+                  matchType={matchType}
+                  matchNote={matchNote}
+                  hasFiltered={hasFiltered}
+                  selectedProperties={selectedProperties}
+                  onToggleProperty={toggleProperty}
+                />
               </div>
 
               {/* Section 4: Additional Info */}
               <SectionCard title="Additional Information" icon={FiFileText}>
-                  <SelectField label="Enquiry Type" value={form.enquiry_type} onChange={(e) => set('enquiry_type', e.target.value)}>
-                    <option value="">Auto (from transaction type)</option>
-                    <option value="buy">Buy</option>
-                    <option value="rent">Rent</option>
-                    <option value="sell">Sell</option>
-                    <option value="general_enquiry">General Enquiry</option>
-                    <option value="consultation">Consultation</option>
-                  </SelectField>
-                  {selectedProperty && (
-  <div className="md:col-span-2">
-    <Label>Selected Property</Label>
-
-    <div className="p-4 rounded-xl border border-green-200 bg-green-50">
-      <div className="font-bold text-green-800">
-        {selectedProperty.propertyName}
-      </div>
-
-      <div className="text-sm text-green-700 mt-1">
-        {selectedProperty.area}, {selectedProperty.city}
-      </div>
-
-      <div className="text-sm font-semibold mt-2">
-        AED {Number(
-          selectedProperty.price_min ||
-          selectedProperty.price ||
-          0
-        ).toLocaleString()}
-      </div>
-    </div>
-  </div>
-)}
-                  {form.listing_id && (
-                    <div>
-                      <Label>Interested Inventory Unit</Label>
-                      <div className="relative">
-                        <select
-                          value={form.inventory_unit_id}
-                          onChange={(e) => set('inventory_unit_id', e.target.value)}
-                          className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-gray-50/50 outline-none appearance-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 transition-all"
-                        >
-                          <option value="">{loadingInventory ? 'Loading inventory...' : 'Select interested unit (optional)'}</option>
-                          {propertyInventory.map((unit) => (
-                            <option key={getInventoryId(unit)} value={getInventoryId(unit)}>{getInventoryLabel(unit)}</option>
-                          ))}
-                        </select>
-                        {loadingInventory
-                          ? <FiLoader size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 animate-spin pointer-events-none" />
-                          : <FiChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                        }
-                      </div>
-                    </div>
-                  )}
+                <SelectField label="Enquiry Type" value={form.enquiry_type} onChange={(e) => set('enquiry_type', e.target.value)}>
+                  <option value="">Auto (from transaction type)</option>
+                  <option value="buy">Buy</option>
+                  <option value="rent">Rent</option>
+                  <option value="sell">Sell</option>
+                  <option value="general_enquiry">General Enquiry</option>
+                  <option value="consultation">Consultation</option>
+                </SelectField>
+                {selectedProperties.length > 0 && (
                   <div className="md:col-span-2">
-                    <TextareaField
-                      label="Additional Notes"
-                      placeholder="Any special requirements or private notes about the client…"
-                      value={form.additional_notes}
-                      onChange={(e) => set('additional_notes', e.target.value)}
-                    />
+                    <Label>Selected Properties</Label>
+                    <div className="space-y-2">
+                      {selectedProperties.map((p) => (
+                        <div key={p._id} className="p-3 rounded-xl border border-green-200 bg-green-50 flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-green-800 text-sm">{p.propertyName}</div>
+                            <div className="text-xs text-green-700">{p.area}, {p.city}</div>
+                            <div className="text-xs font-semibold mt-1">
+                              AED {Number(p.price_min || p.price || 0).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedProperty(p._id)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <FiX size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+                {form.listing_id && (
+                  <div>
+                    <Label>Interested Inventory Unit (for first property)</Label>
+                    <div className="relative">
+                      <select
+                        value={form.inventory_unit_id}
+                        onChange={(e) => set('inventory_unit_id', e.target.value)}
+                        className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-gray-50/50 outline-none appearance-none focus:border-[#5c039b] focus:bg-white focus:ring-4 focus:ring-[#5c039b]/10 transition-all"
+                      >
+                        <option value="">{loadingInventory ? 'Loading inventory...' : 'Select interested unit (optional)'}</option>
+                        {propertyInventory.map((unit) => (
+                          <option key={getInventoryId(unit)} value={getInventoryId(unit)}>{getInventoryLabel(unit)}</option>
+                        ))}
+                      </select>
+                      {loadingInventory
+                        ? <FiLoader size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 animate-spin pointer-events-none" />
+                        : <FiChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      }
+                    </div>
+                  </div>
+                )}
+                <div className="md:col-span-2">
+                  <TextareaField
+                    label="Additional Notes"
+                    placeholder="Any special requirements or private notes about the client…"
+                    value={form.additional_notes}
+                    onChange={(e) => set('additional_notes', e.target.value)}
+                  />
+                </div>
               </SectionCard>
 
               {/* Submit bar */}
@@ -868,7 +905,6 @@ const CreateAgentLead = ({ navigate }) => {
                   <button
                     type="submit" disabled={submitting}
                     className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-70 disabled:transform-none disabled:cursor-not-allowed w-full sm:w-auto bg-[#5c039b]"
-                    
                   >
                     {submitting
                       ? <><FiLoader size={16} className="animate-spin" /> Saving Profile…</>
@@ -880,25 +916,17 @@ const CreateAgentLead = ({ navigate }) => {
             </form>
           </div>
 
-          {/* ── RIGHT: Live Match Panel (desktop only, sticky) ── */}
+          {/* ── RIGHT: Live Match Panel (desktop) ── */}
           <div className="w-[340px] flex-shrink-0 sticky top-28 hidden xl:block">
-        <LiveMatchPanel
-  matches={liveMatches}
-  loading={matchLoading}
-  matchType={matchType}
-  matchNote={matchNote}
-  hasFiltered={hasFiltered}
-  onSelectProperty={(property) => {
-    console.log("Selected Property:", property);
-
-    setSelectedProperty(property);
-
-    setForm(prev => ({
-      ...prev,
-      listing_id: property._id
-    }));
-  }}
-/>
+            <LiveMatchPanel
+              matches={liveMatches}
+              loading={matchLoading}
+              matchType={matchType}
+              matchNote={matchNote}
+              hasFiltered={hasFiltered}
+              selectedProperties={selectedProperties}
+              onToggleProperty={toggleProperty}
+            />
           </div>
         </div>
       </div>

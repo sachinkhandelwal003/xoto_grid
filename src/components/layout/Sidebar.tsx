@@ -42,7 +42,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
       { title: 'Agent Leads',       to: '/dashboard/admin/grid/agentleads' },
       { title: 'Create Lead',       to: '/dashboard/admin/grid/generalleads' },
       { title: 'Referral Leads',    to: '/dashboard/admin/grid/referralleads' },
-      // { title: 'Viewing Requests',  to: '/dashboard/admin/viewing-requests' },
+      { title: 'Viewing Requests',  to: '/dashboard/admin/viewing-requests' },
     ],
   },
   {
@@ -159,7 +159,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
         },
       ],
     },
-    // { title: 'My Viewings', icon: 'fas fa-eye', to: '/dashboard/GridAdvisor/my-viewings' },
+    { title: 'My Viewings', icon: 'fas fa-eye', to: '/dashboard/GridAdvisor/my-viewings' },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/GridAdvisor/leaderboard' },
 
   ],

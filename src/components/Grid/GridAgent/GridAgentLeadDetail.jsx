@@ -1394,7 +1394,9 @@ const GridAgentLeadDetail = () => {
   const [showDeleteConfirm,  setShowDeleteConfirm]  = useState(false);
   const [deleting,           setDeleting]           = useState(false);
   const [showViewingModal,   setShowViewingModal]   = useState(false);
-
+  const [selectedProperties, setSelectedProperties] = useState([]);
+const [loadingSelectedProps, setLoadingSelectedProps] = useState(false);
+const [selectedPropertyForViewing, setSelectedPropertyForViewing] = useState(null);
   // Collapsibles
   const [showHistory, setShowHistory] = useState(false);
   const [showNotes,   setShowNotes]   = useState(true);
@@ -1441,10 +1443,40 @@ const GridAgentLeadDetail = () => {
       setMatchLoading(false);
     }
   }, [id]);
+const fetchSelectedProperties = useCallback(() => {
+  if (!lead) return;
 
-  useEffect(() => {
-    if (id) { fetchLead(); fetchMatches(); }
-  }, [id, fetchLead, fetchMatches]);
+  // listing_ids already populated hai backend se (.populate('listing_ids'))
+  if (Array.isArray(lead.listing_ids) && lead.listing_ids.length > 0) {
+    const populated = lead.listing_ids.filter(p => p && typeof p === 'object' && p._id);
+    if (populated.length > 0) {
+      setSelectedProperties(populated);
+      return;
+    }
+  }
+
+  // Fallback: matched_listings se nikalo jo selected thi
+  if (Array.isArray(lead.matched_listings) && lead.matched_listings.length > 0) {
+    const fromMatched = lead.matched_listings
+      .map(m => m.listing_id)
+      .filter(p => p && typeof p === 'object' && p._id);
+    setSelectedProperties(fromMatched);
+    return;
+  }
+
+  setSelectedProperties([]);
+}, [lead]);
+
+ useEffect(() => {
+  if (id) { fetchLead(); fetchMatches(); }
+}, [id, fetchLead, fetchMatches]);
+
+// Separate effect to fetch selected properties when lead changes
+useEffect(() => {
+  if (lead) {
+    fetchSelectedProperties();
+  }
+}, [lead, fetchSelectedProperties]);
 
   // ── Reactions ────────────────────────────────────────────────────────────
   const handleInventoryChange = (propertyId, inventoryUnitId) => {
@@ -1582,15 +1614,22 @@ const GridAgentLeadDetail = () => {
       {showReqs   && <UpdateRequirementsPanel lead={lead} onClose={() => setShowReqs(false)} onSuccess={handleReqsSuccess} />}
       {showNote   && <NotePanel leadId={id} onClose={() => setShowNote(false)} onAdded={handleNoteAdded} />}
       {showEditLead && <EditLeadModal lead={lead} onClose={() => setShowEditLead(false)} onSuccess={handleEditSuccess} />}
-      {showViewingModal && (
-        <ScheduleViewingModal
-          leadId={lead._id}
-          leadName={`${fn} ${ln}`.trim() || 'Client'}
-          leadPhone={`${cc} ${phone}`.trim()}
-          onClose={() => setShowViewingModal(false)}
-          onSuccess={() => message.success('Viewing request submitted! Admin will confirm shortly.')}
-        />
-      )}
+     {showViewingModal && (
+  <ScheduleViewingModal
+    leadId={lead._id}
+    leadName={`${fn} ${ln}`.trim() || 'Client'}
+    leadPhone={`${cc} ${phone}`.trim()}
+    property={selectedPropertyForViewing}   // ← NEW: pass the selected property
+    onClose={() => {
+      setShowViewingModal(false);
+      setSelectedPropertyForViewing(null);  // ← NEW: clear the property
+    }}
+    onSuccess={() => {
+      message.success('Viewing request submitted! Admin will confirm shortly.');
+      setSelectedPropertyForViewing(null);  // ← NEW: clear the property
+    }}
+  />
+)}
 
       {/* ── DELETE CONFIRM ── */}
       {showDeleteConfirm && (
@@ -1809,7 +1848,7 @@ const GridAgentLeadDetail = () => {
               </div>
 
               {/* Matched Properties */}
-              <SectionBox title="Matched Properties" icon={FiHome}
+              {/* <SectionBox title="Matched Properties" icon={FiHome}
                 action={mc && !matchLoading && (
                   <span className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full"
                     style={{ background: mc.bg, color: mc.color, border: `1px solid ${mc.border}` }}>
@@ -1879,8 +1918,95 @@ const GridAgentLeadDetail = () => {
                     No properties loaded yet.
                   </div>
                 )}
-              </SectionBox>
+              </SectionBox> */}
 
+{/* ── Selected Properties ── */}
+<div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+  <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50">
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: P, color: '#fff' }}>
+      <FiHome size={14} />
+    </div>
+    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex-1">
+      Selected Properties
+      {selectedProperties.length > 0 && (
+        <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">
+          {selectedProperties.length}
+        </span>
+      )}
+    </h4>
+  </div>
+  <div className="p-5">
+    {loadingSelectedProps ? (
+      <div className="text-center py-8">
+        <FiLoader size={20} className="animate-spin mx-auto text-purple-500" />
+        <p className="text-xs text-gray-400 mt-2">Loading properties…</p>
+      </div>
+    ) : selectedProperties.length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {selectedProperties.map((prop) => {
+          const price = prop.price_min || prop.price || 0;
+          const loc = [prop.area, prop.city].filter(Boolean).join(', ');
+          return (
+            <div key={prop._id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+              <div className="h-24 bg-slate-100 relative overflow-hidden">
+                {prop.mainLogo ? (
+                  <img src={prop.mainLogo} alt={prop.propertyName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <FiImage size={24} />
+                  </div>
+                )}
+              </div>
+              <div className="p-3">
+                <div className="text-sm font-bold text-gray-900 truncate">{prop.propertyName}</div>
+                {loc && (
+                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1 truncate">
+                    <FiMapPin size={10} /> {loc}
+                  </div>
+                )}
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
+                  <span className="text-sm font-extrabold" style={{ color: P }}>
+                    {price > 0 ? `AED ${Number(price).toLocaleString()}` : 'On Request'}
+                  </span>
+                  <div className="flex gap-1.5">
+                    {/* Generate PPT button */}
+                    <button
+                      onClick={() => {
+                        setSelectedProperty(prop);
+                        setShowPresentation(true);
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors"
+                    >
+                      <FiFileText size={11} /> Generate PPT
+                    </button>
+                    {/* Schedule Visit button — only if canVisit is true */}
+                    {prop.canVisit && (
+                      <button
+                        onClick={() => {
+                          setSelectedPropertyForViewing(prop);
+                          setShowViewingModal(true);
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                      >
+                        <FiCalendar size={11} /> Schedule Visit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <div className="text-center py-8 text-gray-400">
+        <FiHome size={28} className="mx-auto mb-2 opacity-30" />
+        <p className="text-sm font-medium">No selected properties for this lead.</p>
+        <p className="text-xs">If you selected properties during creation, ensure the backend stores them in <code>listing_ids</code>.</p>
+      </div>
+    )}
+  </div>
+</div>
               {/* Notes */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <button className="w-full flex items-center gap-3 px-5 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors"

@@ -429,6 +429,7 @@ const handleSaveRental = async () => {
       parkingSpaces: Number(values.parkingSpaces || 0),
       hasView: values.hasView || false, 
       viewType: values.viewType || [], 
+      canVisit: Boolean(values.canVisit),
       amenities: values.amenities || [],
       locationHighlights: values.locationHighlights || "",
       investmentPoints: values.investmentPoints || "",
@@ -518,6 +519,7 @@ const handleSubmitSecondary = async () => {
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
       hasView: values.hasView || false, 
       viewType: values.viewType || [], 
+      canVisit: values.canVisit === true,
       amenities: values.amenities || [],
       locationHighlights: values.locationHighlights || "",
       investmentPoints: values.investmentPoints || "",
@@ -752,7 +754,7 @@ qrCode: !offplanPermitOnly ? null : offplanQrUrl,
               </Form.Item>
             </Col>
             <Col xs={12} md={4}>
-              <Form.Item name="hasView" label="Has View?" valuePropName="checked"><Switch /></Form.Item>
+             <Form.Item name="canVisit" label="Can Visit?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
             <Col span={24}>
               <Form.Item name="description" label="Description" rules={[{ required: true }]}>
@@ -1097,7 +1099,7 @@ qrCode: !offplanPermitOnly ? null : offplanQrUrl,
               </Form.Item>
             </Col>
             <Col xs={12} md={4}>
-              <Form.Item name="hasView" label="Has View?" valuePropName="checked"><Switch /></Form.Item>
+              <Form.Item name="canVisit" label="Can Visit?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
             <Col span={24}>
               <Form.Item name="description" label="Description" rules={[{ required: true }]}>
@@ -1854,7 +1856,7 @@ qrCode: !offplanPermitOnly ? null : offplanQrUrl,
       {/* ═══════════ RENTAL ═══════════ */}
       {formMode === "rental" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
-          <Form form={rentalForm} layout="vertical" initialValues={{ permitAvailable: false, bedrooms: 1, bathrooms: 1 }}>
+          <Form form={rentalForm} layout="vertical" initialValues={{ permitAvailable: false, bedrooms: 1, bathrooms: 1, canVisit: false,  }}>
             {renderRentalStep(0)}
             {renderRentalStep(1)}
             {renderRentalStep(2)}
@@ -1874,7 +1876,7 @@ qrCode: !offplanPermitOnly ? null : offplanQrUrl,
       {/* ═══════════ SECONDARY ═══════════ */}
       {formMode === "secondary" && (
         <Card bordered={false} style={{ maxWidth: 1099, margin: "0 auto", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }} styles={{ body: { padding: "28px 32px" } }}>
-          <Form form={secondaryForm} layout="vertical" initialValues={{ bedrooms: 1, bathrooms: 1 }}>
+          <Form form={secondaryForm} layout="vertical" initialValues={{ bedrooms: 1, bathrooms: 1, canVisit: false,  }}>
             {renderSecondaryStep(0)}
             {renderSecondaryStep(1)}
             {renderSecondaryStep(2)}
