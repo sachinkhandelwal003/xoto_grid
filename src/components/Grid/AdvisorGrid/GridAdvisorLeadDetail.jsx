@@ -383,9 +383,10 @@ const PresentationModal = ({ lead, property: initialProperty, onClose }) => {
       });
       const data = res?.data?.success !== undefined ? res.data : res;
       if (data?.success) {
-        setTrackingUrl(data.data.trackingUrl);
-        // ✅ Preview = tracking URL + ?preview=true (no tracking fired)
-        setPreviewUrl(data.data.trackingUrl + '?preview=true');
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+        const fixedUrl = `${apiBase}/presentation/track/${data.data.trackingToken}`;
+        setTrackingUrl(fixedUrl);
+        setPreviewUrl(fixedUrl + '?preview=true');
         setStep(3);
         message.success('Presentation saved!');
       } else message.error(data?.message || 'Save failed');
