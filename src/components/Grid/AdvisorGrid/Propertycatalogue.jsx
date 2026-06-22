@@ -284,7 +284,7 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
       });
       const data = normalizeApi(res);
       if (data?.success) {
-        setNarrative(data.data);
+        setNarrative(data.data); 
         setStep(2);
       } else {
         setError(data?.message || "Generation failed");
