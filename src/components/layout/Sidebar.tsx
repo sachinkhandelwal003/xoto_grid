@@ -119,7 +119,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     { title: "My Leads", icon: "fas fa-calendar-check", to: "/dashboard/agent/GridAgent-lead" },
     { title: "Property Catalogue", icon: "fas fa-building", to: "/dashboard/agent/agent-projects" },
     // { title: "My Viewings", icon: "fas fa-eye", to: "/dashboard/agent/visits" },
-    { title: "My Presentations", icon: "fas fa-file-powerpoint", to: "/dashboard/agent/presentations" },
+    // { title: "My Presentations", icon: "fas fa-file-powerpoint", to: "/dashboard/agent/presentations" },
     MORTGAGE_CALCULATOR_LINK,
     { title: "Leaderboard", icon: "fas fa-users", to: "/dashboard/agent/Leaderboard" },
     { title: "My Agreements", icon: "fas fa-chalkboard-teacher", to: "/dashboard/agent/agent-agreement" },
@@ -144,7 +144,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
   '24': [
     { title: 'My Leads', icon: 'fas fa-users', to: '/dashboard/GridAdvisor/gridAdvisorLeads' },
     { title: 'Property Catalogue', icon: 'fas fa-building', to: '/dashboard/GridAdvisor/property-catalogue' },
-    { title: 'My Presentations', icon: 'fas fa-file-powerpoint', to: '/dashboard/GridAdvisor/presentations' },
+    // { title: 'My Presentations', icon: 'fas fa-file-powerpoint', to: '/dashboard/GridAdvisor/presentations' },
     {
       title: "Calculator",
       icon: "fas fa-calculator",

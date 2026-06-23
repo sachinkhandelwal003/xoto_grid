@@ -135,6 +135,7 @@ const AddGeneralLeads = () => {
         requirements: {
           property_type:       values.property_type    || undefined,
           transaction_type:    values.transaction_type || undefined,
+          finance_type:        values.finance_type     || undefined,
           budget_min:          values.budget_min        ? Number(values.budget_min)        : undefined,
           budget_max:          values.budget_max        ? Number(values.budget_max)        : undefined,
           bedrooms:            values.bedrooms != null && values.bedrooms !== '' ? Number(values.bedrooms) : undefined,
@@ -388,7 +389,7 @@ const AddGeneralLeads = () => {
           <div>
             {/* Requirements */}
             <SectionCard icon={<HomeOutlined />} title="Property Requirements" subtitle="What the client is looking for">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <Form.Item name="property_type" label="Property Type" style={{ marginBottom: 16 }}>
                   <Select allowClear placeholder="Any type" style={{ borderRadius: 8 }}>
                     {PROPERTY_TYPES.map(pt => (
@@ -404,6 +405,13 @@ const AddGeneralLeads = () => {
                         {tt.charAt(0).toUpperCase() + tt.slice(1)}
                       </Option>
                     ))}
+                  </Select>
+                </Form.Item>
+
+                <Form.Item name="finance_type" label="Finance Type" style={{ marginBottom: 16 }}>
+                  <Select allowClear placeholder="Select" style={{ borderRadius: 8 }}>
+                    <Option value="cash">Cash</Option>
+                    <Option value="mortgage">Mortgage</Option>
                   </Select>
                 </Form.Item>
               </div>
