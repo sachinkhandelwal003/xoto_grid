@@ -64,7 +64,7 @@ const ScheduleViewingModal = ({
   const [loadingProps, setLoadingProps] = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
 
-  // ── Fetch leads if none pre-filled ──────────────────────────────────────────
+  // ── Fetch leads if none pre-filled — only keep leads with a phone number ──────
   useEffect(() => {
     if (leadId) return;
     setLoadingLeads(true);
@@ -72,7 +72,11 @@ const ScheduleViewingModal = ({
       .then(res => {
         const payload = res?.data?.success !== undefined ? res.data : res;
         const list    = payload?.data || payload?.leads || [];
-        setLeads(Array.isArray(list) ? list : []);
+        const withPhone = (Array.isArray(list) ? list : []).filter(l => {
+          const ph = l.contact_info?.mobile?.number || l.phone || '';
+          return String(ph).trim().length > 0;
+        });
+        setLeads(withPhone);
       })
       .catch(() => setLeads([]))
       .finally(() => setLoadingLeads(false));
@@ -118,12 +122,15 @@ const ScheduleViewingModal = ({
     return p?.propertyName || p?.projectName || '';
   })();
 
+  const missingPhone = leadId && !resolvedClientPhone;
+
   // ── Validate ────────────────────────────────────────────────────────────────
   const validate = () => {
-    if (!resolvedLeadId)     { message.warning('Please select a lead'); return false; }
-    if (!resolvedPropertyId) { message.warning('Please select a property'); return false; }
-    if (!form.preferredDate) { message.warning('Please select a preferred date'); return false; }
-    if (!form.preferredTime) { message.warning('Please select a preferred time'); return false; }
+    if (!resolvedLeadId)       { message.warning('Please select a lead'); return false; }
+    if (!resolvedClientPhone)  { message.warning('This lead has no phone number. Site visit request cannot be submitted without a client phone number.'); return false; }
+    if (!resolvedPropertyId)   { message.warning('Please select a property'); return false; }
+    if (!form.preferredDate)   { message.warning('Please select a preferred date'); return false; }
+    if (!form.preferredTime)   { message.warning('Please select a preferred time'); return false; }
     const today = new Date(); today.setHours(0, 0, 0, 0);
     if (new Date(form.preferredDate) < today) { message.warning('Date cannot be in the past'); return false; }
     return true;
@@ -178,16 +185,26 @@ const ScheduleViewingModal = ({
 
           {/* ── Lead: pre-filled chip OR dropdown ── */}
           {leadId ? (
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-purple-50 border border-purple-100">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: GR, color: '#fff' }}>
-                <FiUser size={14} />
+            <>
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-purple-50 border border-purple-100">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: GR, color: '#fff' }}>
+                  <FiUser size={14} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Client</p>
+                  <p className="text-sm font-bold text-gray-900">{leadName || 'Selected Client'}</p>
+                  {leadPhone && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><FiPhone size={10} /> {leadPhone}</p>}
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Client</p>
-                <p className="text-sm font-bold text-gray-900">{leadName || 'Selected Client'}</p>
-                {leadPhone && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><FiPhone size={10} /> {leadPhone}</p>}
-              </div>
-            </div>
+              {missingPhone && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+                  <FiPhone size={15} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-700 leading-relaxed font-medium">
+                    This lead does not have a phone number. A site visit request cannot be sent to admin without a client phone number. Please update the lead with a phone number first.
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
@@ -352,7 +369,7 @@ const ScheduleViewingModal = ({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || missingPhone}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-60"
             style={{ background: GR }}
           >
