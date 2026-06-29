@@ -13,7 +13,7 @@ import {
   FilePdfOutlined, VideoCameraOutlined, ExpandOutlined,
   AppstoreOutlined, PictureOutlined, CalendarOutlined,
   SafetyCertificateOutlined, QrcodeOutlined, WalletOutlined,
-  DownloadOutlined // Added for document downloads
+  DownloadOutlined, LeftOutlined, RightOutlined
 } from '@ant-design/icons';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ const PropertyDetailPage = () => {
   const roleSlug  = VAULT_ROLE_SLUG_MAP[roleCode] || 'admin';
 
   const [property,       setProperty]      = useState(null);
-  const [documents,      setDocuments]     = useState([]); // Added state for Library Documents
+  const [documents,      setDocuments]     = useState([]);
   const [loading,        setLoading]       = useState(true);
   const [activeImg,      setActiveImg]     = useState(0);
   const [lightbox,       setLightbox]      = useState(false);
@@ -151,7 +151,6 @@ const PropertyDetailPage = () => {
     }
   };
 
-  // Fetch API for library documents
   const fetchDocuments = async () => {
     try {
       const res = await apiService.get(`/property-documents/${id}`);
@@ -165,7 +164,7 @@ const PropertyDetailPage = () => {
     setLoading(true);
     await Promise.all([fetchProperty(), fetchDocuments()]);
     setLoading(false);
-  }
+  };
 
   useEffect(() => { loadAllData(); }, [id]);
 
@@ -180,7 +179,7 @@ const PropertyDetailPage = () => {
     </div>
   );
 
-  // ── Field extraction (handles both legacy and new schema) ────────────────
+  // ── Field extraction ──────────────────────────────────────────────────────
   const p              = property;
   const subType        = p.propertySubType;
   const med            = p.media || {};
@@ -212,6 +211,16 @@ const PropertyDetailPage = () => {
     ...archImgs, ...interImgs, ...lobbyImgs, ...legacyPhotos,
   ].filter((v, i, a) => v && a.indexOf(v) === i);
 
+  // ── Lightbox navigation helpers ───────────────────────────────────────────
+  const goPrev = (e) => {
+    e.stopPropagation();
+    setActiveImg(i => (i - 1 + allImgs.length) % allImgs.length);
+  };
+  const goNext = (e) => {
+    e.stopPropagation();
+    setActiveImg(i => (i + 1) % allImgs.length);
+  };
+
   // ── Price ─────────────────────────────────────────────────────────────────
   const priceFrom = p.priceRange?.from || p.price_min;
   const priceTo   = p.priceRange?.to   || p.price_max;
@@ -233,7 +242,7 @@ const PropertyDetailPage = () => {
 
   const tc = typeColors[subType] || typeColors.off_plan;
 
-// ── Completion date display ───────────────────────────────────────────────
+  // ── Completion date display ───────────────────────────────────────────────
   const completionDisplay = p.completionDate?.quarter
     ? `${p.completionDate.quarter} ${p.completionDate.year}`
     : p.completionDate?.fullDate
@@ -285,6 +294,16 @@ const PropertyDetailPage = () => {
     finally { setActionLoading(''); }
   };
 
+  // ── Arrow button style (reusable) ─────────────────────────────────────────
+  const arrowBtnStyle = {
+    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+    width: 44, height: 44, borderRadius: '50%',
+    background: 'rgba(0,0,0,0.55)', border: '2px solid rgba(255,255,255,0.35)',
+    color: '#fff', cursor: 'pointer', fontSize: 18,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 10, transition: 'background 0.2s',
+  };
+
   return (
     <>
       <style>{`
@@ -303,7 +322,7 @@ const PropertyDetailPage = () => {
         .pdp-table-row:last-child { border-bottom: none; }
         .pdp-table-head { display: flex; padding: 8px 14px; font-size: 11px; font-weight: 700; color: ${T.muted}; text-transform: uppercase; letter-spacing: 0.05em; background: ${T.surface}; border-bottom: 1px solid ${T.border}; }
         .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain; }
+        .lightbox-arrow:hover { background: rgba(0,0,0,0.8) !important; }
         @media (max-width: 900px) { .pdp-layout { grid-template-columns: 1fr; } .pdp-root { padding: 12px; } }
         @media (max-width: 600px) { .pdp-topbar { flex-direction: column; align-items: flex-start; } .pdp-actions { width: 100%; } .pdp-stats { grid-template-columns: repeat(2, 1fr); } }
       `}</style>
@@ -536,12 +555,9 @@ const PropertyDetailPage = () => {
             {(p.description || p.overview) && (
               <SectionCard title="Description">
                 <div style={{
-                  minHeight: 100,
-                  maxHeight: 320,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  paddingRight: 8,
-                  scrollbarWidth: 'thin',
+                  minHeight: 100, maxHeight: 320,
+                  overflowY: 'auto', overflowX: 'hidden',
+                  paddingRight: 8, scrollbarWidth: 'thin',
                   scrollbarColor: '#c4b5fd transparent',
                 }}>
                   <p style={{ color: T.textSoft, fontSize: 14, lineHeight: 1.85, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
@@ -576,7 +592,6 @@ const PropertyDetailPage = () => {
                 {p.serviceCharge    && <StatChip icon={<WalletOutlined />}      label="Service Charge" value={`${p.serviceCharge} AED/sqft/yr`}             accent="#f59e0b"   />}
               </div>
 
-              {/* Construction Progress */}
               {p.constructionProgress != null && (
                 <div style={{ marginTop: 16, padding: '14px 16px', background: T.surface, borderRadius: 10, border: `1px solid ${T.border}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, fontWeight: 600, color: T.muted }}>
@@ -588,7 +603,7 @@ const PropertyDetailPage = () => {
               )}
             </SectionCard>
 
-            {/* Floor Plans & Unit Details */}
+            {/* Floor Plans */}
             {floorPlans.length > 0 && (
               <SectionCard title="Floor Plans & Unit Types">
                 <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
@@ -598,13 +613,8 @@ const PropertyDetailPage = () => {
                     <span style={{ flex: 1, textAlign: 'right' }}>Area To</span>
                   </div>
                   {floorPlans.map((fp, i) => (
-                    <div
-                      key={i} className="pdp-table-row"
-                      style={{ background: i % 2 === 0 ? '#fff' : T.surface }}
-                    >
-                      <span style={{ flex: 2 }}>
-                        <Tag color="purple" style={{ borderRadius: 8, fontWeight: 600 }}>{fp.unitType || '—'}</Tag>
-                      </span>
+                    <div key={i} className="pdp-table-row" style={{ background: i % 2 === 0 ? '#fff' : T.surface }}>
+                      <span style={{ flex: 2 }}><Tag color="purple" style={{ borderRadius: 8, fontWeight: 600 }}>{fp.unitType || '—'}</Tag></span>
                       <span style={{ flex: 1, textAlign: 'right', fontWeight: 600, color: T.text }}>{fp.areaFrom ? `${fp.areaFrom} sqft` : '—'}</span>
                       <span style={{ flex: 1, textAlign: 'right', fontWeight: 600, color: T.text }}>{fp.areaTo   ? `${fp.areaTo} sqft`   : '—'}</span>
                     </div>
@@ -613,7 +623,7 @@ const PropertyDetailPage = () => {
               </SectionCard>
             )}
 
-            {/* Inventory Overview */}
+            {/* Inventory */}
             {inventory.length > 0 && (
               <SectionCard title="Inventory Overview">
                 <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
@@ -623,13 +633,8 @@ const PropertyDetailPage = () => {
                     <span style={{ flex: 2, textAlign: 'right' }}>Starting Area</span>
                   </div>
                   {inventory.map((u, i) => (
-                    <div
-                      key={i} className="pdp-table-row"
-                      style={{ background: i % 2 === 0 ? '#fff' : T.surface }}
-                    >
-                      <span style={{ flex: 2 }}>
-                        <Tag color="geekblue" style={{ borderRadius: 8, fontWeight: 600 }}>{u.unitType || '—'}</Tag>
-                      </span>
+                    <div key={i} className="pdp-table-row" style={{ background: i % 2 === 0 ? '#fff' : T.surface }}>
+                      <span style={{ flex: 2 }}><Tag color="geekblue" style={{ borderRadius: 8, fontWeight: 600 }}>{u.unitType || '—'}</Tag></span>
                       <span style={{ flex: 1, textAlign: 'center', fontWeight: 700, color: T.text }}>{u.numberOfUnits ?? u.count ?? '—'}</span>
                       <span style={{ flex: 2, textAlign: 'right', fontWeight: 600, color: T.text }}>
                         {u.startingSquareFootage || u.sqft ? `${u.startingSquareFootage || u.sqft} sqft` : '—'}
@@ -640,24 +645,21 @@ const PropertyDetailPage = () => {
               </SectionCard>
             )}
 
-            {/* Buildings / Towers */}
+            {/* Buildings */}
             {buildings.length > 0 && (
               <SectionCard title={`Buildings / Towers (${buildings.length})`} icon={<BuildOutlined />}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                   {buildings.map((b, i) => (
                     <div key={i} style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
                       {b.image && (
-                        <img
-                          src={b.image} alt={b.title || `Building ${i + 1}`}
+                        <img src={b.image} alt={b.title || `Building ${i + 1}`}
                           style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }}
                           onError={e => { e.target.style.display = 'none'; }}
                         />
                       )}
                       <div style={{ padding: '10px 12px' }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{b.title || `Building ${i + 1}`}</div>
-                        {b.description && (
-                          <div style={{ fontSize: 12, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>{b.description}</div>
-                        )}
+                        {b.description && <div style={{ fontSize: 12, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>{b.description}</div>}
                       </div>
                     </div>
                   ))}
@@ -669,9 +671,7 @@ const PropertyDetailPage = () => {
             {p.amenities?.length > 0 && (
               <SectionCard title="Amenities">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {p.amenities.map((a, i) => (
-                    <span key={i} className="pdp-amenity">{a}</span>
-                  ))}
+                  {p.amenities.map((a, i) => <span key={i} className="pdp-amenity">{a}</span>)}
                 </div>
               </SectionCard>
             )}
@@ -684,22 +684,16 @@ const PropertyDetailPage = () => {
                 )}
                 {stages.map((s, i) => {
                   const label = s.milestoneTitle || s.label || s.stage?.replace(/_/g, ' ') || `Stage ${i + 1}`;
-                  const total = stages.reduce((a, x) => a + (x.percentage || 0), 0);
                   const isLast = i === stages.length - 1;
                   return (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '10px 14px', borderRadius: 9, marginBottom: isLast ? 0 : 6,
-                        background: i % 2 === 0 ? T.surface : '#fff',
-                        border: `1px solid ${T.border}`,
-                      }}
-                    >
+                    <div key={i} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '10px 14px', borderRadius: 9, marginBottom: isLast ? 0 : 6,
+                      background: i % 2 === 0 ? T.surface : '#fff',
+                      border: `1px solid ${T.border}`,
+                    }}>
                       <span style={{ fontSize: 13, color: T.text, fontWeight: 600, textTransform: 'capitalize' }}>{label}</span>
-                      {s.description && (
-                        <span style={{ fontSize: 11, color: T.muted, flex: 1, marginLeft: 10 }}>{s.description}</span>
-                      )}
+                      {s.description && <span style={{ fontSize: 11, color: T.muted, flex: 1, marginLeft: 10 }}>{s.description}</span>}
                       <Tag color="purple" style={{ fontWeight: 700, fontSize: 13, margin: 0, marginLeft: 8 }}>{s.percentage}%</Tag>
                     </div>
                   );
@@ -722,20 +716,15 @@ const PropertyDetailPage = () => {
               </SectionCard>
             )}
 
-            {/* YouTube Videos */}
+            {/* Videos */}
             {youtubeVideos.length > 0 && (
               <SectionCard title="Videos" icon={<VideoCameraOutlined />}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {youtubeVideos.map((v, i) => {
-                    const embedUrl = v
-                      .replace('watch?v=', 'embed/')
-                      .replace('youtu.be/', 'www.youtube.com/embed/');
+                    const embedUrl = v.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/');
                     return embedUrl.includes('embed/') ? (
-                      <iframe
-                        key={i} src={embedUrl} width="100%" height="220"
-                        style={{ borderRadius: 10, border: 0 }}
-                        allowFullScreen title={`Video ${i + 1}`}
-                      />
+                      <iframe key={i} src={embedUrl} width="100%" height="220"
+                        style={{ borderRadius: 10, border: 0 }} allowFullScreen title={`Video ${i + 1}`} />
                     ) : (
                       <a key={i} href={v} target="_blank" rel="noreferrer" className="pdp-media-btn"
                         style={{ background: T.hotLt, color: T.hot, border: `1px solid #fecaca` }}>
@@ -750,24 +739,16 @@ const PropertyDetailPage = () => {
             {/* Rejection reason */}
             {p.rejectionReason && (
               <SectionCard title="Rejection Reason" icon={<WarningOutlined style={{ color: T.danger }} />}>
-                <div style={{
-                  background: T.dangerLt, border: `1px solid #fecaca`,
-                  borderRadius: 10, padding: '12px 16px',
-                  color: T.danger, fontSize: 14, fontWeight: 500, lineHeight: 1.6,
-                }}>
+                <div style={{ background: T.dangerLt, border: `1px solid #fecaca`, borderRadius: 10, padding: '12px 16px', color: T.danger, fontSize: 14, fontWeight: 500, lineHeight: 1.6 }}>
                   {p.rejectionReason}
                 </div>
               </SectionCard>
             )}
 
-            {/* Admin comments (changes requested) */}
+            {/* Admin comments */}
             {p.adminComments && (
               <SectionCard title="Admin Comments" icon={<WarningOutlined style={{ color: T.warn }} />}>
-                <div style={{
-                  background: T.warnLt, border: `1px solid #fde68a`,
-                  borderRadius: 10, padding: '12px 16px',
-                  color: T.warn, fontSize: 14, fontWeight: 500, lineHeight: 1.6,
-                }}>
+                <div style={{ background: T.warnLt, border: `1px solid #fde68a`, borderRadius: 10, padding: '12px 16px', color: T.warn, fontSize: 14, fontWeight: 500, lineHeight: 1.6 }}>
                   {p.adminComments}
                 </div>
               </SectionCard>
@@ -780,73 +761,56 @@ const PropertyDetailPage = () => {
             {/* Price hero */}
             <div style={{
               background: `linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #9333ea 100%)`,
-              borderRadius: 18, padding: 22, color: '#fff',
-              marginBottom: 14,
+              borderRadius: 18, padding: 22, color: '#fff', marginBottom: 14,
               boxShadow: '0 8px 28px rgba(109,40,217,0.3)',
             }}>
-              <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.75, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-                Listing Price
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.75, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Listing Price</div>
               <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.2, marginBottom: 4 }}>{displayPrice}</div>
               {p.rentalFrequency && <div style={{ fontSize: 11, opacity: 0.7 }}>per {p.rentalFrequency}</div>}
               <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {p.commission > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
-                    <span>Commission</span>
-                    <span style={{ fontWeight: 700 }}>{p.commission}%</span>
+                    <span>Commission</span><span style={{ fontWeight: 700 }}>{p.commission}%</span>
                   </div>
                 )}
                 {p.eoiAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
-                    <span>EOI Amount</span>
-                    <span style={{ fontWeight: 700 }}>{fmt(p.eoiAmount)}</span>
+                    <span>EOI Amount</span><span style={{ fontWeight: 700 }}>{fmt(p.eoiAmount)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
-                  <span>Approval</span>
-                  <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{p.approvalStatus}</span>
+                  <span>Approval</span><span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{p.approvalStatus}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
-                  <span>Listing</span>
-                  <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{p.listingStatus || '—'}</span>
+                  <span>Listing</span><span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{p.listingStatus || '—'}</span>
                 </div>
                 {p.saleStatus && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
-                    <span>Sale Status</span>
-                    <span style={{ fontWeight: 700 }}>{p.saleStatus}</span>
+                    <span>Sale Status</span><span style={{ fontWeight: 700 }}>{p.saleStatus}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Listing meta */}
+            {/* Listing Info */}
             <SectionCard title="Listing Info">
-              <InfoRow label="Property ID"   value={<span style={{ fontSize: 11, fontFamily: 'monospace' }}>{p._id}</span>} />
-              <InfoRow label="Created"
-                value={p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }) : null}
-              />
-              <InfoRow label="Last Updated"
-                value={p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }) : null}
-              />
+              <InfoRow label="Property ID" value={<span style={{ fontSize: 11, fontFamily: 'monospace' }}>{p._id}</span>} />
+              <InfoRow label="Created" value={p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />
+              <InfoRow label="Last Updated" value={p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />
               {completionDisplay && <InfoRow label="Completion" value={completionDisplay} />}
             </SectionCard>
 
             {/* Location */}
             <SectionCard title="Location" icon={<EnvironmentOutlined />}>
               <InfoRow label="Community / Area" value={p.locality || p.area} />
-              <InfoRow label="City"    value={p.city}    />
+              <InfoRow label="City"    value={p.city} />
               <InfoRow label="Country" value={p.country || 'UAE'} />
               {loc.address && <InfoRow label="Address" value={loc.address} />}
-              {loc.latitude && loc.longitude && (
-                <InfoRow label="Coordinates" value={`${loc.latitude}, ${loc.longitude}`} mono />
-              )}
+              {loc.latitude && loc.longitude && <InfoRow label="Coordinates" value={`${loc.latitude}, ${loc.longitude}`} mono />}
               {(loc.latitude && loc.longitude) && (
                 <div style={{ marginTop: 12, borderRadius: 10, overflow: 'hidden', height: 160 }}>
-                  <iframe
-                    width="100%" height="100%" style={{ border: 0 }}
-                    loading="lazy" allowFullScreen
-                    src={`https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=15&output=embed`}
-                  />
+                  <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen
+                    src={`https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=15&output=embed`} />
                 </div>
               )}
             </SectionCard>
@@ -856,8 +820,7 @@ const PropertyDetailPage = () => {
               <SectionCard title="Developer">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                   {(devDetails.logo || devDetails.mainLogo) ? (
-                    <img
-                      src={devDetails.logo || devDetails.mainLogo} alt="logo"
+                    <img src={devDetails.logo || devDetails.mainLogo} alt="logo"
                       style={{ width: 46, height: 46, borderRadius: 10, objectFit: 'cover', border: `1px solid ${T.border}` }}
                       onError={e => { e.target.style.display = 'none'; }}
                     />
@@ -867,12 +830,9 @@ const PropertyDetailPage = () => {
                     </div>
                   )}
                   <div>
-                    <div style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>
-                      {devDetails.companyName || devDetails.name || p.developerName}
-                    </div>
+                    <div style={{ fontWeight: 700, color: T.text, fontSize: 14 }}>{devDetails.companyName || devDetails.name || p.developerName}</div>
                     {devDetails.accountStatus && (
-                      <Tag style={{ marginTop: 3, fontSize: 10, borderRadius: 8, fontWeight: 600 }}
-                        color={devDetails.accountStatus === 'active' ? 'green' : 'red'}>
+                      <Tag style={{ marginTop: 3, fontSize: 10, borderRadius: 8, fontWeight: 600 }} color={devDetails.accountStatus === 'active' ? 'green' : 'red'}>
                         {devDetails.accountStatus}
                       </Tag>
                     )}
@@ -892,27 +852,20 @@ const PropertyDetailPage = () => {
               borderColor={p.trakheesiPermitId && p.qrCode ? T.border : '#f97316'}
             >
               {p.trakheesiPermitId ? (
-                <InfoRow label="Trakheesi Permit ID" value={
-                  <span style={{ color: T.primary, fontFamily: 'monospace', fontWeight: 700 }}>{p.trakheesiPermitId}</span>
-                } />
+                <InfoRow label="Trakheesi Permit ID" value={<span style={{ color: T.primary, fontFamily: 'monospace', fontWeight: 700 }}>{p.trakheesiPermitId}</span>} />
               ) : (
-                <div style={{ fontSize: 12, color: T.warn, padding: '6px 0', borderBottom: `1px solid ${T.border}` }}>
-                  Trakheesi Permit ID — not set
-                </div>
+                <div style={{ fontSize: 12, color: T.warn, padding: '6px 0', borderBottom: `1px solid ${T.border}` }}>Trakheesi Permit ID — not set</div>
               )}
               {p.qrCode ? (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ fontSize: 11, color: T.muted, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>QR Code</div>
-                  <img
-                    src={p.qrCode} alt="QR Code"
+                  <img src={p.qrCode} alt="QR Code"
                     style={{ width: '100%', maxWidth: 160, height: 160, objectFit: 'contain', borderRadius: 10, border: `1px solid ${T.border}`, background: '#fff', padding: 8, display: 'block' }}
                   />
                   <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>Hover or scan to verify listing</div>
                 </div>
               ) : (
-                <div style={{ fontSize: 12, color: T.warn, padding: '8px 0 0' }}>
-                  QR Code — not uploaded
-                </div>
+                <div style={{ fontSize: 12, color: T.warn, padding: '8px 0 0' }}>QR Code — not uploaded</div>
               )}
               {(!p.trakheesiPermitId || !p.qrCode) && (
                 <div style={{ marginTop: 12, padding: '10px 12px', background: T.warnLt, borderRadius: 8, fontSize: 12, color: '#92400e', fontWeight: 500 }}>
@@ -924,17 +877,15 @@ const PropertyDetailPage = () => {
             {/* Legal */}
             {(p.reraPermitNumber || p.dldRegistrationNumber) && (
               <SectionCard title="Legal & Permits" icon={<SafetyCertificateOutlined />}>
-                <InfoRow label="RERA Permit" value={p.reraPermitNumber}         mono />
-                <InfoRow label="DLD Reg. No." value={p.dldRegistrationNumber}   mono />
+                <InfoRow label="RERA Permit"  value={p.reraPermitNumber}       mono />
+                <InfoRow label="DLD Reg. No." value={p.dldRegistrationNumber}  mono />
               </SectionCard>
             )}
 
-            {/* ── UPDATED Documents SECTION ── */}
+            {/* Documents */}
             {(p.brochure || p.projectPlan || documents.length > 0) && (
               <SectionCard title="Documents" icon={<FilePdfOutlined />}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  
-                  {/* Legacy Documents Fallback */}
                   {p.brochure && (
                     <a href={p.brochure} target="_blank" rel="noreferrer" className="pdp-media-btn"
                       style={{ background: T.primaryLt, color: T.primary, border: `1px solid #ddd6fe`, margin: 0 }}>
@@ -947,48 +898,28 @@ const PropertyDetailPage = () => {
                       <FilePdfOutlined /> Download Site Plan (Legacy)
                     </a>
                   )}
-
-                  {/* API Library Documents (from Developers) */}
                   {documents.map((doc) => (
-                    <div 
-                      key={doc._id} 
-                      style={{ 
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-                        padding: '10px 12px', background: T.surface, 
-                        border: `1px solid ${T.border}`, borderRadius: 10 
-                      }}
-                    >
+                    <div key={doc._id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 12px', background: T.surface,
+                      border: `1px solid ${T.border}`, borderRadius: 10,
+                    }}>
                       <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {doc.title}
-                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.title}</div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                           <Tag style={{ margin: 0, fontSize: 10, border: 'none', background: '#e2e8f0', color: T.textSoft, fontWeight: 600 }}>
                             {doc.documentCategory?.replace(/_/g, ' ')}
                           </Tag>
-                          {doc.isAgentVisible && (
-                            <Tag color="green" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Agent Vis.</Tag>
-                          )}
-                          {doc.isPublic && (
-                            <Tag color="blue" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Public</Tag>
-                          )}
+                          {doc.isAgentVisible && <Tag color="green" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Agent Vis.</Tag>}
+                          {doc.isPublic && <Tag color="blue" style={{ margin: 0, fontSize: 10, border: 'none', fontWeight: 600 }}>Public</Tag>}
                         </div>
                       </div>
-                      <a 
-                        href={doc.fileUrl} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        style={{ 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                          width: 32, height: 32, background: '#fff', border: `1px solid ${T.border}`, 
-                          borderRadius: 8, color: T.primary, flexShrink: 0, textDecoration: 'none' 
-                        }}
-                      >
+                      <a href={doc.fileUrl} target="_blank" rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: '#fff', border: `1px solid ${T.border}`, borderRadius: 8, color: T.primary, flexShrink: 0, textDecoration: 'none' }}>
                         <DownloadOutlined />
                       </a>
                     </div>
                   ))}
-
                 </div>
               </SectionCard>
             )}
@@ -997,23 +928,74 @@ const PropertyDetailPage = () => {
         </div>
       </div>
 
-      {/* ── Lightbox ── */}
+      {/* ══ LIGHTBOX with Prev/Next arrows ══ */}
       {lightbox && (
-        <div className="lightbox" onClick={() => setLightbox(false)}>
-          <div style={{ position: 'relative', maxWidth: 900, width: '100%' }} onClick={e => e.stopPropagation()}>
-            <img src={allImgs[activeImg]} alt="" />
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-              {allImgs.map((_, i) => (
-                <button
-                  key={i} onClick={() => setActiveImg(i)}
-                  style={{
-                    width: i === activeImg ? 24 : 8, height: 8, border: 'none', cursor: 'pointer',
-                    borderRadius: 4, background: i === activeImg ? '#fff' : 'rgba(255,255,255,0.4)',
-                    padding: 0, transition: 'all 0.2s',
-                  }}
-                />
-              ))}
-            </div>
+        <div
+          className="lightbox"
+          onClick={() => setLightbox(false)}
+        >
+          <div
+            style={{ position: 'relative', maxWidth: 900, width: '100%' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Main Image */}
+            <img
+              src={allImgs[activeImg]}
+              alt=""
+              style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: 12, display: 'block' }}
+            />
+
+            {/* ← Prev Arrow */}
+            {allImgs.length > 1 && (
+              <button
+                className="lightbox-arrow"
+                onClick={goPrev}
+                style={{ ...arrowBtnStyle, left: -56 }}
+              >
+                <LeftOutlined />
+              </button>
+            )}
+
+            {/* → Next Arrow */}
+            {allImgs.length > 1 && (
+              <button
+                className="lightbox-arrow"
+                onClick={goNext}
+                style={{ ...arrowBtnStyle, right: -56 }}
+              >
+                <RightOutlined />
+              </button>
+            )}
+
+            {/* Counter */}
+            {allImgs.length > 1 && (
+              <div style={{
+                textAlign: 'center', marginTop: 10,
+                color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 600,
+              }}>
+                {activeImg + 1} / {allImgs.length}
+              </div>
+            )}
+
+            {/* Dots */}
+            {allImgs.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 10 }}>
+                {allImgs.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImg(i)}
+                    style={{
+                      width: i === activeImg ? 24 : 8, height: 8,
+                      border: 'none', cursor: 'pointer', borderRadius: 4,
+                      background: i === activeImg ? '#fff' : 'rgba(255,255,255,0.4)',
+                      padding: 0, transition: 'all 0.2s',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Close Button */}
             <button
               onClick={() => setLightbox(false)}
               style={{
@@ -1023,7 +1005,7 @@ const PropertyDetailPage = () => {
                 color: '#fff', cursor: 'pointer', fontSize: 16,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-            >x</button>
+            >✕</button>
           </div>
         </div>
       )}

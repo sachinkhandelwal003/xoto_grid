@@ -174,7 +174,24 @@ const AddGeneralLeads = () => {
     fontWeight: 600,
     color: C.sub,
   };
-
+// Add this helper function
+const preventAlphabets = (e) => {
+  // Allow control keys
+  const controlKeys = [
+    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'Home', 'End'
+  ];
+  if (controlKeys.includes(e.key)) return;
+  
+  // Allow Ctrl/Cmd + A, C, V, X, etc.
+  if (e.ctrlKey || e.metaKey) return;
+  
+  // Block anything that's not a digit
+  if (!/^[0-9]$/.test(e.key)) {
+    e.preventDefault();
+  }
+};
   return (
     <div style={{ padding: '24px 28px', background: C.bg, minHeight: '100vh' }}>
 
@@ -444,8 +461,9 @@ const AddGeneralLeads = () => {
                       style={{ width: '100%', borderRadius: 8 }}
                       placeholder="500,000"
                       min={0}
+                      onKeyDown={preventAlphabets}
                       formatter={v => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                      parser={v => v.replace(/,/g, '')}
+                      parser={v => v.replace(/[^0-9]/g, '')}
                     />
                   </Form.Item>
                   <Form.Item
@@ -467,8 +485,9 @@ const AddGeneralLeads = () => {
                       style={{ width: '100%', borderRadius: 8 }}
                       placeholder="2,000,000"
                       min={0}
+                      onKeyDown={preventAlphabets}
                       formatter={v => v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                      parser={v => v.replace(/,/g, '')}
+                      parser={v => v.replace(/[^0-9]/g, '')}
                     />
                   </Form.Item>
                 </div>

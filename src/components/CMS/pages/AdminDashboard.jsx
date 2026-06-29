@@ -38,14 +38,14 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [range, setRange] = useState('7d');
 
-  useEffect(() => {
-    const token = localStorage.getItem('grid_token') || localStorage.getItem('token');
-    if (token) fetchDashboardData();
-  }, [range]);
+ useEffect(() => {
+  fetchDashboardData();
+}, [range]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null); 
       const response = await apiService.get(`/dashboard/view/superadmin?range=${range}`);
       if (response.success) {
         setDashboardData(response.data);
@@ -117,6 +117,7 @@ const AdminDashboard = () => {
         </div>
         <div className="flex gap-3 items-center">
           <Select 
+           value={range}   
             defaultValue="7d" 
             style={{ width: 120 }} 
             onChange={setRange}
@@ -125,9 +126,9 @@ const AdminDashboard = () => {
             <Option value="30d">Last 30 Days</Option>
             <Option value="90d">Last 90 Days</Option>
           </Select>
-          <div className="flex gap-3 bg-primary text-white cursor-pointer p-2 rounded-lg shadow-sm"> 
+          {/* <div className="flex gap-3 bg-primary text-white cursor-pointer p-2 rounded-lg shadow-sm"> 
             <button className='cursor-pointer' onClick={() => window.location.href = '/'}>Go To Home</button>
-          </div>
+          </div> */}
         </div>
       </div>
 
