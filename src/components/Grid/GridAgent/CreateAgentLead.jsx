@@ -438,14 +438,17 @@ const CreateAgentLead = ({ navigate }) => {
     p.set('listingStatus', 'active');
     p.set('limit', '8');
 
-    if (form.transaction_type === 'rent') p.set('propertySubType', 'rental');
+    if (form.transaction_type) {
+      p.set('transactionType', form.transaction_type === 'rent' ? 'rent' : 'sell');
+    }
     if (form.property_type && UNIT_TYPE_MAP[form.property_type]) {
       p.set('unitType', UNIT_TYPE_MAP[form.property_type]);
     }
 
-    const mult = mode === 'relaxed' ? 1.2 : mode === 'broad' ? 1.5 : 1.0;
-    if (form.budget_max) p.set('maxPrice', Math.round(Number(form.budget_max) * mult));
-    if (form.budget_min && mode === 'strict') p.set('minPrice', form.budget_min);
+    const maxMult = mode === 'relaxed' ? 1.2 : mode === 'broad' ? 1.5 : 1.0;
+    const minMult = mode === 'relaxed' ? 0.8 : mode === 'broad' ? 0.5 : 1.0;
+    if (form.budget_max) p.set('maxPrice', Math.round(Number(form.budget_max) * maxMult));
+    if (form.budget_min) p.set('minPrice', Math.round(Number(form.budget_min) * minMult));
 
     if (form.bedrooms) {
       const beds = mode === 'relaxed' ? Math.max(0, Number(form.bedrooms) - 1) : Number(form.bedrooms);
@@ -477,7 +480,7 @@ const CreateAgentLead = ({ navigate }) => {
     try {
       const strictRes  = await apiService.get(`/properties/?${buildParams('strict')}`);
       const strictData = unwrapList(strictRes);
-      if (strictData.length >= 2) {
+      if (strictData.length >= 1) {
         setLiveMatches(strictData.slice(0, 8));
         setMatchType('exact');
         setMatchNote('');
@@ -486,7 +489,7 @@ const CreateAgentLead = ({ navigate }) => {
 
       const relaxedRes  = await apiService.get(`/properties/?${buildParams('relaxed')}`);
       const relaxedData = unwrapList(relaxedRes);
-      if (relaxedData.length >= 2) {
+      if (relaxedData.length >= 1) {
         setLiveMatches(relaxedData.slice(0, 8));
         setMatchType('relaxed');
         setMatchNote('Budget slightly relaxed & bedroom count adjusted for better results.');

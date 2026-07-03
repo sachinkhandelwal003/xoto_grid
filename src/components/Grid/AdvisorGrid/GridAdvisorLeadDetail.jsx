@@ -685,7 +685,7 @@ const PresentationModal = ({ lead, property: initialProperty, onClose }) => {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-purple-100 bg-purple-50">
+            {/* <div className="p-4 rounded-xl border border-purple-100 bg-purple-50">
               <p className="text-xs font-bold text-purple-700 mb-2">📊 Tracking kya karta hai:</p>
               <ul className="space-y-1 text-xs text-purple-600">
                 <li>✓ Exact time client opens the presentation</li>
@@ -693,7 +693,7 @@ const PresentationModal = ({ lead, property: initialProperty, onClose }) => {
                 <li>✓ Number of times opened</li>
                 <li>✓ Lead engagement score +15 per view</li>
               </ul>
-            </div>
+            </div> */}
           </div>
         )}
 
@@ -1428,7 +1428,7 @@ const NoteModal = ({ leadId, onClose, onAdded }) => {
     if (!text.trim()) return message.warning('Note text is required');
     setLoading(true);
     try {
-      const res  = await apiService.post(`/gridlead/${leadId}/note-advisor`, { text: text.trim() });
+      const res  = await apiService.post(`/gridlead/advisor/${leadId}/note`, { text: text.trim() });
       const data = res?.data?.success !== undefined ? res.data : res;
       if (data?.success) { message.success('Note added'); onAdded(data.data); onClose(); }
       else message.error(data?.message || 'Failed');

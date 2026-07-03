@@ -23,6 +23,7 @@ export default function DeveloperEditUnit() {
   const [saving, setSaving] = useState(false);
   const [unit, setUnit] = useState(null);
   const [project, setProject] = useState(null);
+  const [existingUnitNumbers, setExistingUnitNumbers] = useState([]);
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +55,24 @@ export default function DeveloperEditUnit() {
             paymentPlan: raw.paymentPlan || undefined,
             status: fetchedUnit.status
           });
+
+          // Fetch other units of the same project to check duplicates
+          const pid = fetchedUnit.propertyId?._id || fetchedUnit.propertyId;
+          if (pid) {
+            apiService.get(`/properties/inventory?propertyId=${pid}&limit=1000`)
+              .then((invRes) => {
+                const resData = invRes?.data || invRes;
+                const list = Array.isArray(resData) ? resData : (resData?.data || []);
+                const otherUnitNums = list
+                  .filter(u => u._id !== id)
+                  .map(u => u.unitNumber?.trim().toLowerCase())
+                  .filter(Boolean);
+                setExistingUnitNumbers(otherUnitNums);
+              })
+              .catch((err) => {
+                console.error("Failed to load existing unit numbers:", err);
+              });
+          }
         }
       })
       .catch((err) => {
@@ -65,20 +84,60 @@ export default function DeveloperEditUnit() {
       });
   }, [id, form]);
 
+  const handleBedroomTypeChange = (value) => {
+    let beds = 0;
+    let baths = 1;
+    if (value === "studio") {
+      beds = 0;
+      baths = 1;
+    } else if (value === "8plus") {
+      beds = 8;
+      baths = 8;
+    } else {
+      const match = value.match(/^(\d+)bed$/);
+      if (match) {
+        beds = parseInt(match[1]);
+        baths = beds;
+      }
+    }
+    form.setFieldsValue({ bedrooms: beds });
+    const currentBaths = form.getFieldValue("bathrooms");
+    if (!currentBaths || currentBaths === 0) {
+      form.setFieldsValue({ bathrooms: baths });
+    }
+  };
+
+  const handleUnitTypeChange = (value) => {
+    const isRes = isResidentialUnitType(value);
+    if (!isRes) {
+      form.setFieldsValue({
+        bedroomType: undefined,
+        bedrooms: undefined,
+        bathrooms: undefined
+      });
+    } else {
+      const currentBaths = form.getFieldValue("bathrooms");
+      if (currentBaths === undefined || currentBaths === null) {
+        form.setFieldsValue({ bathrooms: 1 });
+      }
+    }
+  };
+
   const onFinish = async (values) => {
     setSaving(true);
     try {
+      const isRes = isResidentialUnitType(values.unitType);
       const payload = {
-        unitNumber: values.unitNumber,
-        buildingName: values.buildingName || "",
+        unitNumber: values.unitNumber?.trim(),
+        buildingName: values.buildingName?.trim() || "",
         floorNumber: values.floorNumber || 0,
         unitType: values.unitType,
-        bedroomType: values.bedroomType,
-        bedrooms: values.bedrooms || 0,
-        bathrooms: values.bathrooms || 0,
-        area: values.area,
+        bedroomType: isRes ? values.bedroomType : null,
+        bedrooms: isRes ? (values.bedrooms || 0) : 0,
+        bathrooms: isRes ? (values.bathrooms || 0) : 0,
+        area: Number(values.area),
         areaUnit: values.areaUnit || "sqft",
-        price: values.price,
+        price: Number(values.price),
         currency: values.currency === "inherit" ? null : values.currency,
         hasView: values.hasView === "inherit" ? null : values.hasView,
         viewType: (values.hasView === "inherit" || !values.viewType) ? null : values.viewType,
@@ -140,15 +199,38 @@ export default function DeveloperEditUnit() {
           
           <div style={S.formSection}>Unit Identity</div>
           <div style={S.formGrid3}>
-            <Form.Item name="unitNumber" label="Unit Number" rules={[{ required: true, message: "Unit number is required" }]}><Input /></Form.Item>
+            <Form.Item
+              name="unitNumber"
+              label="Unit Number"
+              rules={[
+                { required: true, message: "Unit number is required" },
+                { whitespace: true, message: "Unit number cannot be empty whitespace" },
+                {
+                  validator: async (_, value) => {
+                    if (value && existingUnitNumbers.includes(value.trim().toLowerCase())) {
+                      return Promise.reject(new Error("This unit number already exists in this project!"));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+            >
+              <Input />
+            </Form.Item>
             <Form.Item name="buildingName" label="Building Name"><Input placeholder="e.g. Tower A" /></Form.Item>
-            <Form.Item name="floorNumber" label="Floor Number"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+            <Form.Item
+              name="floorNumber"
+              label="Floor Number"
+              rules={[{ type: "integer", message: "Floor number must be an integer" }]}
+            >
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
           </div>
 
           <div style={S.formSection}>Unit Type & Size</div>
           <div style={S.formGrid4}>
             <Form.Item name="unitType" label="Unit Type" rules={[{ required: true, message: "Unit type is required" }]}>
-              <Select placeholder="Select">{UNIT_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
+              <Select placeholder="Select" onChange={handleUnitTypeChange}>{UNIT_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
             </Form.Item>
             
             <Form.Item shouldUpdate={(prev, curr) => prev.unitType !== curr.unitType}>
@@ -156,11 +238,32 @@ export default function DeveloperEditUnit() {
                 const unitType = getFieldValue("unitType");
                 return isResidentialUnitType(unitType) ? (
                   <>
-                    <Form.Item name="bedroomType" label="Bedroom Type" rules={[{ required: true, message: "Required" }]}>
-                      <Select placeholder="Select">{BEDROOM_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
+                    <Form.Item
+                      name="bedroomType"
+                      label="Bedroom Type"
+                      rules={[{ required: true, message: "Bedroom type is required for residential units" }]}
+                    >
+                      <Select placeholder="Select" onChange={handleBedroomTypeChange}>
+                        {BEDROOM_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}
+                      </Select>
                     </Form.Item>
-                    <Form.Item name="bedrooms" label="Bedrooms"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
-                    <Form.Item name="bathrooms" label="Bathrooms"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+                    <Form.Item
+                      name="bedrooms"
+                      label="Bedrooms"
+                      rules={[{ type: "integer", min: 0, message: "Bedrooms must be 0 or more" }]}
+                    >
+                      <InputNumber min={0} style={{ width: "100%" }} precision={0} />
+                    </Form.Item>
+                    <Form.Item
+                      name="bathrooms"
+                      label="Bathrooms"
+                      rules={[
+                        { required: true, message: "Bathrooms count is required for residential units" },
+                        { type: "integer", min: 1, message: "Bathrooms must be at least 1" }
+                      ]}
+                    >
+                      <InputNumber min={1} style={{ width: "100%" }} precision={0} />
+                    </Form.Item>
                   </>
                 ) : null;
               }}
@@ -169,10 +272,26 @@ export default function DeveloperEditUnit() {
 
           <div style={S.formSection}>Area & Price</div>
           <div style={S.formGrid4}>
-            <Form.Item name="area" label="Area" rules={[{ required: true, message: "Area is required" }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+            <Form.Item
+              name="area"
+              label="Area"
+              rules={[
+                { required: true, message: "Area is required" },
+                { type: "number", min: 0.01, message: "Area must be greater than 0" }
+              ]}
+            >
+              <InputNumber min={0.01} style={{ width: "100%" }} />
+            </Form.Item>
             <Form.Item name="areaUnit" label="Unit"><Select>{AREA_UNITS.map(u => <Option key={u} value={u}>{u}</Option>)}</Select></Form.Item>
-            <Form.Item name="price" label="Price" rules={[{ required: true, message: "Price is required" }]}>
-              <InputNumber min={0} style={{ width: "100%" }}
+            <Form.Item
+              name="price"
+              label="Price"
+              rules={[
+                { required: true, message: "Price is required" },
+                { type: "number", min: 0.01, message: "Price must be greater than 0" }
+              ]}
+            >
+              <InputNumber min={0.01} style={{ width: "100%" }}
                 formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                 parser={v => v.replace(/,/g, "")} />
             </Form.Item>
@@ -209,6 +328,18 @@ export default function DeveloperEditUnit() {
                               name="viewType"
                               label="View Types"
                               style={{ gridColumn: "span 2" }}
+                              rules={[
+                                ({ getFieldValue: getField }) => ({
+                                  validator(_, val) {
+                                    const hv = getField("hasView");
+                                    const required = hv === true || (hv === "inherit" && project?.hasView);
+                                    if (required && (!val || val.length === 0)) {
+                                      return Promise.reject(new Error("Please select at least one view type"));
+                                    }
+                                    return Promise.resolve();
+                                  }
+                                })
+                              ]}
                             >
                               <Select mode="multiple" placeholder={`Inherit: ${propViewType}`} allowClear>
                                 {VIEW_TYPES.map(v => (
@@ -220,8 +351,12 @@ export default function DeveloperEditUnit() {
                         }}
                       </Form.Item>
 
-                      <Form.Item name="parkingSpaces" label="Parking">
-                        <InputNumber min={0} style={{ width: "100%" }} placeholder={`Inherit: ${propParking}`} />
+                      <Form.Item
+                        name="parkingSpaces"
+                        label="Parking"
+                        rules={[{ type: "integer", min: 0, message: "Parking spaces must be a non-negative integer" }]}
+                      >
+                        <InputNumber min={0} style={{ width: "100%" }} precision={0} placeholder={`Inherit: ${propParking}`} />
                       </Form.Item>
                     </div>
                     <div style={S.formGrid3}>

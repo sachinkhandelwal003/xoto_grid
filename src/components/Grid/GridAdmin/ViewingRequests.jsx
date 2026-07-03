@@ -1,15 +1,44 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { message, Spin, Tooltip } from 'antd';
+import { message, Spin } from 'antd';
 import {
   FiCalendar, FiClock, FiUser, FiHome, FiRefreshCw, FiSearch,
-  FiCheckCircle, FiXCircle, FiAlertCircle, FiLoader, FiX,
-  FiFilter, FiMapPin, FiPhone, FiEye,
+  FiCheckCircle, FiLoader, FiX, FiFilter, FiMapPin,
 } from 'react-icons/fi';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
 const P  = '#4A027C';
 const P2 = '#7C3AED';
 const GR = `linear-gradient(135deg, ${P} 0%, ${P2} 100%)`;
+
+// Convert "13:30" → "01:30 PM"
+const to12h = (t) => {
+  if (!t) return '';
+  if (/(am|pm)$/i.test(t)) return t;
+  const [hStr, m] = t.split(':');
+  const h = parseInt(hStr, 10);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, '0')}:${m} ${period}`;
+};
+
+// Convert "01:30 PM" → "13:30"
+const to24h = (time12h) => {
+  if (!time12h) return '';
+  if (/^\d{2}:\d{2}$/.test(time12h)) return time12h;
+  
+  const match = time12h.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time12h;
+  
+  let [_, hours, minutes, period] = match;
+  let hrs = parseInt(hours, 10);
+  
+  if (period.toUpperCase() === 'PM' && hrs < 12) {
+    hrs += 12;
+  } else if (period.toUpperCase() === 'AM' && hrs === 12) {
+    hrs = 0;
+  }
+  return `${String(hrs).padStart(2, '0')}:${minutes}`;
+};
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CFG = {
@@ -34,9 +63,9 @@ const inputCls = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm t
 
 // ─── Assign Advisor Modal ─────────────────────────────────────────────────────
 const AssignAdvisorModal = ({ request, advisors, onClose, onSuccess }) => {
-  const [selectedAdvisor, setSelectedAdvisor] = useState('');
+  const [selectedAdvisor, setSelectedAdvisor] = useState(request?.advisor?._id || request?.advisor || '');
   const [confirmDate,     setConfirmDate]     = useState(request?.scheduledDate || request?.confirmedDate || '');
-  const [confirmTime,     setConfirmTime]     = useState(request?.visitTime || request?.confirmedTime || '');
+  const [confirmTime,     setConfirmTime]     = useState(to24h(request?.visitTime || request?.confirmedTime || ''));
   const [adminNote,       setAdminNote]       = useState('');
   const [submitting,      setSubmitting]      = useState(false);
 
@@ -49,7 +78,7 @@ const AssignAdvisorModal = ({ request, advisors, onClose, onSuccess }) => {
       const res  = await apiService.post(`/agent/lead/update-site-visit/${request._id}`, {
         advisor:       selectedAdvisor,
         confirmedDate: confirmDate,
-        confirmedTime: confirmTime,
+        confirmedTime: to12h(confirmTime),
         status:        'assigned',
         adminNote,
       });
@@ -91,7 +120,7 @@ const AssignAdvisorModal = ({ request, advisors, onClose, onSuccess }) => {
               Client: <strong>{request?.lead?.contact_info?.name?.first_name || request?.clientName || 'Client'}</strong>
             </p>
             <p className="text-xs text-gray-500">
-              Requested: {request?.scheduledDate || '—'} at {request?.visitTime || '—'}
+              Requested Time: {request?.scheduledDate || '—'} at {request?.visitTime || '—'}
             </p>
             {request?.notes && <p className="text-xs text-gray-500 italic">"{request.notes}"</p>}
           </div>
@@ -174,179 +203,6 @@ const AssignAdvisorModal = ({ request, advisors, onClose, onSuccess }) => {
   );
 };
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
-const DetailPanel = ({ request, onClose, onStatusChange, advisors, onAssign }) => {
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-
-  const handleStatusChange = async (newStatus) => {
-    setUpdatingStatus(true);
-    try {
-      const res  = await apiService.post(`/agent/lead/update-site-visit/${request._id}`, { status: newStatus });
-      const data = res?.data?.success !== undefined ? res.data : res;
-      if (data?.success !== false) {
-        message.success(`Status updated to ${STATUS_CFG[newStatus]?.label || newStatus}`);
-        onStatusChange(request._id, newStatus);
-        onClose();
-      } else {
-        message.error(data?.message || 'Update failed');
-      }
-    } catch (e) {
-      message.error(e?.response?.data?.message || 'Update failed');
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
-
-  const lead = request?.lead;
-  const clientName = `${lead?.contact_info?.name?.first_name || ''} ${lead?.contact_info?.name?.last_name || ''}`.trim() || request?.clientName || 'Unknown Client';
-  const phone = lead?.contact_info?.mobile ? `${lead.contact_info.mobile.country_code || ''} ${lead.contact_info.mobile.number || ''}`.trim() : (request?.clientPhone || null);
-  const agentObj = request?.agent;
-  const agentName = agentObj ? (agentObj.name || `${agentObj.first_name || ''} ${agentObj.last_name || ''}`.trim() || agentObj.email || 'Agent') : '—';
-  const propName = request?.property?.propertyName || request?.property?.projectName || 'Property';
-  const propArea = request?.property?.area || request?.property?.locality || '';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-
-        <div className="px-5 py-4 flex items-start justify-between flex-shrink-0" style={{ background: GR }}>
-          <div>
-            <p className="text-[10px] font-medium text-white/60 uppercase tracking-widest mb-0.5">Viewing Request</p>
-            <h3 className="text-base font-semibold text-white leading-tight">{propName}</h3>
-            <p className="text-xs text-white/60 mt-0.5">#{String(request._id).slice(-8)}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={request.status} />
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 ml-2">
-              <FiX size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-y-auto flex-1 p-6 space-y-4">
-          {/* Property */}
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Property</p>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: GR, color: '#fff' }}>
-                <FiHome size={16} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{propName}</p>
-                {propArea && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><FiMapPin size={10} /> {propArea}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Client */}
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Client</p>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-base font-extrabold flex-shrink-0" style={{ background: GR }}>
-                {clientName[0]?.toUpperCase() || '?'}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{clientName}</p>
-                {phone && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><FiPhone size={10} /> {phone}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Schedule */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Preferred Date</p>
-              <p className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                <FiCalendar size={13} style={{ color: P }} />
-                {request.scheduledDate || '—'}
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Preferred Time</p>
-              <p className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                <FiClock size={13} style={{ color: P }} />
-                {request.visitTime || '—'}
-              </p>
-            </div>
-            {request.confirmedDate && (
-              <div className="p-4 rounded-xl bg-green-50 border border-green-100">
-                <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">Confirmed Date</p>
-                <p className="text-sm font-bold text-green-800">{new Date(request.confirmedDate).toLocaleDateString('en-AE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-              </div>
-            )}
-            {request.confirmedTime && (
-              <div className="p-4 rounded-xl bg-green-50 border border-green-100">
-                <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">Confirmed Time</p>
-                <p className="text-sm font-bold text-green-800">{request.confirmedTime}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Visit type */}
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Visit Type:</span>
-            <span className="text-sm font-bold text-gray-900">{request.visitType === 'virtual' ? 'Virtual Tour' : 'In-Person'}</span>
-          </div>
-
-          {/* Agent */}
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Agent:</span>
-            <span className="text-sm font-bold text-gray-900">{agentName}</span>
-          </div>
-
-          {/* Assigned Advisor */}
-          {request.advisor && (
-            <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
-              <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest mb-1">Assigned Advisor</p>
-              <p className="text-sm font-bold text-purple-900">
-                {request.advisor.name || `${request.advisor.firstName || request.advisor.first_name || ''} ${request.advisor.lastName || request.advisor.last_name || ''}`.trim() || request.advisor.email}
-              </p>
-              {request.adminNote && <p className="text-xs text-purple-600 mt-1 italic">"{request.adminNote}"</p>}
-            </div>
-          )}
-
-          {/* Notes */}
-          {request.notes && (
-            <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-100">
-              <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Agent Notes</p>
-              <p className="text-sm text-gray-700">{request.notes}</p>
-            </div>
-          )}
-
-          {/* Status actions */}
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Update Status</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(STATUS_CFG).filter(([k]) => k !== request.status).map(([key, cfg]) => (
-                <button
-                  key={key}
-                  onClick={() => handleStatusChange(key)}
-                  disabled={updatingStatus}
-                  style={{ background: cfg.bg, color: cfg.color, padding: '7px 14px', borderRadius: 9, border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: updatingStatus ? 0.6 : 1 }}
-                >
-                  {updatingStatus ? <FiLoader size={11} className="animate-spin" /> : <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, display: 'inline-block' }} />}
-                  {cfg.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Assign advisor action */}
-          {!request.advisor && (
-            <button
-              onClick={() => onAssign(request)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white"
-              style={{ background: GR }}
-            >
-              <FiUser size={14} /> Assign Xoto Advisor
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const ViewingRequests = () => {
   const [requests,  setRequests]  = useState([]);
@@ -354,8 +210,6 @@ const ViewingRequests = () => {
   const [loading,   setLoading]   = useState(false);
   const [search,    setSearch]    = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-
-  const [selectedRequest, setSelectedRequest] = useState(null);
   const [assignTarget,    setAssignTarget]    = useState(null);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -393,14 +247,24 @@ const ViewingRequests = () => {
   useEffect(() => { fetchRequests(); fetchAdvisors(); }, [fetchRequests, fetchAdvisors]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleStatusChange = (id, newStatus) => {
-    setRequests(prev => prev.map(r => r._id === id ? { ...r, status: newStatus } : r));
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const res = await apiService.post(`/agent/lead/update-site-visit/${id}`, { status: newStatus });
+      const data = res?.data?.success !== undefined ? res.data : res;
+      if (data?.success !== false) {
+        message.success(`Status updated to ${STATUS_CFG[newStatus]?.label || newStatus}`);
+        setRequests(prev => prev.map(r => r._id === id ? { ...r, status: newStatus } : r));
+      } else {
+        message.error(data?.message || 'Update failed');
+      }
+    } catch (e) {
+      message.error(e?.response?.data?.message || 'Update failed');
+    }
   };
 
   const handleAssignSuccess = () => {
     fetchRequests();
     setAssignTarget(null);
-    setSelectedRequest(null);
   };
 
   // ── Normalize field access (site-visit shape) ─────────────────────────────
@@ -440,15 +304,6 @@ const ViewingRequests = () => {
     <div className="min-h-screen bg-slate-50 pb-16">
 
       {/* Modals */}
-      {selectedRequest && !assignTarget && (
-        <DetailPanel
-          request={selectedRequest}
-          advisors={advisors}
-          onClose={() => setSelectedRequest(null)}
-          onStatusChange={handleStatusChange}
-          onAssign={(req) => { setAssignTarget(req); setSelectedRequest(null); }}
-        />
-      )}
       {assignTarget && (
         <AssignAdvisorModal
           request={assignTarget}
@@ -566,39 +421,51 @@ const ViewingRequests = () => {
                         {propArea && <p style={{ fontSize: 12, color: '#94A3B8', margin: '3px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}><FiMapPin size={10} /> {propArea}</p>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {!r.advisor && r.status === 'requested' && (
+                        {!r.advisor ? (
+                          r.status === 'requested' && (
+                            <button
+                              onClick={() => setAssignTarget(r)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: 'none', background: GR, color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                            >
+                              <FiUser size={12} /> Assign Advisor
+                            </button>
+                          )
+                        ) : (
                           <button
                             onClick={() => setAssignTarget(r)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: 'none', background: GR, color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: '1px solid #E2E8F0', background: '#fff', fontSize: 12, fontWeight: 500, color: '#475569', cursor: 'pointer' }}
                           >
-                            <FiUser size={12} /> Assign Advisor
+                            <FiUser size={12} /> Reassign Advisor
                           </button>
                         )}
-                        <button
-                          onClick={() => setSelectedRequest(r)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: '1px solid #E2E8F0', background: '#fff', fontSize: 12, fontWeight: 500, color: '#475569', cursor: 'pointer' }}
-                        >
-                          <FiEye size={12} /> Details
-                        </button>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px 16px' }}>
-                      {[
-                        { label: 'Client',  value: clientName },
-                        { label: 'Agent',   value: agentName },
-                        { label: 'Date & Time', value: `${prefDate} · ${prefTime || '—'}` },
-                        { label: 'Advisor', value: advisorName || 'Not assigned', muted: !advisorName },
-                      ].map(({ label, value, muted }) => (
-                        <div key={label}>
-                          <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-                          <p style={{ fontSize: 12, fontWeight: 500, color: muted ? '#CBD5E1' : '#334155', margin: '2px 0 0' }}>{value}</p>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Client</p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', margin: '2px 0 0' }}>{clientName}</p>
+                        {r.clientPhone && <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>📞 {r.clientPhone}</p>}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Agent</p>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: '#334155', margin: '2px 0 0' }}>{agentName}</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Date & Time</p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', margin: '2px 0 0' }}>{prefDate}</p>
+                        <p style={{ fontSize: 11, color: '#10b981', fontWeight: 500, margin: 0 }}>⏰ {prefTime || '—'}</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Advisor</p>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: advisorName ? '#7c3aed' : '#94a3b8', margin: '2px 0 0' }}>
+                          {advisorName || 'Not Assigned'}
+                        </p>
+                      </div>
                     </div>
 
                     {r.notes && (
-                      <p style={{ fontSize: 12, color: '#94A3B8', marginTop: 8, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{r.notes}"</p>
+                      <p style={{ fontSize: 12, color: '#94A3B8', marginTop: 8, fontStyle: 'italic' }}>"{r.notes}"</p>
                     )}
                     <p style={{ fontSize: 11, color: '#CBD5E1', marginTop: 8 }}>
                       Requested {r.createdAt ? new Date(r.createdAt).toLocaleString('en-AE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}

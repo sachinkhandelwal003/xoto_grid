@@ -6,7 +6,7 @@ import {
   FiArrowLeft, FiImage, FiInfo, FiXCircle, FiCheckCircle, FiThumbsUp,
   FiThumbsDown, FiMinus, FiSend, FiEdit3, FiPlus, FiX, FiLoader,
   FiChevronDown, FiChevronUp, FiAlertTriangle, FiFileText, FiRefreshCw,
-  FiEye, FiCopy,
+  FiEye, FiCopy, FiGlobe,
 } from 'react-icons/fi';
 import { message, Spin } from 'antd';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
@@ -796,7 +796,7 @@ const PresentationModal = ({ lead, property: initialProperty, onClose }) => {
             </div>
 
             {/* Tracking info */}
-            <div className="p-4 rounded-xl border border-purple-100 bg-purple-50">
+            {/* <div className="p-4 rounded-xl border border-purple-100 bg-purple-50">
               <p className="text-xs font-bold text-purple-700 mb-2">📊 Tracking kya karta hai:</p>
               <ul className="space-y-1 text-xs text-purple-600">
                 <li>✓ Exact time client opens the presentation</li>
@@ -804,7 +804,7 @@ const PresentationModal = ({ lead, property: initialProperty, onClose }) => {
                 <li>✓ Number of times opened</li>
                 <li>✓ Lead engagement score +15 per view</li>
               </ul>
-            </div>
+            </div> */}
           </div>
         )}
 
@@ -2093,11 +2093,14 @@ useEffect(() => {
                                     <FiClock size={10} /> {createdAt}
                                   </p>
                                 </div>
-                                {/* Opens badge */}
-                                <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                                  <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg"
+                                {/* Badges */}
+                                <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                                  <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-wide">
+                                    🔥 {ppt.engagementScore || 0} Score
+                                  </span>
+                                  <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded"
                                     style={{ background: ppt.viewCount > 0 ? '#f0fdf4' : '#f9fafb', color: ppt.viewCount > 0 ? '#16a34a' : '#9ca3af', border: `1px solid ${ppt.viewCount > 0 ? '#bbf7d0' : '#e5e7eb'}` }}>
-                                    <FiEye size={11} /> {ppt.viewCount} {ppt.viewCount === 1 ? 'open' : 'opens'}
+                                    <FiEye size={10} /> {ppt.viewCount} {ppt.viewCount === 1 ? 'open' : 'opens'}
                                   </span>
                                 </div>
                               </div>
@@ -2138,38 +2141,62 @@ useEffect(() => {
                                   className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
                                   <FiEye size={11} /> Preview
                                 </a>
-                                {ppt.viewCount > 0 && (
-                                  <button
-                                    onClick={() => setExpandedPresentation(isExpanded ? null : ppt._id)}
-                                    className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors ml-auto">
-                                    {isExpanded ? <FiChevronUp size={11} /> : <FiChevronDown size={11} />}
-                                    {isExpanded ? 'Hide History' : 'View History'}
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => setExpandedPresentation(isExpanded ? null : ppt._id)}
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors ml-auto">
+                                  {isExpanded ? <FiChevronUp size={11} /> : <FiChevronDown size={11} />}
+                                  {isExpanded ? 'Hide Details' : 'View Details'}
+                                </button>
                               </div>
 
-                              {/* View history */}
+                              {/* View history & info */}
                               {isExpanded && (
-                                <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Open History</p>
-                                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {[...(ppt.views || [])].reverse().map((view, idx) => (
-                                      <div key={idx} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 last:border-0">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-[11px]">
-                                            {view.device === 'Mobile' ? '📱' : view.device === 'Tablet' ? '📟' : '🖥'}
-                                          </span>
-                                          <span className="text-[11px] font-semibold text-gray-700">{view.device || 'Unknown'}</span>
-                                          {view.ip && <span className="text-[10px] text-gray-400">{view.ip}</span>}
-                                        </div>
-                                        <span className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
-                                          <FiClock size={9} />
-                                          {view.timestamp
-                                            ? new Date(view.timestamp).toLocaleString('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-                                            : '—'}
-                                        </span>
+                                <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 space-y-4">
+                                  {/* Info details */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Client Details</p>
+                                      <p className="text-gray-700 font-semibold mb-1">Name: <span className="font-normal text-gray-600">{ppt.clientNotes?.clientName || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold mb-1">Budget: <span className="font-normal text-gray-600">{ppt.clientNotes?.budget || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold">Key Reqs: <span className="font-normal text-gray-600">{ppt.clientNotes?.requirements || '—'}</span></p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Presentation Info</p>
+                                      <p className="text-gray-700 font-semibold mb-1">Tone: <span className="font-normal text-gray-600 capitalize">{ppt.settings?.tone || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold mb-1">Language: <span className="font-normal text-gray-600">{ppt.settings?.language || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold">Unit & Currency: <span className="font-normal text-gray-600">{[ppt.settings?.currency, ppt.settings?.areaUnit].filter(Boolean).join(', ') || '—'}</span></p>
+                                    </div>
+                                  </div>
+
+                                  {/* Open History */}
+                                  <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Open History</p>
+                                    {ppt.views && ppt.views.length > 0 ? (
+                                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                        {[...(ppt.views || [])].reverse().map((view, idx) => (
+                                          <div key={idx} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="text-xs">
+                                                {view.device === 'Mobile' ? '📱' : view.device === 'Tablet' ? '📟' : '🖥'}
+                                              </span>
+                                              <span className="text-[11px] font-semibold text-gray-700">{view.device || 'Unknown'}</span>
+                                              {view.ip && <span className="text-[10px] text-gray-400">({view.ip})</span>}
+                                              <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                                                <FiGlobe size={10} /> {view.country || 'Unknown'}
+                                              </span>
+                                            </div>
+                                            <span className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
+                                              <FiClock size={9} />
+                                              {view.timestamp
+                                                ? new Date(view.timestamp).toLocaleString('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                                : '—'}
+                                            </span>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
+                                    ) : (
+                                      <p className="text-[11px] text-gray-400 py-1">No view history recorded yet.</p>
+                                    )}
                                   </div>
                                 </div>
                               )}
