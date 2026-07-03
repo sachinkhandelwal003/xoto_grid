@@ -147,6 +147,18 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
   const [property,         setProperty]        = useState(initialProperty);
   const [propertyLoading,  setPropertyLoading] = useState(false);
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  // ? NEW: Selected Lead States
+  const [leads,            setLeads]           = useState([]);
+  const [selectedLeadId,   setSelectedLeadId]  = useState("");
+  const [leadsLoading,     setLeadsLoading]    = useState(false);
+
   const [settings, setSettings] = useState({
     language: "English", currency: "AED", areaUnit: "sqft", tone: "professional",
     sections: {
@@ -160,6 +172,22 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
     clientName: "", budget: "", requirements: "",
   });
 
+  // ? NEW: Fetch leads for dropdown selection
+  useEffect(() => {
+    setLeadsLoading(true);
+    apiService.get("/gridlead/agent/my-leads?limit=100")
+      .then((res) => {
+        const list = res?.data || res || [];
+        setLeads(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch agent leads:", err);
+      })
+      .finally(() => {
+        setLeadsLoading(false);
+      });
+  }, []);
+
   useEffect(() => {
     if (!initialProperty?._id) return;
     setPropertyLoading(true);
@@ -168,6 +196,36 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
       .catch(() => {})
       .finally(() => setPropertyLoading(false));
   }, [initialProperty._id]);
+
+  const handleLeadChange = (leadId) => {
+    setSelectedLeadId(leadId);
+    if (!leadId) {
+      setClientNotes({ clientName: "", budget: "", requirements: "" });
+      return;
+    }
+    const found = leads.find(l => l._id === leadId);
+    if (found) {
+      const fn = found.contact_info?.name?.first_name || '';
+      const ln = found.contact_info?.name?.last_name || '';
+      const fullName = `${fn} ${ln}`.trim() || found.full_name || 'Valued Client';
+      
+      const bMin = found.requirements?.budget_min;
+      const bMax = found.requirements?.budget_max;
+      let budgetStr = '';
+      if (bMax) budgetStr = `AED ${Number(bMax).toLocaleString()}`;
+      else if (bMin) budgetStr = `AED ${Number(bMin).toLocaleString()}`;
+      
+      const pType = found.requirements?.property_type || '';
+      const beds = found.requirements?.bedrooms != null ? `${found.requirements.bedrooms}BR` : '';
+      const reqsStr = [pType, beds].filter(Boolean).join(', ') || found.requirements?.additional_notes || '';
+      
+      setClientNotes({
+        clientName: fullName,
+        budget: budgetStr,
+        requirements: reqsStr,
+      });
+    }
+  };
 
   const buildCleanProperty = () => ({
     propertyName:    property.propertyName || property.projectName || "",
@@ -277,13 +335,15 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 1050,
-      display: "flex", alignItems: "flex-end", justifyContent: "center",
+      display: "flex", alignItems: "center", justifyContent: "center",
       background: "rgba(0,0,0,0.55)",
+      padding: 16,
+      boxSizing: "border-box",
     }}>
       <div style={{
-        background: "#fff", width: "100%", maxWidth: 640, maxHeight: "92vh",
+        background: "#fff", width: "100%", maxWidth: 640, maxHeight: "90vh",
         display: "flex", flexDirection: "column",
-        borderRadius: "24px 24px 0 0", overflow: "hidden",
+        borderRadius: "24px", overflow: "hidden",
         boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
       }}>
         {/* Header */}
@@ -325,6 +385,45 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1e293b" }}>{property.propertyName || property.projectName}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>{[property.area || property.locality, property.city].filter(Boolean).join(", ")}</p>
               </div>
+            </div>
+
+            {/* Select Lead */}
+            <div>
+              <p style={{ margin: "0 0 12px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Select Lead</p>
+              <label style={{ display: "block", fontSize: 12, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>
+                Choose Lead <span style={{ color: "#dc2626" }}>*</span>
+              </label>
+              {leadsLoading ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 10, borderRadius: 12, border: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                  <FiLoader size={12} className="animate-spin text-purple-500" />
+                  <span style={{ fontSize: 12, color: "#64748b" }}>Loading your leads...</span>
+                </div>
+              ) : (
+                <select
+                  value={selectedLeadId}
+                  onChange={(e) => handleLeadChange(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 14px", borderRadius: 12,
+                    border: "1px solid #e2e8f0", fontSize: 14, outline: "none",
+                    background: "#fafafa", boxSizing: "border-box", cursor: "pointer",
+                    color: "#1e293b", fontWeight: 500
+                  }}
+                >
+                  <option value="">-- Choose a Lead (Required) --</option>
+                  {leads.map((l) => {
+                    const fn = l.contact_info?.name?.first_name || '';
+                    const ln = l.contact_info?.name?.last_name || '';
+                    const name = `${fn} ${ln}`.trim() || l.full_name || 'Untitled Lead';
+                    const email = l.contact_info?.email?.address || '';
+                    const status = l.status ? `[${l.status.toUpperCase()}]` : '';
+                    return (
+                      <option key={l._id} value={l._id}>
+                        {name} {email ? `(${email})` : ''} {status}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
 
             {/* Client Details */}
@@ -454,18 +553,18 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
             </div>
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: P, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>🔗 Client Link (Tracked)</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input readOnly value={trackingUrl} style={{ flex: 1, padding: "10px 14px", borderRadius: 12, border: `1px solid ${P2}`, background: "#f3e8ff", fontSize: 13, color: P, fontWeight: 600, outline: "none" }} />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input readOnly value={trackingUrl} style={{ flex: 1, padding: "10px 14px", borderRadius: 12, border: `1px solid ${P2}`, background: "#f3e8ff", fontSize: 13, color: P, fontWeight: 600, outline: "none", height: 42, boxSizing: "border-box" }} />
                 <button onClick={() => { navigator.clipboard.writeText(trackingUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                  style={{ padding: "10px 16px", borderRadius: 12, border: `1px solid ${copied ? "#bbf7d0" : P2}`, background: copied ? "#f0fdf4" : "#f3e8ff", cursor: "pointer", fontSize: 14, fontWeight: 700, color: copied ? "#16a34a" : P, flexShrink: 0 }}>
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 42, padding: "0 16px", borderRadius: 12, border: `1px solid ${copied ? "#bbf7d0" : P2}`, background: copied ? "#f0fdf4" : "#f3e8ff", cursor: "pointer", fontSize: 14, fontWeight: 700, color: copied ? "#16a34a" : P, flexShrink: 0, boxSizing: "border-box" }}>
                   {copied ? "✓" : <FiCopy size={14} />}
                 </button>
               </div>
             </div>
             {previewUrl && (
               <a href={previewUrl} target="_blank" rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fafafa", fontSize: 14, color: "#374151", textDecoration: "none", fontWeight: 600 }}>
-                <FiEye size={13} /> Open Preview (Not Tracked)
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 0", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fafafa", fontSize: 14, color: "#374151", textDecoration: "none", fontWeight: 600, width: "100%", boxSizing: "border-box" }}>
+                <FiEye size={14} /> Open Preview (Not Tracked)
               </a>
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -483,12 +582,13 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
         )}
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
-          <Btn variant="ghost" onClick={onClose}>{step === 3 ? "Close" : "Cancel"}</Btn>
+        <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: step === 3 ? "flex-end" : "space-between", gap: 12, flexShrink: 0 }}>
+          {step !== 3 && <Btn variant="ghost" onClick={onClose}>Cancel</Btn>}
           <div style={{ display: "flex", gap: 8 }}>
             {step === 2 && <Btn variant="ghost" onClick={() => setStep(1)}>← Back</Btn>}
-            {step === 1 && <Btn onClick={handleGenerate} loading={generating} disabled={propertyLoading}>Generate with AI →</Btn>}
+            {step === 1 && <Btn onClick={handleGenerate} loading={generating} disabled={propertyLoading || !selectedLeadId}>Generate with AI →</Btn>}
             {step === 2 && <Btn onClick={handleSave} loading={saving}><FiCheckCircle size={14} /> Save & Get Link →</Btn>}
+            {step === 3 && <Btn onClick={onClose}>Close</Btn>}
           </div>
         </div>
       </div>
@@ -806,7 +906,7 @@ export default function AgentProjectDetails() {
     propertyId={property._id}
     propertyName={property.propertyName || property.projectName}
     onClose={() => setShowViewingModal(false)}
-    onSuccess={() => message.success("Viewing request submitted! Admin will confirm shortly.")}
+    onSuccess={() => {}}
   />
 )}
 
@@ -1165,10 +1265,6 @@ export default function AgentProjectDetails() {
                 <button onClick={() => setShowPresentation(true)}
                   style={{ width: "100%", height: 52, borderRadius: 16, border: "none", background: GR, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <ThunderboltOutlined /> Generate AI Presentation
-                </button>
-                <button onClick={() => setShowLeadModal(true)}
-                  style={{ width: "100%", height: 52, borderRadius: 16, border: `1px solid ${P}`, background: "#fff", color: P, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <UserOutlined /> Add Lead
                 </button>
               {property.canVisit && (
   <button onClick={() => setShowViewingModal(true)}

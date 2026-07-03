@@ -146,14 +146,16 @@ const AgentDashboard = () => {
     conversion_rate      = 0,
     lead_status_breakdown = [],
     monthly_leads        = [],
+    commission_trend     = [],
+    conversion_funnel    = [],
+    leads_mom_increase   = 0,
     recent_clients       = [],
   } = data || {};
 
   const profileComplete = profile_completion >= 100;
 
   const kpiCards = [
-    { title: 'Active Requirement Leads', value: active_requirement_leads, icon: <TeamOutlined />,     color: THEME.primary, bg: THEME.primaryLight },
-    { title: 'Active Listings',          value: active_listings,          icon: <HomeOutlined />,      color: '#0ea5e9',     bg: '#f0f9ff'          },
+    { title: 'Current Leads',            value: stats?.total,             icon: <TeamOutlined />,     color: THEME.primary, bg: THEME.primaryLight },
     { title: 'Presentations Generated',  value: presentations_generated,  icon: <FileTextOutlined />,  color: THEME.green,   bg: '#ecfdf5'          },
     { title: 'Commission Earned (AED)',  value: commission_earned,        icon: <DollarOutlined />,    color: THEME.amber,   bg: '#fffbeb', locked: !profileComplete },
   ];
@@ -249,7 +251,7 @@ const AgentDashboard = () => {
         {/* ── KPI Cards ──────────────────────────────────────────────────── */}
         <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
           {kpiCards.map(k => (
-            <Col xs={24} sm={12} lg={6} key={k.title}>
+            <Col xs={24} sm={12} lg={8} key={k.title}>
               <KpiCard {...k} />
             </Col>
           ))}
@@ -294,26 +296,26 @@ const AgentDashboard = () => {
             </Card>
           </Col>
 
-          {/* Deals Closed */}
+          {/* Leads by Month (Bar Chart) */}
           <Col xs={24} lg={8}>
             <Card bordered={false} bodyStyle={{ padding: 20 }}
               style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)', height: '100%' }}>
-              <div style={{ marginBottom: 16 }}>
-                <SectionLabel>Conversions</SectionLabel>
-                <CardTitle>Deals Closed</CardTitle>
-                <Text style={{ fontSize: 12, color: THEME.sub, display: 'block', marginTop: 2 }}>Monthly</Text>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div>
+                  <SectionLabel>Monthly Intake</SectionLabel>
+                  <CardTitle>Leads by Month</CardTitle>
+                </div>
+                <Tag color={leads_mom_increase >= 0 ? 'green' : 'red'} style={{ fontWeight: 600, fontSize: 11, borderRadius: 20, margin: 0 }}>
+                  {leads_mom_increase >= 0 ? `+${leads_mom_increase}%` : `${leads_mom_increase}%`} MoM
+                </Tag>
               </div>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={deals_closed} margin={{ top: 10, right: 6, left: -28, bottom: 0 }}>
+                <BarChart data={monthly_leads} margin={{ top: 10, right: 6, left: -28, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fill: THEME.sub, fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
                   <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={ChartTooltipStyle} />
-                  <Bar dataKey="deals" radius={[5, 5, 0, 0]} barSize={24}>
-                    {deals_closed.map((_, i) => (
-                      <Cell key={i} fill={i === deals_closed.length - 1 ? THEME.primary : '#e2e8f0'} />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="leads" radius={[5, 5, 0, 0]} barSize={24} fill={THEME.primary} />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
@@ -359,52 +361,52 @@ const AgentDashboard = () => {
             </Card>
           </Col>
 
-          {/* Monthly Leads Line Chart */}
+          {/* Commission over Time Line Chart */}
           <Col xs={24} sm={12} lg={10}>
             <Card bordered={false} bodyStyle={{ padding: 20 }}
               style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)', height: '100%' }}>
-              <SectionLabel>Month on Month</SectionLabel>
-              <CardTitle>Leads Growth</CardTitle>
+              <SectionLabel>Earnings</SectionLabel>
+              <CardTitle>Commission over Time</CardTitle>
               <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={monthly_leads} margin={{ top: 20, right: 16, left: -20, bottom: 0 }}>
+                <LineChart data={commission_trend} margin={{ top: 20, right: 16, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fill: THEME.sub, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, d => Math.max(1, d + 1)]} />
-                  <Tooltip contentStyle={ChartTooltipStyle} />
-                  <Line type="monotone" dataKey="leads" stroke={THEME.primary} strokeWidth={2.5} dot={{ fill: THEME.primary, r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} unit="aed" formatter={(v) => `AED ${v.toLocaleString()}`} />
+                  <Tooltip contentStyle={ChartTooltipStyle} formatter={(v) => [`AED ${v.toLocaleString()}`, 'Commission']} />
+                  <Line type="monotone" dataKey="commission" stroke={THEME.green} strokeWidth={2.5} dot={{ fill: THEME.green, r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </Card>
           </Col>
 
-          {/* Conversion Rate */}
+          {/* Conversion Funnel */}
           <Col xs={24} sm={12} lg={7}>
             <Card bordered={false} bodyStyle={{ padding: 20 }}
               style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)', height: '100%' }}>
-              <SectionLabel>Performance</SectionLabel>
-              <CardTitle>Conversion Rate</CardTitle>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, margin: '14px 0 8px' }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: THEME.green, lineHeight: 1 }}>{conversion_rate}</span>
-                <span style={{ fontSize: 16, color: THEME.sub }}>%</span>
-              </div>
-              <Progress
-                percent={conversion_rate}
-                strokeColor={{ '0%': THEME.red, '50%': THEME.amber, '100%': THEME.green }}
-                trailColor="#e8edf5"
-                showInfo={false}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
-                {[
-                  { label: 'Total Leads',  value: stats?.total     || 0, color: THEME.text  },
-                  { label: 'In Progress',  value: stats?.active    || 0, color: THEME.amber },
-                  { label: 'Completed',    value: stats?.completed || 0, color: THEME.green },
-                  { label: 'Not Proceeding', value: stats?.not_proceeding || 0, color: THEME.red },
-                ].map(({ label, value, color }) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 12, color: THEME.sub }}>{label}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: 600, color }}>{value}</Text>
-                  </div>
-                ))}
+              <SectionLabel>Funnel</SectionLabel>
+              <CardTitle>Conversion Funnel</CardTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 18 }}>
+                {conversion_funnel.map((item) => {
+                  const maxVal = stats?.total || 1;
+                  const percent = Math.round((item.count / maxVal) * 100);
+                  return (
+                    <div key={item.stage}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                        <Text style={{ fontWeight: 600, fontSize: 11 }}>{item.stage}</Text>
+                        <Text style={{ color: THEME.sub, fontSize: 11 }}>{item.count} ({percent}%)</Text>
+                      </div>
+                      <div style={{ height: 16, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${percent}%`,
+                          background: `linear-gradient(90deg, ${THEME.primary} 0%, ${THEME.green} 100%)`,
+                          borderRadius: 4,
+                          transition: 'width 0.5s ease-in-out'
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           </Col>
@@ -439,13 +441,12 @@ const AgentDashboard = () => {
           </Col>
         </Row>
 
-        {/* ── Activity Feed + Quick Actions ──────────────────────────────── */}
+        {/* ── Activity Feed ──────────────────────────────── */}
         <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-
           {/* Recent Activity */}
-          <Col xs={24} lg={14}>
+          <Col xs={24}>
             <Card bordered={false} bodyStyle={{ padding: 20 }}
-              style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)', height: '100%' }}
+              style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)' }}
               title={<CardTitle>Recent Activity</CardTitle>}>
               {activity_feed.length > 0 ? (
                 <List
@@ -477,71 +478,7 @@ const AgentDashboard = () => {
               )}
             </Card>
           </Col>
-
-          {/* Quick Actions */}
-          <Col xs={24} lg={10}>
-            <Card bordered={false} bodyStyle={{ padding: 20 }}
-              style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)', height: '100%' }}
-              title={<CardTitle>Quick Actions</CardTitle>}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Button
-                  size="large" block type="primary" icon={<PlusOutlined />}
-                  onClick={() => navigate('/dashboard/agent/CreateAgent-Lead')}
-                  style={{ background: `linear-gradient(135deg, ${THEME.primary} 0%, #9D4EDD 100%)`, border: 'none', fontWeight: 500, height: 46, borderRadius: 8 }}
-                >
-                  Add Requirement Lead
-                </Button>
-                <Button
-                  size="large" block icon={<AppstoreAddOutlined />}
-                  onClick={() => navigate('/dashboard/agent/agent-projects')}
-                  style={{ fontWeight: 500, height: 46, borderRadius: 8, borderColor: '#0ea5e9', color: '#0ea5e9' }}
-                >
-                  Add Listing
-                </Button>
-                <Button
-                  size="large" block icon={<FireOutlined />}
-                  onClick={() => navigate('/dashboard/agent/agent-projects')}
-                  style={{ fontWeight: 500, height: 46, borderRadius: 8, borderColor: THEME.blue, color: THEME.blue }}
-                >
-                  Browse Properties
-                </Button>
-              </div>
-            </Card>
-          </Col>
         </Row>
-
-        {/* ── Recent Clients ─────────────────────────────────────────────── */}
-        {recent_clients.length > 0 && (
-          <Row gutter={[16, 16]}>
-            <Col xs={24}>
-              <Card bordered={false} bodyStyle={{ padding: 20 }}
-                style={{ borderRadius: 10, border: `1px solid ${THEME.border}`, boxShadow: '0 2px 12px rgba(15,23,42,0.05)' }}
-                title={<CardTitle>Recent Clients</CardTitle>}>
-                <List
-                  dataSource={recent_clients}
-                  renderItem={item => (
-                    <List.Item style={{ paddingLeft: 0, paddingRight: 0, borderBottom: '1px solid #f1f5f9' }}>
-                      <List.Item.Meta
-                        avatar={
-                          <Avatar size={40} style={{ background: THEME.primaryLight, color: THEME.primary, fontWeight: 600, fontSize: 16 }}>
-                            {item.name?.charAt(0)?.toUpperCase()}
-                          </Avatar>
-                        }
-                        title={<Text style={{ fontSize: 13, fontWeight: 500, color: THEME.text }}>{item.title || item.name}</Text>}
-                        description={
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-                            <Text style={{ fontSize: 12, color: THEME.sub }}>{item.name}</Text>
-                            <Text style={{ fontSize: 11, color: '#94a3b8' }}>{item.time}</Text>
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
 
       </div>
     </Spin>

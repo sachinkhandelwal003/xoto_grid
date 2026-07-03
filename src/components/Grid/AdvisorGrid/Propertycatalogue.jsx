@@ -294,7 +294,7 @@ const PresentationModal = ({ property: initialProperty, onClose }) => {
     } finally {
       setGenerating(false); 
     }
-  };
+  };   
 
   const handleSave = async () => {
     setSaving(true);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { message } from 'antd';
+import { message, Select } from 'antd';
 import {
   FiX, FiLoader, FiCalendar, FiClock, FiHome,
   FiUser, FiMessageSquare, FiCheckCircle, FiPhone,
@@ -210,23 +210,30 @@ const ScheduleViewingModal = ({
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                 Select Client / Lead <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <FiUser size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <select
-                  value={form.selectedLeadId}
-                  onChange={e => { set('selectedLeadId', e.target.value); set('selectedPropertyId', ''); }}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 flex-shrink-0">
+                  <FiUser size={15} />
+                </div>
+                <Select
+                  showSearch
+                  placeholder={loadingLeads ? 'Loading leads…' : leads.length === 0 ? 'No leads found' : 'Search and choose a client'}
+                  value={form.selectedLeadId || undefined}
+                  onChange={val => { set('selectedLeadId', val || ''); set('selectedPropertyId', ''); }}
                   disabled={loadingLeads}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all appearance-none"
-                >
-                  <option value="">{loadingLeads ? 'Loading leads…' : leads.length === 0 ? 'No leads found' : 'Choose a lead'}</option>
-                  {leads.map(l => {
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  style={{ flex: 1 }}
+                  size="large"
+                  dropdownStyle={{ zIndex: 10000 }}
+                  options={leads.map(l => {
                     const fn    = l.contact_info?.name?.first_name || l.first_name || '';
                     const ln    = l.contact_info?.name?.last_name  || l.last_name  || '';
                     const ph    = l.contact_info?.mobile?.number   || '';
                     const label = `${fn} ${ln}`.trim() || ph || String(l._id).slice(-6);
-                    return <option key={l._id || l.id} value={l._id || l.id}>{label}</option>;
+                    return { value: l._id || l.id, label };
                   })}
-                </select>
+                />
               </div>
             </div>
           )}
@@ -307,30 +314,6 @@ const ScheduleViewingModal = ({
                   <option key={t} value={t}>{to12h(t)}</option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          {/* ── Visit type ── */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Visit Type</label>
-            <div className="flex gap-2">
-              {[
-                { value: 'in_person', label: 'In-Person' },
-                { value: 'virtual',   label: 'Virtual Tour' },
-              ].map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => set('visitType', value)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
-                    form.visitType === value
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 text-gray-500 hover:border-purple-300 bg-white'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
 
