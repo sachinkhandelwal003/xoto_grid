@@ -156,7 +156,7 @@ const InventoryCard = ({ unit, onEdit, onAction, onView }) => {
 };
 
 // Form Fields Component
-const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProperty = null }) => {
+const InventoryFormFields = ({ form, isEdit = false, selectedUnit = null, units = [], activeProperty = null }) => {
   const isResidentialUnitType = (unitType) => 
     ["apartment", "villa", "townhouse", "duplex", "penthouse", "hotel_apartment"].includes(unitType);
   
@@ -169,19 +169,89 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
   const propViewType = activeProperty?.viewType?.length ? activeProperty.viewType.map(toLabel).join(", ") : "None";
   const propPaymentPlan = activeProperty?.paymentPlan?.length ? activeProperty.paymentPlan[0]?.title : "";
 
+  const handleBedroomTypeChange = (value) => {
+    let beds = 0;
+    let baths = 1;
+    if (value === "studio") {
+      beds = 0;
+      baths = 1;
+    } else if (value === "8plus") {
+      beds = 8;
+      baths = 8;
+    } else {
+      const match = value.match(/^(\d+)bed$/);
+      if (match) {
+        beds = parseInt(match[1]);
+        baths = beds;
+      }
+    }
+    if (form) {
+      form.setFieldsValue({ bedrooms: beds });
+      const currentBaths = form.getFieldValue("bathrooms");
+      if (!currentBaths || currentBaths === 0) {
+        form.setFieldsValue({ bathrooms: baths });
+      }
+    }
+  };
+
+  const handleUnitTypeChange = (value) => {
+    const isRes = isResidentialUnitType(value);
+    if (!isRes) {
+      form.setFieldsValue({
+        bedroomType: undefined,
+        bedrooms: undefined,
+        bathrooms: undefined
+      });
+    } else {
+      const currentBaths = form.getFieldValue("bathrooms");
+      if (currentBaths === undefined || currentBaths === null) {
+        form.setFieldsValue({ bathrooms: 1 });
+      }
+    }
+  };
+
   return (
     <>
       <div style={S.formSection}>Unit Identity</div>
       <div style={S.formGrid3}>
-        <Form.Item name="unitNumber" label="Unit Number" rules={[{ required: true }]}><Input placeholder="e.g. T1-1001" /></Form.Item>
+        <Form.Item
+          name="unitNumber"
+          label="Unit Number"
+          rules={[
+            { required: true, message: "Unit number is required" },
+            { whitespace: true, message: "Unit number cannot be empty whitespace" },
+            {
+              validator: async (_, value) => {
+                if (value && units && Array.isArray(units)) {
+                  const isDup = units.some(u => 
+                    u.unitNumber?.trim().toLowerCase() === value.trim().toLowerCase() && 
+                    u._id !== selectedUnit?._id
+                  );
+                  if (isDup) {
+                    return Promise.reject(new Error("This unit number already exists in this project!"));
+                  }
+                }
+                return Promise.resolve();
+              }
+            }
+          ]}
+        >
+          <Input placeholder="e.g. T1-1001" />
+        </Form.Item>
         <Form.Item name="buildingName" label="Building Name"><Input placeholder="e.g. Tower A" /></Form.Item>
-        <Form.Item name="floorNumber" label="Floor Number"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+        <Form.Item
+          name="floorNumber"
+          label="Floor Number"
+          rules={[{ type: "integer", message: "Floor number must be an integer" }]}
+        >
+          <InputNumber style={{ width: "100%" }} />
+        </Form.Item>
       </div>
 
       <div style={S.formSection}>Unit Type & Size</div>
       <div style={S.formGrid4}>
-        <Form.Item name="unitType" label="Unit Type" rules={[{ required: true }]}>
-          <Select placeholder="Select">{UNIT_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
+        <Form.Item name="unitType" label="Unit Type" rules={[{ required: true, message: "Unit type is required" }]}>
+          <Select placeholder="Select" onChange={handleUnitTypeChange}>{UNIT_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
         </Form.Item>
         
         <Form.Item shouldUpdate={(prev, curr) => prev.unitType !== curr.unitType}>
@@ -189,11 +259,32 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
             const unitType = getFieldValue("unitType");
             return isResidentialUnitType(unitType) ? (
               <>
-                <Form.Item name="bedroomType" label="Bedroom Type" rules={[{ required: true }]}>
-                  <Select placeholder="Select">{BEDROOM_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}</Select>
+                <Form.Item
+                  name="bedroomType"
+                  label="Bedroom Type"
+                  rules={[{ required: true, message: "Bedroom type is required for residential units" }]}
+                >
+                  <Select placeholder="Select" onChange={handleBedroomTypeChange}>
+                    {BEDROOM_TYPES.map(t => <Option key={t} value={t}>{toLabel(t)}</Option>)}
+                  </Select>
                 </Form.Item>
-                <Form.Item name="bedrooms" label="Bedrooms"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
-                <Form.Item name="bathrooms" label="Bathrooms"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+                <Form.Item
+                  name="bedrooms"
+                  label="Bedrooms"
+                  rules={[{ type: "integer", min: 0, message: "Bedrooms must be 0 or more" }]}
+                >
+                  <InputNumber min={0} style={{ width: "100%" }} precision={0} />
+                </Form.Item>
+                <Form.Item
+                  name="bathrooms"
+                  label="Bathrooms"
+                  rules={[
+                    { required: true, message: "Bathrooms count is required for residential units" },
+                    { type: "integer", min: 1, message: "Bathrooms must be at least 1" }
+                  ]}
+                >
+                  <InputNumber min={1} style={{ width: "100%" }} precision={0} />
+                </Form.Item>
               </>
             ) : null;
           }}
@@ -202,10 +293,26 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
 
       <div style={S.formSection}>Area & Price</div>
       <div style={S.formGrid4}>
-        <Form.Item name="area" label="Area" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+        <Form.Item
+          name="area"
+          label="Area"
+          rules={[
+            { required: true, message: "Area is required" },
+            { type: "number", min: 0.01, message: "Area must be greater than 0" }
+          ]}
+        >
+          <InputNumber min={0.01} style={{ width: "100%" }} />
+        </Form.Item>
         <Form.Item name="areaUnit" label="Unit" initialValue="sqft"><Select>{AREA_UNITS.map(u => <Option key={u} value={u}>{u}</Option>)}</Select></Form.Item>
-        <Form.Item name="price" label="Price" rules={[{ required: true }]}>
-          <InputNumber min={0} style={{ width: "100%" }}
+        <Form.Item
+          name="price"
+          label="Price"
+          rules={[
+            { required: true, message: "Price is required" },
+            { type: "number", min: 0.01, message: "Price must be greater than 0" }
+          ]}
+        >
+          <InputNumber min={0.01} style={{ width: "100%" }}
             formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
             parser={v => v.replace(/,/g, "")} />
         </Form.Item>
@@ -234,14 +341,26 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
                   </Form.Item>
 
                   <Form.Item shouldUpdate={(prev, curr) => prev.hasView !== curr.hasView}>
-                    {({ getFieldValue }) => {
-                      const hasView = getFieldValue("hasView");
+                    {({ getFieldValue: getFieldVal }) => {
+                      const hasView = getFieldVal("hasView");
                       const shouldShow = hasView === true || (hasView === "inherit" && activeProperty?.hasView);
                       return shouldShow ? (
                         <Form.Item
                           name="viewType"
                           label="View Types"
                           style={{ gridColumn: "span 2" }}
+                          rules={[
+                            ({ getFieldValue: getField }) => ({
+                              validator(_, val) {
+                                const hv = getField("hasView");
+                                const required = hv === true || (hv === "inherit" && activeProperty?.hasView);
+                                if (required && (!val || val.length === 0)) {
+                                  return Promise.reject(new Error("Please select at least one view type"));
+                                }
+                                return Promise.resolve();
+                              }
+                            })
+                          ]}
                         >
                           <Select mode="multiple" placeholder={`Inherit: ${propViewType}`} allowClear>
                             {VIEW_TYPES.map(v => (
@@ -253,8 +372,12 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
                     }}
                   </Form.Item>
 
-                  <Form.Item name="parkingSpaces" label="Parking">
-                    <InputNumber min={0} style={{ width: "100%" }} placeholder={`Inherit: ${propParking}`} />
+                  <Form.Item
+                    name="parkingSpaces"
+                    label="Parking"
+                    rules={[{ type: "integer", min: 0, message: "Parking spaces must be a non-negative integer" }]}
+                  >
+                    <InputNumber min={0} style={{ width: "100%" }} precision={0} placeholder={`Inherit: ${propParking}`} />
                   </Form.Item>
                 </div>
                 <div style={S.formGrid3}>
@@ -278,7 +401,7 @@ const InventoryFormFields = ({ isEdit = false, selectedUnit = null, activeProper
       {isEdit && (<>
         <div style={S.formSection}>Status</div>
         <div style={{ maxWidth: 240 }}>
-          <Form.Item name="status" label="Unit Status">
+          <Form.Item name="status" label="Unit Status" rules={[{ required: true, message: "Status is required" }]}>
             <Select>
               {["available", "reserved", "booked"].map(s => <Option key={s} value={s}>{toLabel(s)}</Option>)}
               <Option value="sold" disabled={selectedUnit?.status !== "booked"}>Sold</Option>
@@ -338,7 +461,7 @@ export default function DeveloperInventory() {
       }
     } catch (err) {
       console.error("Failed to fetch property config:", err);
-      message.error(err?.response?.data?.message || "Failed to load config");
+      message.error(err?.response?.data?.message || err?.message || "Failed to load config");
     }
   }, []);
 
@@ -371,7 +494,12 @@ export default function DeveloperInventory() {
       configForm.resetFields();
     } catch (err) {
       console.error("Auto-generate error:", err);
-      message.error(err?.response?.data?.message || "Auto-generate failed");
+      if (err?.errorFields) {
+        const errMsg = err.errorFields.map(f => f.errors.join(", ")).filter(Boolean).join("; ");
+        message.error(`Validation failed: ${errMsg}`);
+      } else {
+        message.error(err?.response?.data?.message || err?.message || "Auto-generate failed");
+      }
     } finally {
       setGenerating(false);
     }
@@ -497,29 +625,33 @@ const opts = (Array.isArray(list) ? list : [])
       
     } catch (err) {
       console.error("Failed to load inventory:", err);
-      message.error(err?.response?.data?.message || "Failed to load inventory");
+      message.error(err?.response?.data?.message || err?.message || "Failed to load inventory");
     } finally {
       setLoading(false);
     }
   }, [statusFilter, unitTypeFilter]);
 
+const isResidentialUnitType = (unitType) => 
+  ["apartment", "villa", "townhouse", "duplex", "penthouse", "hotel_apartment"].includes(unitType);
+
 const handleCreate = async (values) => {
   if (!projectId) { message.error("Select a project first"); return; }
   setSaving(true);
   try {
+    const isRes = isResidentialUnitType(values.unitType);
     await apiService.post("/properties/inventory", {
       propertyId: projectId,
       units: [{
-        unitNumber: values.unitNumber,
-        buildingName: values.buildingName || "",
+        unitNumber: values.unitNumber?.trim(),
+        buildingName: values.buildingName?.trim() || "",
         floorNumber: values.floorNumber || 0,
         unitType: values.unitType,
-        bedroomType: values.bedroomType,
-        bedrooms: values.bedrooms || 0,
-        bathrooms: values.bathrooms || 0,
-        area: values.area,
+        bedroomType: isRes ? values.bedroomType : null,
+        bedrooms: isRes ? (values.bedrooms || 0) : 0,
+        bathrooms: isRes ? (values.bathrooms || 0) : 0,
+        area: Number(values.area),
         areaUnit: values.areaUnit || "sqft",
-        price: values.price,
+        price: Number(values.price),
         currency: values.currency === "inherit" ? null : values.currency,
         hasView: values.hasView === "inherit" ? null : values.hasView,
         viewType: (values.hasView === "inherit" || !values.viewType) ? null : values.viewType,
@@ -543,15 +675,24 @@ const handleCreate = async (values) => {
  const handleUpdate = async (values) => {
   setSaving(true);
   try {
-    await apiService.patch(`/properties/inventory/${selectedUnit._id}`, {
+    const isRes = isResidentialUnitType(values.unitType);
+    const payload = {
       ...values,
+      unitNumber: values.unitNumber?.trim(),
+      buildingName: values.buildingName?.trim() || "",
+      bedroomType: isRes ? values.bedroomType : null,
+      bedrooms: isRes ? (values.bedrooms || 0) : 0,
+      bathrooms: isRes ? (values.bathrooms || 0) : 0,
+      area: Number(values.area),
+      price: Number(values.price),
       currency: values.currency === "inherit" ? null : values.currency,
       hasView: values.hasView === "inherit" ? null : values.hasView,
       viewType: (values.hasView === "inherit" || !values.viewType) ? null : values.viewType,
       parkingSpaces: values.parkingSpaces === undefined || values.parkingSpaces === null ? null : values.parkingSpaces,
       furnishing: values.furnishing === "inherit" ? null : values.furnishing,
       paymentPlan: !values.paymentPlan ? null : values.paymentPlan,
-    });
+    };
+    await apiService.patch(`/properties/inventory/${selectedUnit._id}`, payload);
     message.success("Unit updated");
     setEditModal(false); 
     editForm.resetFields(); 
@@ -853,7 +994,7 @@ const handleCreate = async (values) => {
         footer={null} width={780} destroyOnClose
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
-          <InventoryFormFields activeProperty={propertiesList.find(p => p._id === projectId)} />
+          <InventoryFormFields form={createForm} units={units} activeProperty={propertiesList.find(p => p._id === projectId)} />
           <div style={S.modalFooter}>
             <button style={S.outlineBtn} type="button" onClick={() => { setCreateModal(false); createForm.resetFields(); }}>Cancel</button>
             <button style={{ ...S.primaryBtn, opacity: saving ? 0.7 : 1 }} type="submit" disabled={saving}>
@@ -975,7 +1116,7 @@ const handleCreate = async (values) => {
         footer={null} width={780} destroyOnClose
       >
         <Form form={editForm} layout="vertical" onFinish={handleUpdate}>
-          <InventoryFormFields isEdit selectedUnit={selectedUnit} activeProperty={propertiesList.find(p => p._id === projectId)} />
+          <InventoryFormFields form={editForm} isEdit selectedUnit={selectedUnit} units={units} activeProperty={propertiesList.find(p => p._id === projectId)} />
           <div style={S.modalFooter}>
             <button style={S.outlineBtn} type="button" onClick={() => { setEditModal(false); editForm.resetFields(); setSelectedUnit(null); }}>Cancel</button>
             <button style={{ ...S.primaryBtn, opacity: saving ? 0.7 : 1 }} type="submit" disabled={saving}>
@@ -1011,8 +1152,24 @@ const handleCreate = async (values) => {
             <div key={idx}>
               <Divider style={{ margin: "16px 0 8px" }}>{field.label}</Divider>
               {field.type === "array" && field.fields && (
-                <Form.List name={field.key}>
-                  {(fields, { add, remove }) => (
+                <Form.List
+                  name={field.key}
+                  rules={[
+                    {
+                      validator: async (_, value) => {
+                        if (!value || value.length === 0) {
+                          let labelClean = field.label || "";
+                          if (labelClean.includes("(")) {
+                            labelClean = labelClean.split("(")[0].trim();
+                          }
+                          const singular = labelClean.endsWith("s") ? labelClean.slice(0, -1) : labelClean;
+                          return Promise.reject(new Error(`Please add at least one ${singular}`));
+                        }
+                      },
+                    },
+                  ]}
+                >
+                  {(fields, { add, remove }, { errors }) => (
                     <>
                       {fields.map((listField, i) => (
                         <div key={listField.key} style={{
@@ -1072,6 +1229,7 @@ const handleCreate = async (values) => {
                           </div>
                         </div>
                       ))}
+                      <Form.ErrorList errors={errors} style={{ marginBottom: "12px" }} />
                       <button
                         type="button"
                         onClick={() => add()}
