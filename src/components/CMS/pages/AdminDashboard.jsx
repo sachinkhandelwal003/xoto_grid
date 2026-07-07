@@ -88,7 +88,7 @@ const AdminDashboard = () => {
   const getPendingSummaries = () => {
     return [
       { type: 'Agent Registrations', count: dashboardData?.agents?.pending || 0, link: '/approvals/agents', color: 'blue' },
-      { type: 'Agency Registrations', count: dashboardData?.agencies?.pending || 0, link: '/approvals/agencies', color: 'purple' },
+      { type: 'Partner Registrations', count: dashboardData?.agencies?.pending || 0, link: '/approvals/agencies', color: 'purple' },
       { type: 'Pending Deals', count: dashboardData?.deals?.pending || 0, link: '/deals', color: 'orange' },
       { type: 'Property Listings', count: dashboardData?.properties?.notReady || 0, link: '/properties', color: 'green' }
     ];
