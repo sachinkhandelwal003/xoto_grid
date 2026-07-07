@@ -922,7 +922,7 @@ const PropertyDetailPage = () => {
                   ))}
                 </div>
               </SectionCard>
-            )}
+            )} 
 
           </div>
         </div>
