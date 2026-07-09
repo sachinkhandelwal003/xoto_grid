@@ -965,7 +965,7 @@ function WizardStep3({ record, sharing, onShareChannel, onClose, onRefresh }) {
         {record.pdfUrl && <Button block icon={<FilePdfOutlined />} onClick={() => openPdf(record.pdfUrl)} style={{ borderRadius: 12, height: 44, fontWeight: 600 }}>View / Download PDF</Button>}
         <Card bordered style={{ borderRadius: 14 }} bodyStyle={{ padding: 20 }}>
           <Text strong style={{ fontSize: 13, color: T.text, display: "block", marginBottom: 12 }}>Client contact</Text>
-          <Alert type="info" showIcon={false} message={<span style={{ fontSize: 11 }}>Contact details masked per PRD §10.4.</span>} style={{ borderRadius: 8, marginBottom: 10 }} />
+          <Alert type="info" showIcon={false} message={<span style={{ fontSize: 11 }}>Contact details masked.</span>} style={{ borderRadius: 8, marginBottom: 10 }} />
           {[["Name", "A•••• A• M••••••••"], ["Phone", "+971 •• ••• ••••"], ["Email", "a••••@•••••.com"]].map(([l, v]) => (
             <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6" }}>
               <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>{l}</span>

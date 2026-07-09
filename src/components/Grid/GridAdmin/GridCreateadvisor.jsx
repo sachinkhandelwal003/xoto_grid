@@ -702,7 +702,7 @@ const GridCreateadvisor = () => {
                 • A temporary password is auto-generated and emailed to{" "}
                 <strong>{form.email || "the advisor"}</strong><br />
                 • Employee ID (XA-XXXX) is assigned automatically<br />
-                • Advisor must reset password on first login (PRD §3.4)
+                • Advisor must reset password on first login
               </p>
             </div>
 
