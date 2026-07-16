@@ -147,10 +147,6 @@ const AddAgent = () => {
   // ✅ EXACT JSON PAYLOAD SUBMIT HANDLER
   // ==========================================
   const onFinish = async (values) => {
-    // Check if required images are uploaded manually
-    if (!urls.profile) return message.error("Please upload Profile Photo");
-    if (!urls.idProof) return message.error("Please upload ID Proof");
-
     setLoading(true);
     
     try {
@@ -407,7 +403,7 @@ const AddAgent = () => {
               style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", marginBottom: "24px" }}
             >
               {/* 🔥 MAGIC UPLOAD BUTTONS */}
-              <Form.Item label="Profile Photo" required>
+              <Form.Item label="Profile Photo">
                 <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'profile')}>
                   <Button
                     icon={urls.profile ? <CheckOutlined /> : <UploadOutlined />}
@@ -425,7 +421,7 @@ const AddAgent = () => {
 
               <Text strong style={{ display: "block", marginBottom: "8px" }}>KYC & Certifications</Text>
               
-              <Form.Item label="ID Proof (Emirates ID/Passport)" style={{ marginBottom: "12px" }} required>
+              <Form.Item label="ID Proof (Emirates ID/Passport)" style={{ marginBottom: "12px" }}>
                 <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'idProof')}>
                   <Button
                     icon={urls.idProof ? <CheckOutlined /> : <UploadOutlined />}

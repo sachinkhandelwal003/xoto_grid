@@ -312,54 +312,11 @@ const AgentDetail = () => {
           </Button>
           <div>
             <Title level={4} style={{ margin: 0, color: T.text, fontWeight: 800 }}>Agent Profile</Title>
-            <Text style={{ color: T.textMuted, fontSize: 12 }}>ID: <code style={{ background: T.borderLight, padding: "1px 6px", borderRadius: 4, fontSize: 11 }}>{agent._id}</code></Text>
+            {/* <Text style={{ color: T.textMuted, fontSize: 12 }}>ID: <code style={{ background: T.borderLight, padding: "1px 6px", borderRadius: 4, fontSize: 11 }}>{agent._id}</code></Text> */}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: 10 }}>
-          {adminPending && (
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              loading={actionLoading}
-              disabled={!canAdminApprove}
-              onClick={handleApprove}
-              title={canAdminApprove ? "Approve agent" : "Agency approval is required first"}
-              style={{ background: T.success, borderColor: T.success, borderRadius: 8, fontWeight: 700, height: 40 }}
-            >
-              Approve Agent
-            </Button>
-          )}
-        {!isDeclined && (
-  <Button
-    danger
-    icon={<CloseCircleOutlined />}
-    onClick={() => { setReason(""); setReasonError(""); setRejectModal(true); }}
-    style={{ borderRadius: 8, fontWeight: 700, height: 40 }}
-  >
-    Decline
-  </Button>
-)}
-
-{isDeclined && (
-  <Button
-    type="default"
-    icon={<UndoOutlined />}
-    onClick={handleReset}
-    loading={actionLoading}
-    style={{
-      borderRadius: 8,
-      fontWeight: 700,
-      height: 40,
-      borderColor: T.warning,
-      color: T.warning,
-    }}
-  >
-    Reset for Re‑approval
-  </Button>
-)}
-        </div>
+        {/* Action Buttons removed for Admin */}
       </div>
 
       {/* ── HERO BANNER ── */}
@@ -398,15 +355,14 @@ const AgentDetail = () => {
                 {!agent.profile_photo && agent.fullName?.charAt(0)?.toUpperCase()}
               </Avatar>
               <div style={{ paddingBottom: 6 }}>
-                <Title level={3} style={{ margin: 0, color: T.text, fontWeight: 800, textTransform: "capitalize" }}>
+                <Title level={3} style={{ margin: 0, color: "#ffffff", fontWeight: 800, textTransform: "capitalize", textShadow: "0 2px 4px rgba(0,0,0,0.15)" }}>
                   {agent.fullName || `${agent.first_name} ${agent.last_name}` || "—"}
                 </Title>
-                <Text style={{ color: T.textSub, fontSize: 13 }}>
+                <Text style={{ color: "#EBE5F7", fontSize: 13, fontWeight: 500 }}>
                   {agent.specialization || "Agent"} · {agent.operating_city || "—"}
                 </Text>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                   <Badge status={agencyStatus} prefix="Agency" />
-                  <Badge status={adminStatus}  prefix="Admin"  />
                   {agent.isFlagged && (
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: T.warningBg, color: T.warning, padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
                       <FlagOutlined style={{ fontSize: 11 }} /> Flagged
@@ -461,10 +417,11 @@ const AgentDetail = () => {
         <Col xs={24} lg={14}>
           <SectionCard title="Personal & Contact Info" icon={<UserOutlined />}>
             <InfoRow icon={<MailOutlined />}             label="Email"           value={agent.email} />
-            <InfoRow icon={<PhoneOutlined />}            label="Phone"           value={agent.country_code ? `${agent.country_code} ${agent.phone_number}` : agent.phone_number} />
+            <InfoRow icon={<PhoneOutlined />}            label="Phone"           value={agent.phone_number?.startsWith('+') ? agent.phone_number : `${agent.country_code || ''} ${agent.phone_number || ''}`.trim()} />
             <InfoRow icon={<EnvironmentOutlined />}      label="Operating City"  value={agent.operating_city} />
             <InfoRow icon={<GlobalOutlined />}           label="Country"         value={agent.country} />
             <InfoRow icon={<StarOutlined />}             label="Specialization"  value={agent.specialization} />
+            <InfoRow icon={<TrophyOutlined />}           label="Experience"      value={agent.experience_years ? `${agent.experience_years} Years` : "0 Years"} />
             <InfoRow icon={<ApartmentOutlined />}        label="Agency"          value={agent.agency?.companyName} />
             <InfoRow icon={<SafetyCertificateOutlined />} label="RERA Card No."  value={agent.reraCardNumber} />
             <InfoRow icon={<CalendarOutlined />}         label="Joined"          value={joinedDate} />
@@ -490,11 +447,11 @@ const AgentDetail = () => {
                 label="Agency Approved At"
                 value={agent.agencyApprovedAt ? new Date(agent.agencyApprovedAt).toLocaleString("en-AE") : null}
               />
-              <InfoRow
+              {/* <InfoRow
                 icon={<CheckCircleOutlined />}
                 label="Admin Approved At"
                 value={agent.adminApprovedAt ? new Date(agent.adminApprovedAt).toLocaleString("en-AE") : null}
-              />
+              /> */}
               {agent.agencyDeclineNote && (
                 <InfoRow icon={<CloseCircleOutlined />} label="Agency Decline Note" value={agent.agencyDeclineNote} />
               )}
