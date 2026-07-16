@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 import {
   Modal, Button, Tag, Tooltip, Avatar, Radio,
-  Spin, Empty, message, Drawer, Descriptions, Badge
+  Spin, Empty, message, Drawer, Descriptions, Badge, Input, Select
 } from 'antd';
 import {
   UserAddOutlined, EyeOutlined, CheckCircleFilled,
@@ -12,11 +12,12 @@ import {
   ClockCircleOutlined, FireOutlined, HomeOutlined,
   LinkOutlined, PictureOutlined, PhoneOutlined,
   MailOutlined, BankOutlined, DollarOutlined,
-  FileTextOutlined, TeamOutlined
+  FileTextOutlined, TeamOutlined, SearchOutlined
 } from '@ant-design/icons';
 import CustomTable from '../../CMS/pages/custom/CustomTable';
 
 const PRIMARY = '#5c039b';
+const { Option } = Select;
 
 // ─── Type & Status Maps ───────────────────────────────────────────────────────
 const TYPE_COLORS = {
@@ -99,15 +100,13 @@ const AdvisorChip = ({ advisor }) => {
   );
 };
 
-// Section title helper
 const SectionTitle = ({ icon, label }) => (
   <div style={{
     fontSize: 11, fontWeight: 700, color: '#374151',
     marginBottom: 10, marginTop: 4,
     textTransform: 'uppercase', letterSpacing: 0.6,
     display: 'flex', alignItems: 'center', gap: 6,
-    paddingBottom: 6,
-    borderBottom: '1px solid #f3f4f6',
+    paddingBottom: 6, borderBottom: '1px solid #f3f4f6',
   }}>
     {icon && <span style={{ color: PRIMARY, fontSize: 13 }}>{icon}</span>}
     {label}
@@ -121,17 +120,13 @@ const PropertySourceCard = ({ listingId, matchedListings = [] }) => {
 
   useEffect(() => {
     if (listingId && typeof listingId === 'object' && listingId._id) {
-      setListing(listingId);
-      return;
+      setListing(listingId); return;
     }
     if (matchedListings?.length > 0) {
       const first = matchedListings[0];
-      setListing(first?.listing_id || first);
-      return;
+      setListing(first?.listing_id || first); return;
     }
-    if (listingId && typeof listingId === 'string') {
-      fetchListing(listingId);
-    }
+    if (listingId && typeof listingId === 'string') fetchListing(listingId);
   }, [listingId, matchedListings]);
 
   const fetchListing = async (id) => {
@@ -139,7 +134,7 @@ const PropertySourceCard = ({ listingId, matchedListings = [] }) => {
     try {
       const res = await apiService.get(`/property/listing/${id}`);
       setListing(res?.data || res);
-    } catch { /* silently fail */ }
+    } catch { }
     finally { setLoading(false); }
   };
 
@@ -174,13 +169,13 @@ const PropertySourceCard = ({ listingId, matchedListings = [] }) => {
   }
 
   if (listing) {
-    const title     = listing.propertyName || listing.title || listing.name || 'Property Listing';
-    const area      = listing.area && listing.city ? `${listing.area}, ${listing.city}` : listing.area || listing.city || '—';
-    const price     = listing.price ? `${listing.currency || 'AED'} ${Number(listing.price).toLocaleString()}` : null;
-    const propType  = listing.propertySubType || listing.propertyType || listing.property_type;
-    const thumbnail = listing.photos?.architecture?.[0] || listing.photos?.interior?.[0] || listing.mainLogo || null;
-    const beds      = listing.bedrooms || listing.beds;
-    const builtUp   = listing.builtUpArea ? `${listing.builtUpArea} ${listing.builtUpAreaUnit || 'sqft'}` : null;
+    const title    = listing.propertyName || listing.title || listing.name || 'Property Listing';
+    const area     = listing.area && listing.city ? `${listing.area}, ${listing.city}` : listing.area || listing.city || '—';
+    const price    = listing.price ? `${listing.currency || 'AED'} ${Number(listing.price).toLocaleString()}` : null;
+    const propType = listing.propertySubType || listing.propertyType || listing.property_type;
+    const thumbnail= listing.photos?.architecture?.[0] || listing.photos?.interior?.[0] || listing.mainLogo || null;
+    const beds     = listing.bedrooms || listing.beds;
+    const builtUp  = listing.builtUpArea ? `${listing.builtUpArea} ${listing.builtUpAreaUnit || 'sqft'}` : null;
 
     return (
       <div style={{ background: '#faf5ff', border: '1px solid #ede9fe', borderRadius: 10, overflow: 'hidden' }}>
@@ -214,15 +209,12 @@ const PropertySourceCard = ({ listingId, matchedListings = [] }) => {
   return null;
 };
 
-// ─── Property Source Chip (table column) ─────────────────────────────────────
 const PropertySourceChip = ({ listingId, matchedListings = [] }) => {
   const hasListing = listingId || matchedListings?.length > 0;
   if (!hasListing) return <span style={{ fontSize: 11, color: '#9ca3af' }}>— General</span>;
-
   const isPopulated  = listingId && typeof listingId === 'object';
   const propertyName = isPopulated ? (listingId.propertyName || listingId.title || listingId.name || null) : null;
-  const id           = isPopulated ? (listingId._id || listingId.id) : (typeof listingId === 'string' ? listingId : matchedListings[0]?._id);
-
+  const id = isPopulated ? (listingId._id || listingId.id) : (typeof listingId === 'string' ? listingId : matchedListings[0]?._id);
   return (
     <Tooltip title={`Listing ID: ${id}`}>
       <span style={{ background: '#ede9fe', color: PRIMARY, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'default', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -311,7 +303,6 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
               <span><EnvironmentOutlined style={{ marginRight: 4, color: PRIMARY }} />{lead?.requirements?.location_preferences?.[0]?.area || '—'}</span>
               <span><ApartmentOutlined style={{ marginRight: 4, color: PRIMARY }} />{lead?.enquiry_type || '—'}</span>
             </div>
-
             {recommended && (
               <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <ThunderboltOutlined style={{ color: '#16a34a', fontSize: 18 }} />
@@ -322,7 +313,6 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
                 <CheckCircleFilled style={{ color: '#16a34a', fontSize: 20 }} />
               </div>
             )}
-
             <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8 }}>Select Advisor</div>
             <Radio.Group value={selectedId} onChange={e => setSelectedId(e.target.value)} style={{ width: '100%' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
@@ -351,7 +341,6 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
                 })}
               </div>
             </Radio.Group>
-
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
                 Assignment Notes <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
@@ -377,22 +366,15 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
 // ─── Lead Detail Drawer ───────────────────────────────────────────────────────
 const LeadDetailDrawer = ({ lead, visible, onClose }) => {
   if (!lead) return null;
-
   const req = lead.requirements || {};
-
-  // location_preferences se area nikalo
   const locationPref = req.location_preferences?.[0]?.area || null;
-
-  // additional_notes se project name aur locality parse karo
-  let projectName = null;
-  let localArea   = null;
+  let projectName = null, localArea = null;
   if (req.additional_notes) {
     const projMatch = req.additional_notes.match(/Project:\s*([^|]+)/);
     const areaMatch = req.additional_notes.match(/Area\/Locality:\s*([^|]+)/);
     projectName = projMatch ? projMatch[1].trim() : null;
     localArea   = areaMatch ? areaMatch[1].trim() : null;
   }
-
   const isSell = lead.enquiry_type === 'sell';
 
   return (
@@ -404,32 +386,19 @@ const LeadDetailDrawer = ({ lead, visible, onClose }) => {
           <TypeTag type={lead.enquiry_type} />
         </div>
       }
-      open={visible}
-      onClose={onClose}
-      width={520}
+      open={visible} onClose={onClose} width={520}
       styles={{ body: { padding: '20px 20px', background: '#fafafa' } }}
     >
-   {/* ── 5. PROPERTY SOURCE (linked listing) ── */}
       <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
         <SectionTitle icon={<LinkOutlined />} label="Linked Property / Listing" />
-        <PropertySourceCard
-          listingId={lead.source?.listing_id}
-          matchedListings={lead.matched_listings}
-        />
+        <PropertySourceCard listingId={lead.source?.listing_id} matchedListings={lead.matched_listings} />
       </div>
-      {/* ── 1. CONTACT INFORMATION ── */}
       <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
         <SectionTitle icon={<UserOutlined />} label="Contact Information" />
         <Descriptions column={1} size="small" labelStyle={{ fontWeight: 600, fontSize: 12, color: '#6b7280', width: 130 }} contentStyle={{ fontSize: 12, color: '#111827' }}>
-          <Descriptions.Item label="Full Name">
-            {lead.contact_info?.name?.first_name} {lead.contact_info?.name?.last_name}
-          </Descriptions.Item>
-          <Descriptions.Item label="Mobile">
-            {lead.contact_info?.mobile?.country_code} {lead.contact_info?.mobile?.number}
-          </Descriptions.Item>
-          <Descriptions.Item label="Email">
-            {lead.contact_info?.email?.address || '—'}
-          </Descriptions.Item>
+          <Descriptions.Item label="Full Name">{lead.contact_info?.name?.first_name} {lead.contact_info?.name?.last_name}</Descriptions.Item>
+          <Descriptions.Item label="Mobile">{lead.contact_info?.mobile?.country_code} {lead.contact_info?.mobile?.number}</Descriptions.Item>
+          <Descriptions.Item label="Email">{lead.contact_info?.email?.address || '—'}</Descriptions.Item>
           <Descriptions.Item label="Preferred Contact">
             <span style={{ background: '#ede9fe', color: PRIMARY, padding: '1px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
               {CONTACT_LABELS[lead.contact_info?.preferred_contact] || lead.contact_info?.preferred_contact || '—'}
@@ -437,97 +406,37 @@ const LeadDetailDrawer = ({ lead, visible, onClose }) => {
           </Descriptions.Item>
         </Descriptions>
       </div>
-
-      {/* ── 2. LEAD DETAILS ── */}
       <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
         <SectionTitle icon={<FileTextOutlined />} label="Lead Details" />
         <Descriptions column={1} size="small" labelStyle={{ fontWeight: 600, fontSize: 12, color: '#6b7280', width: 130 }} contentStyle={{ fontSize: 12, color: '#111827' }}>
-          <Descriptions.Item label="Enquiry Type">
-            <TypeTag type={lead.enquiry_type} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Status">
-            <StatusBadge status={lead.status} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Classification">
-            <ClassificationBadge value={lead.classification} />
-          </Descriptions.Item>
-          {lead.classification_reason && (
-            <Descriptions.Item label="Classified As">
-              <span style={{ fontSize: 11, color: '#6b7280', fontStyle: 'italic' }}>{lead.classification_reason}</span>
-            </Descriptions.Item>
-          )}
-          <Descriptions.Item label="Source Channel">
-            {lead.source?.channel?.replace(/_/g, ' ') || '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Assigned Advisor">
-            <AdvisorChip advisor={lead.assignedAdvisor} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Submitted On">
-            {new Date(lead.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </Descriptions.Item>
+          <Descriptions.Item label="Enquiry Type"><TypeTag type={lead.enquiry_type} /></Descriptions.Item>
+          <Descriptions.Item label="Status"><StatusBadge status={lead.status} /></Descriptions.Item>
+          <Descriptions.Item label="Classification"><ClassificationBadge value={lead.classification} /></Descriptions.Item>
+          {lead.classification_reason && <Descriptions.Item label="Classified As"><span style={{ fontSize: 11, color: '#6b7280', fontStyle: 'italic' }}>{lead.classification_reason}</span></Descriptions.Item>}
+          <Descriptions.Item label="Source Channel">{lead.source?.channel?.replace(/_/g, ' ') || '—'}</Descriptions.Item>
+          <Descriptions.Item label="Assigned Advisor"><AdvisorChip advisor={lead.assignedAdvisor} /></Descriptions.Item>
+          <Descriptions.Item label="Submitted On">{new Date(lead.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</Descriptions.Item>
         </Descriptions>
       </div>
-
-      {/* ── 3. SELL — PROPERTY DETAILS ── */}
       {isSell && (
         <div style={{ background: '#fff5f9', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #fce7f3' }}>
           <SectionTitle icon={<HomeOutlined />} label="Property Being Sold" />
           <Descriptions column={1} size="small" labelStyle={{ fontWeight: 600, fontSize: 12, color: '#6b7280', width: 130 }} contentStyle={{ fontSize: 12, color: '#111827' }}>
-
-            {req.property_type && (
-              <Descriptions.Item label="Listing Type">
-                <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{req.property_type}</span>
-              </Descriptions.Item>
-            )}
-
-            {locationPref && (
-              <Descriptions.Item label="Location">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <EnvironmentOutlined style={{ color: PRIMARY, fontSize: 11 }} />
-                  {locationPref}
-                </span>
-              </Descriptions.Item>
-            )}
-
-            {localArea && (
-              <Descriptions.Item label="Locality / Area">
-                {localArea}
-              </Descriptions.Item>
-            )}
-
-            {projectName && (
-              <Descriptions.Item label="Project Name">
-                <span style={{ fontWeight: 600 }}>{projectName}</span>
-              </Descriptions.Item>
-            )}
-
-            {req.bedrooms != null && req.bedrooms !== undefined && (
-              <Descriptions.Item label="Bedroom Config">
-                {req.bedrooms} BHK
-              </Descriptions.Item>
-            )}
-
-            {req.budget_min != null && (
-              <Descriptions.Item label="Expected Price">
-                <span style={{ fontWeight: 700, color: '#166534' }}>
-                  AED {Number(req.budget_min).toLocaleString()}
-                </span>
-              </Descriptions.Item>
-            )}
-
+            {req.property_type && <Descriptions.Item label="Listing Type"><span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{req.property_type}</span></Descriptions.Item>}
+            {locationPref && <Descriptions.Item label="Location"><span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><EnvironmentOutlined style={{ color: PRIMARY, fontSize: 11 }} />{locationPref}</span></Descriptions.Item>}
+            {localArea && <Descriptions.Item label="Locality / Area">{localArea}</Descriptions.Item>}
+            {projectName && <Descriptions.Item label="Project Name"><span style={{ fontWeight: 600 }}>{projectName}</span></Descriptions.Item>}
+            {req.bedrooms != null && <Descriptions.Item label="Bedroom Config">{req.bedrooms} BHK</Descriptions.Item>}
+            {req.budget_min != null && <Descriptions.Item label="Expected Price"><span style={{ fontWeight: 700, color: '#166534' }}>AED {Number(req.budget_min).toLocaleString()}</span></Descriptions.Item>}
           </Descriptions>
         </div>
       )}
-
-      {/* ── 4. DESCRIPTION / MESSAGE ── */}
       {lead.notes?.length > 0 && (
         <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
           <SectionTitle icon={<FileTextOutlined />} label="Description / Message" />
           {lead.notes.map((n, i) => (
             <div key={i} style={{ background: '#faf5ff', border: '1px solid #ede9fe', borderRadius: 8, padding: '10px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                {n.text}
-              </div>
+              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{n.text}</div>
               <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <ClockCircleOutlined />
                 {new Date(n.created_at || n.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -537,10 +446,6 @@ const LeadDetailDrawer = ({ lead, visible, onClose }) => {
           ))}
         </div>
       )}
-
-   
-
-      {/* ── 6. OTHER MATCHED LISTINGS ── */}
       {lead.matched_listings?.length > 1 && (
         <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginBottom: 14, border: '1px solid #f0f0f0' }}>
           <SectionTitle icon={<HomeOutlined />} label={`Other Matched Listings (${lead.matched_listings.length})`} />
@@ -554,7 +459,6 @@ const LeadDetailDrawer = ({ lead, visible, onClose }) => {
           ))}
         </div>
       )}
-
     </Drawer>
   );
 };
@@ -562,23 +466,33 @@ const LeadDetailDrawer = ({ lead, visible, onClose }) => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const PlatformLeads = () => {
   const navigate = useNavigate();
-  const [leads,      setLeads]      = useState([]);
-  const [loading,    setLoading]    = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-  const [assignLead, setAssignLead] = useState(null);
-  const [viewLead,   setViewLead]   = useState(null);
-  const [filters,    setFilters]    = useState({});
-  const [stats,      setStats]      = useState({ total: 0, unassigned: 0, converted: 0, hot: 0 });
+  const [leads,       setLeads]       = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [pagination,  setPagination]  = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [assignLead,  setAssignLead]  = useState(null);
+  const [viewLead,    setViewLead]    = useState(null);
+  const [stats,       setStats]       = useState({ total: 0, unassigned: 0, converted: 0, hot: 0 });
 
-  const fetchLeads = useCallback(async (extraFilters = {}, page = 1, limit = 10) => {
+  // ✅ Own search + filter state — independent of CustomTable
+  const [searchText,  setSearchText]  = useState('');
+  const [statusFilter,setStatusFilter]= useState('');
+  const [typeFilter,  setTypeFilter]  = useState('');
+  const searchTimeout = useRef(null);
+
+  // ✅ Central fetch — builds query string from all filters
+  const fetchLeads = useCallback(async ({
+    search = '',
+    status = '',
+    type   = '',
+    page   = 1,
+    limit  = 10,
+  } = {}) => {
     setLoading(true);
     try {
-      const query = new URLSearchParams();
-      query.set('page',  page);
-      query.set('limit', limit);
-      if (extraFilters.search) query.set('search', extraFilters.search);
-      if (extraFilters.status) query.set('status', extraFilters.status);
-      if (extraFilters.type)   query.set('type',   extraFilters.type);
+      const query = new URLSearchParams({ page, limit });
+      if (search.trim()) query.set('search', search.trim());
+      if (status)        query.set('status', status);
+      if (type)          query.set('type',   type);
 
       const res = await apiService.get(`/gridlead/website-only?${query.toString()}`);
       const leadsData      = res?.data       || [];
@@ -605,21 +519,51 @@ const PlatformLeads = () => {
     }
   }, []);
 
+  // Initial load
   useEffect(() => { fetchLeads(); }, []);
 
-  const handlePageChange = (page, limit) => fetchLeads(filters, page, limit);
+  // ✅ Search with 500ms debounce
+  const handleSearch = (value) => {
+    setSearchText(value);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      fetchLeads({ search: value, status: statusFilter, type: typeFilter, page: 1, limit: pagination.limit });
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+  };
 
-  const handleFilter = (newFilters) => {
-    const merged = { ...filters, ...newFilters };
-    setFilters(merged);
-    fetchLeads(merged, 1, pagination.limit);
+  // ✅ Status filter change
+  const handleStatusFilter = (value) => {
+    setStatusFilter(value);
+    fetchLeads({ search: searchText, status: value, type: typeFilter, page: 1, limit: pagination.limit });
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  // ✅ Type filter change
+  const handleTypeFilter = (value) => {
+    setTypeFilter(value);
+    fetchLeads({ search: searchText, status: statusFilter, type: value, page: 1, limit: pagination.limit });
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  // ✅ Clear all filters
+  const handleClearFilters = () => {
+    setSearchText('');
+    setStatusFilter('');
+    setTypeFilter('');
+    fetchLeads({ page: 1, limit: pagination.limit });
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  // ✅ Pagination
+  const handlePageChange = (page, limit) => {
+    fetchLeads({ search: searchText, status: statusFilter, type: typeFilter, page, limit });
+    setPagination(prev => ({ ...prev, page, limit }));
   };
 
   const columns = [
     {
-      title: 'Name',
-      key: 'full_name',
-      sortable: true,
+      title: 'Name', key: 'full_name', sortable: true,
       render: (val, row) => (
         <div>
           <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>
@@ -632,63 +576,35 @@ const PlatformLeads = () => {
       )
     },
     {
-      title: 'Type',
-      key: 'enquiry_type',
-      filterable: true,
-      filterKey: 'type',
-      filterOptions: Object.entries(TYPE_COLORS).map(([k, v]) => ({ value: k, label: v.label })),
+      title: 'Type', key: 'enquiry_type',
       render: (_, row) => <TypeTag type={row.enquiry_type} />
     },
     {
-      title: 'Status',
-      key: 'status',
-      filterable: true,
-      filterKey: 'status',
-      filterOptions: Object.entries(STATUS_COLORS).map(([k, v]) => ({ value: k, label: v.label })),
+      title: 'Status', key: 'status',
       render: (val) => <StatusBadge status={val} />
     },
     {
-      title: 'Classification',
-      key: 'classification',
+      title: 'Classification', key: 'classification',
       render: (val) => <ClassificationBadge value={val} />
     },
     {
-      title: 'Property',
-      key: 'source',
-      render: (val, row) => (
-        <PropertySourceChip
-          listingId={row.source?.listing_id}
-          matchedListings={row.matched_listings}
-        />
-      )
+      title: 'Property', key: 'source',
+      render: (val, row) => <PropertySourceChip listingId={row.source?.listing_id} matchedListings={row.matched_listings} />
     },
     {
-      title: 'Source',
-      key: 'source_channel',
-      render: (val, row) => (
-        <span style={{ fontSize: 12, color: '#6b7280' }}>
-          {row.source?.channel?.replace(/_/g, ' ') || '—'}
-        </span>
-      )
+      title: 'Source', key: 'source_channel',
+      render: (val, row) => <span style={{ fontSize: 12, color: '#6b7280' }}>{row.source?.channel?.replace(/_/g, ' ') || '—'}</span>
     },
     {
-      title: 'Assigned Advisor',
-      key: 'assignedAdvisor',
+      title: 'Assigned Advisor', key: 'assignedAdvisor',
       render: (val, row) => <AdvisorChip advisor={row.assignedAdvisor || null} />
     },
     {
-      title: 'Created',
-      key: 'createdAt',
-      sortable: true,
-      render: (val) => (
-        <span style={{ fontSize: 12, color: '#6b7280' }}>
-          {val ? new Date(val).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-        </span>
-      )
+      title: 'Created', key: 'createdAt', sortable: true,
+      render: (val) => <span style={{ fontSize: 12, color: '#6b7280' }}>{val ? new Date(val).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
     },
     {
-      title: 'Actions',
-      key: '_id',
+      title: 'Actions', key: '_id',
       render: (val, row) => (
         <div style={{ display: 'flex', gap: 6 }}>
           <Tooltip title="View Details">
@@ -696,9 +612,7 @@ const PlatformLeads = () => {
           </Tooltip>
           <Tooltip title={row.assigned_to ? 'Reassign Advisor' : 'Assign Advisor'}>
             <Button
-              size="small"
-              icon={<UserAddOutlined />}
-              onClick={() => setAssignLead(row)}
+              size="small" icon={<UserAddOutlined />} onClick={() => setAssignLead(row)}
               style={{ background: row.assigned_to ? '#fff' : PRIMARY, borderColor: PRIMARY, color: row.assigned_to ? PRIMARY : '#fff', fontWeight: 600 }}
             >
               {row.assigned_to ? 'Reassign' : 'Assign'}
@@ -710,11 +624,13 @@ const PlatformLeads = () => {
   ];
 
   const statCards = [
-    { label: 'Total Leads',  value: stats.total,      bg: '#faf5ff', color: PRIMARY,   icon: <ApartmentOutlined /> },
-    { label: 'Unassigned',   value: stats.unassigned, bg: '#fff7ed', color: '#c2410c', icon: <UserOutlined /> },
-    { label: 'Hot & Unassigned', value: stats.hot,    bg: '#fef2f2', color: '#b91c1c', icon: <FireOutlined /> },
-    { label: 'Completed',    value: stats.converted,  bg: '#f0fdf4', color: '#16a34a', icon: <CheckCircleFilled /> },
+    { label: 'Total Leads',      value: stats.total,      bg: '#faf5ff', color: PRIMARY,   icon: <ApartmentOutlined /> },
+    { label: 'Unassigned',       value: stats.unassigned, bg: '#fff7ed', color: '#c2410c', icon: <UserOutlined /> },
+    { label: 'Hot & Unassigned', value: stats.hot,        bg: '#fef2f2', color: '#b91c1c', icon: <FireOutlined /> },
+    { label: 'Completed',        value: stats.converted,  bg: '#f0fdf4', color: '#16a34a', icon: <CheckCircleFilled /> },
   ];
+
+  const hasActiveFilters = searchText || statusFilter || typeFilter;
 
   return (
     <div style={{ padding: '28px 32px', background: '#faf5ff', minHeight: '100vh' }}>
@@ -732,7 +648,7 @@ const PlatformLeads = () => {
         </div>
         <Button
           icon={<ReloadOutlined />}
-          onClick={() => fetchLeads(filters, pagination.page, pagination.limit)}
+          onClick={() => fetchLeads({ search: searchText, status: statusFilter, type: typeFilter, page: pagination.page, limit: pagination.limit })}
           style={{ borderColor: PRIMARY, color: PRIMARY }}
         >
           Refresh
@@ -752,6 +668,62 @@ const PlatformLeads = () => {
         ))}
       </div>
 
+      {/* ✅ Own Search + Filter Bar — does NOT rely on CustomTable's internal search */}
+      <div style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Search Input */}
+        <Input
+          prefix={<SearchOutlined style={{ color: '#9ca3af' }} />}
+          placeholder="Search by name, phone, email..."
+          value={searchText}
+          onChange={e => handleSearch(e.target.value)}
+          allowClear
+          onClear={() => handleSearch('')}
+          style={{ width: 280, borderRadius: 8 }}
+        />
+
+        {/* Status Filter */}
+        <Select
+          placeholder="All Statuses"
+          value={statusFilter || undefined}
+          onChange={handleStatusFilter}
+          allowClear
+          onClear={() => handleStatusFilter('')}
+          style={{ width: 180, borderRadius: 8 }}
+        >
+          {Object.entries(STATUS_COLORS).map(([k, v]) => (
+            <Option key={k} value={k}>{v.label}</Option>
+          ))}
+        </Select>
+
+        {/* Type Filter */}
+        <Select
+          placeholder="All Types"
+          value={typeFilter || undefined}
+          onChange={handleTypeFilter}
+          allowClear
+          onClear={() => handleTypeFilter('')}
+          style={{ width: 180, borderRadius: 8 }}
+        >
+          {Object.entries(TYPE_COLORS).map(([k, v]) => (
+            <Option key={k} value={k}>{v.label}</Option>
+          ))}
+        </Select>
+
+        {/* Clear all */}
+        {hasActiveFilters && (
+          <Button onClick={handleClearFilters} size="small" style={{ color: '#6b7280', borderColor: '#e5e7eb' }}>
+            Clear Filters
+          </Button>
+        )}
+
+        {/* Active filter count */}
+        {hasActiveFilters && (
+          <span style={{ fontSize: 11, color: PRIMARY, fontWeight: 600 }}>
+            Filters active
+          </span>
+        )}
+      </div>
+
       {/* Table */}
       <CustomTable
         columns={columns}
@@ -761,15 +733,14 @@ const PlatformLeads = () => {
         currentPage={pagination.page}
         itemsPerPage={pagination.limit}
         onPageChange={handlePageChange}
-        onFilter={handleFilter}
-        showSearch
+        showSearch={false}  // ✅ CustomTable ka search off — apna use kar rahe hain
       />
 
       <AssignModal
         lead={assignLead}
         visible={!!assignLead}
         onClose={() => setAssignLead(null)}
-        onAssigned={() => fetchLeads(filters, pagination.page, pagination.limit)}
+        onAssigned={() => fetchLeads({ search: searchText, status: statusFilter, type: typeFilter, page: pagination.page, limit: pagination.limit })}
       />
 
       <LeadDetailDrawer
