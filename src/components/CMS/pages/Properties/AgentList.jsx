@@ -208,6 +208,16 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
         <Text style={{ textTransform: "capitalize" }}>{record.location}</Text>
       ),
     },
+    {
+      title: "Presentations",
+      key: "presentationsGenerated",
+      sortable: true,
+      render: (_, record) => (
+        <Text strong style={{ fontSize: 14, color: "#1f2937", paddingLeft: 8 }}>
+          {record.presentationsGenerated || 0}
+        </Text>
+      ),
+    },
     // {
     //   title: "Agency Approval",
     //   key: "agencyApprovalStatus",

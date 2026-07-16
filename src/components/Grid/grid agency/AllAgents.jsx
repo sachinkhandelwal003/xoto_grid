@@ -481,6 +481,14 @@ const AgencyAgentList = () => {
       render: (val, agent) => getSpecializationTag(agent.specialization),
     },
     {
+      key: "presentations", title: "Presentations", sortable: true,
+      render: (_, agent) => (
+        <div style={{ fontWeight: 700, fontSize: 13, color: "var(--tx)", paddingLeft: 8 }}>
+          {agent.presentationsGenerated || 0}
+        </div>
+      ),
+    },
+    {
       key: "agencyApproval", title: "Agency Approval",
       render: (_, agent) => <ApprovalStatusTag status={agent.agencyApprovalStatus} />,
     },
