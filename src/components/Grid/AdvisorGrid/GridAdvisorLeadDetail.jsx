@@ -10,7 +10,7 @@ import {
   FiArrowLeft, FiImage, FiInfo, FiXCircle, FiCheckCircle, FiSearch,
   FiChevronDown, FiChevronUp, FiAlertTriangle, FiFileText, FiRefreshCw,
   FiLoader, FiX, FiPlus, FiSend, FiEdit3, FiThumbsUp, FiThumbsDown,
-  FiMinus, FiZap, FiList, FiArrowRight, FiStar, FiPackage, FiEye, FiCopy,
+  FiMinus, FiZap, FiList, FiArrowRight, FiStar, FiPackage, FiEye, FiCopy, FiGlobe,
 } from 'react-icons/fi';
 import { message, Spin } from 'antd';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
@@ -1726,6 +1726,13 @@ const GridAdvisorLeadDetail = () => {
   const [showPresentation, setShowPresentation] = useState(false);
   const [selectedProperty,  setSelectedProperty]  = useState(null);
 
+  // Presentations
+  const [presentations,        setPresentations]        = useState([]);
+  const [presentationsLoading, setPresentationsLoading] = useState(false);
+  const [showPresentations,    setShowPresentations]    = useState(true);
+  const [expandedPresentation, setExpandedPresentation] = useState(null);
+  const [copiedPresentationId, setCopiedPresentationId] = useState(null);
+
   const [showNotes,   setShowNotes]   = useState(true);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -1752,9 +1759,31 @@ const GridAdvisorLeadDetail = () => {
     finally { setMatchLoading(false); }
   }, [id]);
 
+  const fetchPresentations = useCallback(async () => {
+    setPresentationsLoading(true);
+    try {
+      const res  = await apiService.get(`/presentation/lead/${id}`);
+      const data = res?.data?.success !== undefined ? res.data : res;
+      setPresentations(data?.data || []);
+    } catch {
+      setPresentations([]);
+    } finally {
+      setPresentationsLoading(false);
+    }
+  }, [id]);
+
+  const handleCopyPresentationLink = (presentationId, url) => {
+    navigator.clipboard.writeText(url);
+    setCopiedPresentationId(presentationId);
+    setTimeout(() => setCopiedPresentationId(null), 2000);
+  };
+
   useEffect(() => {
-    if (id) fetchLead();
-  }, [id, fetchLead]);
+    if (id) {
+      fetchLead();
+      fetchPresentations();
+    }
+  }, [id, fetchLead, fetchPresentations]);
 
   // Fetch smart matches only after lead is loaded — and for website leads, only
   // if the advisor has already added requirements (budget / type / location).
@@ -1856,7 +1885,7 @@ const GridAdvisorLeadDetail = () => {
         <PresentationModal
           lead={lead}
           property={selectedProperty}
-          onClose={() => { setShowPresentation(false); setSelectedProperty(null); }}
+          onClose={() => { setShowPresentation(false); setSelectedProperty(null); fetchPresentations(); }}
         />
       )}
 
@@ -2324,6 +2353,181 @@ const GridAdvisorLeadDetail = () => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Presentations */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <button className="w-full flex items-center gap-3 px-5 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowPresentations(p => !p)}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: P, color: '#fff' }}>
+                    <FiFileText size={14} />
+                  </div>
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex-1 text-left">
+                    Presentations
+                    {presentations.length > 0 && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">{presentations.length}</span>
+                    )}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={e => { e.stopPropagation(); fetchPresentations(); }}
+                      className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100">
+                      <FiRefreshCw size={11} /> Refresh
+                    </button>
+                    {showPresentations ? <FiChevronUp size={14} className="text-gray-400" /> : <FiChevronDown size={14} className="text-gray-400" />}
+                  </div>
+                </button>
+
+                {showPresentations && (
+                  <div className="p-5">
+                    {presentationsLoading ? (
+                      <div className="text-center py-8">
+                        <FiLoader size={20} className="animate-spin mx-auto mb-2" style={{ color: P }} />
+                        <p className="text-xs text-gray-400">Loading presentations…</p>
+                      </div>
+                    ) : presentations.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400">
+                        <FiFileText size={28} className="mx-auto mb-2 opacity-30" />
+                        <p className="text-sm font-medium">No presentations created yet.</p>
+                        <p className="text-xs mt-1">Generate a PPT from any property above to get started.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {presentations.map((ppt) => {
+                          const isExpanded = expandedPresentation === ppt._id;
+                          const isCopied   = copiedPresentationId === ppt._id;
+                          const createdAt  = ppt.createdAt
+                            ? new Date(ppt.createdAt).toLocaleString('en-AE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            : '—';
+                          const { mobile = 0, tablet = 0, desktop = 0 } = ppt.deviceBreakdown || {};
+
+                          return (
+                            <div key={ppt._id} className="rounded-xl border border-gray-100 overflow-hidden">
+                              {/* Card header */}
+                              <div className="flex items-start gap-3 p-4 bg-gray-50">
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F5F3FF' }}>
+                                  <FiFileText size={16} style={{ color: P }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-gray-900 truncate">{ppt.title || 'Untitled Presentation'}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                    <FiClock size={10} /> {createdAt}
+                                  </p>
+                                </div>
+                                {/* Badges */}
+                                <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                                  <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-wide">
+                                    🔥 {ppt.engagementScore || 0} Score
+                                  </span>
+                                  <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded"
+                                    style={{ background: ppt.viewCount > 0 ? '#f0fdf4' : '#f9fafb', color: ppt.viewCount > 0 ? '#16a34a' : '#9ca3af', border: `1px solid ${ppt.viewCount > 0 ? '#bbf7d0' : '#e5e7eb'}` }}>
+                                    <FiEye size={10} /> {ppt.viewCount} {ppt.viewCount === 1 ? 'open' : 'opens'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Device breakdown row */}
+                              {ppt.viewCount > 0 && (
+                                <div className="flex items-center gap-4 px-4 py-2.5 border-t border-gray-100 bg-white">
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Device</span>
+                                  {desktop > 0 && (
+                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-600">
+                                      🖥 {desktop} Desktop
+                                    </span>
+                                  )}
+                                  {mobile > 0 && (
+                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-600">
+                                      📱 {mobile} Mobile
+                                    </span>
+                                  )}
+                                  {tablet > 0 && (
+                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-600">
+                                      📟 {tablet} Tablet
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Action row */}
+                              <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 bg-white flex-wrap">
+                                <button
+                                  onClick={() => handleCopyPresentationLink(ppt._id, ppt.trackingUrl)}
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                  <FiCopy size={11} /> {isCopied ? 'Copied!' : 'Copy Link'}
+                                </button>
+                                <a
+                                  href={ppt.previewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors">
+                                  <FiEye size={11} /> Preview
+                                </a>
+                                <button
+                                  onClick={() => setExpandedPresentation(isExpanded ? null : ppt._id)}
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors ml-auto">
+                                  {isExpanded ? <FiChevronUp size={11} /> : <FiChevronDown size={11} />}
+                                  {isExpanded ? 'Hide Details' : 'View Details'}
+                                </button>
+                              </div>
+
+                              {/* View history & info */}
+                              {isExpanded && (
+                                <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 space-y-4">
+                                  {/* Info details */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Client Details</p>
+                                      <p className="text-gray-700 font-semibold mb-1">Name: <span className="font-normal text-gray-600">{ppt.clientNotes?.clientName || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold mb-1">Budget: <span className="font-normal text-gray-600">{ppt.clientNotes?.budget || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold">Key Reqs: <span className="font-normal text-gray-600">{ppt.clientNotes?.requirements || '—'}</span></p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Presentation Info</p>
+                                      <p className="text-gray-700 font-semibold mb-1">Tone: <span className="font-normal text-gray-600 capitalize">{ppt.settings?.tone || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold mb-1">Language: <span className="font-normal text-gray-600">{ppt.settings?.language || '—'}</span></p>
+                                      <p className="text-gray-700 font-semibold">Unit & Currency: <span className="font-normal text-gray-600">{[ppt.settings?.currency, ppt.settings?.areaUnit].filter(Boolean).join(', ') || '—'}</span></p>
+                                    </div>
+                                  </div>
+
+                                  {/* Open History */}
+                                  <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-50 pb-1">Open History</p>
+                                    {ppt.views && ppt.views.length > 0 ? (
+                                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                        {[...(ppt.views || [])].reverse().map((view, idx) => (
+                                          <div key={idx} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="text-xs">
+                                                {view.device === 'Mobile' ? '📱' : view.device === 'Tablet' ? '📟' : '🖥'}
+                                              </span>
+                                              <span className="text-[11px] font-semibold text-gray-700">{view.device || 'Unknown'}</span>
+                                              {view.ip && <span className="text-[10px] text-gray-400">({view.ip})</span>}
+                                              <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                                                <FiGlobe size={10} /> {view.country || 'Unknown'}
+                                              </span>
+                                            </div>
+                                            <span className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
+                                              <FiClock size={9} />
+                                              {view.timestamp
+                                                ? new Date(view.timestamp).toLocaleString('en-AE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                                : '—'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-[11px] text-gray-400 py-1">No view history recorded yet.</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Status Progress */}

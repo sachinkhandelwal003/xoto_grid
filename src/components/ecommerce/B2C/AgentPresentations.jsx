@@ -56,13 +56,13 @@ const LANGUAGE_PROMPTS = {
 // ══════════════════════════════════════════════════════════════════════════════
 //  API SERVICE LAYER
 // ══════════════════════════════════════════════════════════════════════════════
-const apiCreate       = (payload)          => apiService.post("/agent/lead/presentations", payload);
-const apiUpdate       = (id, payload)      => apiService.put(`/agent/lead/presentations/${id}`, payload);
-const apiGenerate     = (id)               => apiService.post(`/agent/lead/presentations/${id}/generate`);
-const apiShareChannel = (id, channel)      => apiService.post(`/agent/lead/presentations/${id}/share`, { channel });
-const apiFetchList    = (status)           => apiService.get(`/agent/lead/presentations${status && status !== "all" ? `?status=${status}` : ""}`);
-const apiFetchOne     = (id)               => apiService.get(`/agent/lead/presentations/${id}`);
-const apiArchive      = (id)               => apiService.delete(`/agent/lead/presentations/${id}`);
+const apiCreate       = (payload)          => apiService.post("/presentation/save", payload);
+const apiUpdate       = (id, payload)      => apiService.put(`/presentation/${id}`, payload);
+const apiGenerate     = (id)               => apiService.post(`/presentation/${id}/generate`);
+const apiShareChannel = (id, channel)      => apiService.post(`/presentation/${id}/share`, { channel });
+const apiFetchList    = (status)           => apiService.get(`/presentation/my${status && status !== "all" ? `?status=${status}` : ""}`);
+const apiFetchOne     = (id)               => apiService.get(`/presentation/views/${id}`);
+const apiArchive      = (id)               => apiService.delete(`/presentation/${id}`);
 const apiFetchProperty = (id)             => apiService.get(`/agent/properties/${id}`);
 
 // ── Payload builder ───────────────────────────────────────────────────────────
@@ -998,13 +998,20 @@ function WizardStep3({ record, sharing, onShareChannel, onClose, onRefresh }) {
               <span style={{ fontSize: 11, color: T.muted }}>Auto-updates to "Viewed" on first open (+15 pts)</span>
             </div>
           </div>
-          {record.viewHistory?.length > 0 ? (
+          {record.views?.length > 0 ? (
             <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
-              {record.viewHistory.slice(0, 5).map((v, i) => (
+              {record.views.slice(0, 5).map((v, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: i < 4 ? "1px solid #f3f4f6" : "none", fontSize: 11 }}>
-                  <span style={{ color: T.muted, fontWeight: 600 }}>{new Date(v.viewedAt).toLocaleString("en-AE")}</span>
+                  <span style={{ color: T.muted, fontWeight: 600 }}>{new Date(v.timestamp).toLocaleString("en-AE")}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Tag style={{ fontSize: 10 }}>{v.deviceType}</Tag>
+                    <Tag style={{ fontSize: 10 }}>
+                      {v.device === 'Mobile' ? '📱' : v.device === 'Tablet' ? '📟' : '🖥'} {v.device || 'Unknown'}
+                    </Tag>
+                    {v.country && (
+                      <span style={{ color: T.muted, fontSize: 10 }}>
+                        📍 {v.country}
+                      </span>
+                    )}
                     <span style={{ color: T.success, fontSize: 10, fontWeight: 700 }}>+15 pts</span>
                   </div>
                 </div>
