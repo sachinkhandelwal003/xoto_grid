@@ -165,6 +165,7 @@ const CUSTOM_ROLE_LINKS = {
       icon: "fas fa-user-friends",
       submenus: [
         { title: "Agent List",        path: "/dashboard/{roleSlug}/agent-list" },
+        { title: "Onboard Agent",     path: "/dashboard/{roleSlug}/onboarding/agent" },
         // { title: "Verification Queue",path: "/dashboard/{roleSlug}/agents/verification-queue" },
       ]
     },

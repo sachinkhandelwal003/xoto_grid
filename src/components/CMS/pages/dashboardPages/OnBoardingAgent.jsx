@@ -42,6 +42,25 @@ const AddAgent = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
+  // --- AGENCY STATES ---
+  const [agencies, setAgencies] = useState([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(false);
+
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      setLoadingAgencies(true);
+      try {
+        const res = await apiService.get("/agency/public/agencies");
+        setAgencies(res?.data || res || []);
+      } catch {
+        message.error("Failed to load agencies");
+      } finally {
+        setLoadingAgencies(false);
+      }
+    };
+    fetchAgencies();
+  }, []);
+
   // --- LOCATION STATES ---
   const [citiesList, setCitiesList] = useState([]);
   const selectedCountry = Form.useWatch("country", form);
@@ -144,7 +163,6 @@ const AddAgent = () => {
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
-        password: values.password,
         phone_number: fullPhoneNumber, 
         country_code: extractedCountryCode, 
         operating_city: values.operating_city,
@@ -154,7 +172,8 @@ const AddAgent = () => {
         rera_number: values.rera_number || "",
         profile_photo: urls.profile,
         id_proof: urls.idProof,
-        rera_certificate: urls.rera || ""
+        rera_certificate: urls.rera || "",
+        agency: values.agency,
       };
 
       
@@ -228,8 +247,19 @@ const AddAgent = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="password" label=" Password" rules={[{ required: true, min: 6 }]}>
-                    <Input.Password placeholder="Enter secure password" size="large" style={{ borderRadius: "8px" }} />
+                  <Form.Item name="agency" label="Partners " rules={[{ required: true, message: "Please select a partner" }]}>
+                    <Select
+                      showSearch
+                      placeholder="Select Partner"
+                      optionFilterProp="children"
+                      size="large"
+                      style={{ borderRadius: "8px" }}
+                      loading={loadingAgencies}
+                    >
+                      {agencies.map((agency) => (
+                        <Option key={agency._id} value={agency._id}>{agency.companyName || agency.name || 'Unnamed'}</Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
               </Row>

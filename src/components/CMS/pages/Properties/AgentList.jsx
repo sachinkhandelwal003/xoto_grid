@@ -135,20 +135,20 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
       color: "#2563eb",
       bg: "#dbeafe",
     },
-    {
-      title: "Admin Approved",
-      value: approvedAgents,
-      icon: <CheckCircleOutlined />,
-      color: "#059669",
-      bg: "#d1fae5",
-    },
-    {
-      title: "Pending Approvals",
-      value: pendingApprovals,
-      icon: <ClockCircleOutlined />,
-      color: "#d97706",
-      bg: "#fef3c7",
-    },
+    // {
+    //   title: "Admin Approved",
+    //   value: approvedAgents,
+    //   icon: <CheckCircleOutlined />,
+    //   color: "#059669",
+    //   bg: "#d1fae5",
+    // },
+    // {
+    //   title: "Pending Approvals",
+    //   value: pendingApprovals,
+    //   icon: <ClockCircleOutlined />,
+    //   color: "#d97706",
+    //   bg: "#fef3c7",
+    // },
   ];
 
   const filteredAgents = agents.filter((agent) => {
@@ -275,16 +275,27 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
   return (
     <div style={{ padding: "24px", background: "#f8f9fa", minHeight: "100vh" }}>
       {/* Header */}
-      <div style={{ marginBottom: 32, display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ padding: 10, background: "#f3e8ff", borderRadius: 10, color: "#5c039b" }}>
-          <UsergroupAddOutlined style={{ fontSize: 24 }} />
+      <div style={{ marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ padding: 10, background: "#f3e8ff", borderRadius: 10, color: "#5c039b" }}>
+            <UsergroupAddOutlined style={{ fontSize: 24 }} />
+          </div>
+          <div>
+            <Title level={2} style={{ margin: 0, color: "#1f2937" }}>Agent Management</Title>
+            <Text type="secondary" style={{ fontSize: 15 }}>
+              Manage all registered platform agents. Approve or decline pending agents.
+            </Text>
+          </div>
         </div>
-        <div>
-          <Title level={2} style={{ margin: 0, color: "#1f2937" }}>Agent Management</Title>
-          <Text type="secondary" style={{ fontSize: 15 }}>
-            Manage all registered platform agents. Approve or decline pending agents.
-          </Text>
-        </div>
+        <Button
+          type="primary"
+          icon={<UsergroupAddOutlined />}
+          size="large"
+          style={{ background: "#5c039b", borderColor: "#5c039b", borderRadius: 8, fontWeight: 600 }}
+          onClick={() => navigate("/dashboard/admin/onboarding/agent")}
+        >
+          Onboard New Agent
+        </Button>
       </div>
 
       {/* Stats */}
@@ -308,7 +319,7 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
         ))}
       </Row>
 
-      <Tabs
+      {/* <Tabs
         activeKey={activeTab}
         onChange={(key) => setActiveTab(key)}
         style={{ marginBottom: 20 }}
@@ -317,7 +328,7 @@ await apiService.put(`/agency/admin/agents/${selectedAgentId}/decline`, { reason
           { key: "approved", label: "Admin Approved" },
           { key: "rejected", label: "Admin Declined" },
         ]}
-      />
+      /> */}
 
       {/* Table */}
       <Card bordered={false} style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} bodyStyle={{ padding: 0 }}>

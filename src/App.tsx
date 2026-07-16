@@ -33,6 +33,7 @@ const ReferralLeads = lazy(() => import('./components/Grid/GridAdmin/ReferralLea
 const GridAgentLeadDetailadmin = lazy(() => import('./components/Grid/GridAdmin/GridAgentLeadDetailadmin'));
 const VaultLeadDetails = lazy(() => import('./components/ecommerce/B2C/VaultLeadDetails'));
 const OnBoardingAgency = lazy(() => import('./components/CMS/pages/dashboardPages/OnBoardingAgency'));
+const OnBoardingAgent = lazy(() => import('./components/CMS/pages/dashboardPages/OnBoardingAgent'));
 const AgencyList = lazy(() => import('./components/CMS/pages/Properties/AgencyList'));
 const DeveloperList = lazy(() => import('./components/CMS/pages/DeveloperList'));
 const DeveloperForm = lazy(() => import('./components/CMS/pages/dashboardPages/DeveloperForm'));
@@ -207,6 +208,7 @@ const App: React.FC = () => (
         <Route path="developer-list" element={<DeveloperList />} />
         <Route path="developers/:id" element={<Developerdetail />} />
         <Route path="onboarding/developer" element={<DeveloperForm />} />
+        <Route path="onboarding/agent" element={<OnBoardingAgent />} />
         <Route path="agent-list" element={<AgentList />} />
         <Route path="agents/:id" element={<Agentdetail />} />
         <Route path="advisors" element={<AllAdvisors />} />
