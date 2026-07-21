@@ -7,6 +7,7 @@ import {
   SecurityScanOutlined, LoginOutlined, WarningOutlined,
   HomeOutlined, TeamOutlined, ReloadOutlined, SearchOutlined,
   FilterOutlined, LogoutOutlined, FilePptOutlined, DownloadOutlined,
+  LeftOutlined, RightOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { apiService } from '../../../manageApi/utils/custom.apiservice';
@@ -89,6 +90,78 @@ const StatCard = ({ icon, title, value, color, loading }) => (
   </Card>
 );
 
+// ── Custom pagination footer (matches "Showing X to Y of Z results" style) ──
+const CustomPagination = ({ current, pageSize, total, onChange, pageSizeOptions = [10, 20, 50, 100] }) => {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
+  const end = Math.min(current * pageSize, total);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 12,
+        padding: '12px 20px',
+        borderTop: '1px solid #f0f0f0',
+      }}
+    >
+      <Text style={{ fontSize: 13, color: '#555' }}>
+        Showing {start} to {end} of {total} results
+      </Text>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 13, color: '#555' }}>Rows per page:</Text>
+          <Select
+            size="small"
+            value={pageSize}
+            style={{ width: 72 }}
+            onChange={(sz) => onChange(1, sz)}
+          >
+            {pageSizeOptions.map((sz) => (
+              <Option key={sz} value={sz}>{sz}</Option>
+            ))}
+          </Select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Button
+            size="small"
+            icon={<LeftOutlined />}
+            disabled={current <= 1}
+            onClick={() => onChange(current - 1, pageSize)}
+          />
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              background: THEME.primary,
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {current}
+          </div>
+          <Button
+            size="small"
+            icon={<RightOutlined />}
+            disabled={current >= totalPages}
+            onClick={() => onChange(current + 1, pageSize)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────
 const AuditLogs = () => {
   const [logs, setLogs]         = useState([]);
@@ -97,7 +170,7 @@ const AuditLogs = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [total, setTotal]       = useState(0);
   const [page, setPage]         = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(10);
   const [error, setError]       = useState(null);
   const [exportLoading, setExportLoading] = useState(false);
 
@@ -200,13 +273,17 @@ const AuditLogs = () => {
     setFilters({ entityType: '', action: '', performedByRole: '', search: '', dateFrom: null, dateTo: null });
   };
 
+  const handlePaginationChange = (p, sz) => {
+    setPage(p);
+    setPageSize(sz);
+    fetchLogs(p, sz);
+  };
+
   // ── Metadata helpers ─────────────────────────────────────────────
-  // Keys to skip — technical/internal DB fields
   const SKIP_KEYS = new Set(['roleCode', '__v', '_id', 'id', 'performedBy']);
   const isMongoId = (v) => typeof v === 'string' && /^[a-f0-9]{24}$/i.test(v);
   const isIdKey   = (k) => k === '_id' || k === 'id' || k.endsWith('Id') || k.endsWith('_id');
 
-  // Human-readable labels
   const META_LABELS = {
     email:          'Email',
     phone:          'Phone',
@@ -225,7 +302,6 @@ const AuditLogs = () => {
     theme:          'Theme',
   };
 
-  // Returns only human-readable [label, value] pairs from metadata
   const cleanMeta = (meta) => {
     if (!meta || typeof meta !== 'object') return [];
     return Object.entries(meta)
@@ -534,23 +610,17 @@ const AuditLogs = () => {
             columns={columns}
             rowKey="_id"
             scroll={{ x: 900 }}
-            pagination={{
-              current: page,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              pageSizeOptions: ['20', '50', '100'],
-              showTotal: (t) => `${t} total records`,
-              onChange: (p, sz) => {
-                setPage(p);
-                setPageSize(sz);
-                fetchLogs(p, sz);
-              },
-            }}
+            pagination={false}
             rowClassName={(_, idx) => idx % 2 === 0 ? '' : 'audit-row-alt'}
             style={{ fontSize: 13 }}
           />
         </Spin>
+        <CustomPagination
+          current={page}
+          pageSize={pageSize}
+          total={total}
+          onChange={handlePaginationChange}
+        />
       </Card>
 
       <style>{`
