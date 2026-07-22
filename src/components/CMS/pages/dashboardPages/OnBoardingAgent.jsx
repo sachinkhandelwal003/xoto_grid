@@ -35,9 +35,7 @@ import { apiService } from "../../../../manageApi/utils/custom.apiservice";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const BRAND_PURPLE = "#5C039B";
-
-const AddAgent = () => {
+const BRAND_PURPLE = "#5C039B";const AddAgent = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -64,10 +62,12 @@ const AddAgent = () => {
   // --- LOCATION STATES ---
   const [citiesList, setCitiesList] = useState([]);
   const selectedCountry = Form.useWatch("country", form);
+  const watchAgentMode = Form.useWatch("agentMode", form);
+  const watchLocationStatus = Form.useWatch("locationStatus", form);
 
   // 🔥 INSTANT UPLOAD STATES
-  const [urls, setUrls] = useState({ profile: "", idProof: "", rera: "" });
-  const [uploading, setUploading] = useState({ profile: false, idProof: false, rera: false });
+  const [urls, setUrls] = useState({ profile: "", idProof: "", rera: "", passport: "" });
+  const [uploading, setUploading] = useState({ profile: false, idProof: false, rera: false, passport: false });
 
   // --- COUNTRY OPTIONS LOGIC ---
   const countryOptions = useMemo(() => {
@@ -99,7 +99,7 @@ const AddAgent = () => {
     }
   }, [selectedCountry]);
 
-// ==========================================
+  // ==========================================
   // 🔥 THE MAGIC FIX: BULLETPROOF INSTANT UPLOAD 
   // ==========================================
   const handleInstantUpload = async (file, type) => {
@@ -112,19 +112,13 @@ const AddAgent = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      
-
-      // 🔥 BULLETPROOF URL EXTRACTION 🔥
-      // Ye har possible format se URL nikal lega chahe apiService kuch bhi return kare
       const uploadedUrl = 
         response?.data?.file?.url || 
-        response?.file?.url ||        // <-- Agar interceptor direct data bhej raha hai
+        response?.file?.url ||        
         response?.data?.url || 
         response?.url || 
         response?.data?.fileUrl ||
         "";
-
-     
 
       if (uploadedUrl) {
         setUrls((prev) => ({ ...prev, [type]: uploadedUrl }));
@@ -139,7 +133,6 @@ const AddAgent = () => {
       setUploading((prev) => ({ ...prev, [type]: false }));
     }
 
-    // ⛔ This stops Ant Design's default upload tracking
     return false;
   };
 
@@ -150,7 +143,6 @@ const AddAgent = () => {
     setLoading(true);
     
     try {
-      // ✅ Formats exactly as your JSON requires
       const fullPhoneNumber = `+${values.country_code}${values.phone}`;
       const extractedCountryCode = `+${values.country_code}`;
 
@@ -165,20 +157,26 @@ const AddAgent = () => {
         specialization: values.specialization,
         country: values.country,
         experience_years: Number(values.experience_years) || 0,
-        rera_number: values.rera_number || "",
+        rera_number: values.locationStatus === 'inside_uae' ? (values.rera_number || "") : "",
         profile_photo: urls.profile,
-        id_proof: urls.idProof,
-        rera_certificate: urls.rera || "",
-        agency: values.agency,
+        id_proof: values.locationStatus === 'inside_uae' ? urls.idProof : "",
+        rera_certificate: values.locationStatus === 'inside_uae' ? (urls.rera || "") : "",
+        agency: values.agentMode === 'freelance' ? null : values.agency,
+        
+        // Onboarding tracking fields
+        agentMode: values.agentMode,
+        locationStatus: values.locationStatus,
+        residencyStatus: values.locationStatus === 'inside_uae' ? (values.residencyStatus || '') : '',
+        emiratesIdNumber: values.locationStatus === 'inside_uae' ? (values.emiratesIdNumber || '') : '',
+        passportNumber: values.locationStatus === 'outside_uae' ? (values.passportNumber || '') : '',
+        passportUrl: values.locationStatus === 'outside_uae' ? urls.passport : '',
       };
-
-      
 
       const response = await apiService.post("/agent/agent-signup", payload);
       
       message.success(response?.data?.message || "Agent onboarded successfully!");
       form.resetFields();
-      setUrls({ profile: "", idProof: "", rera: "" });
+      setUrls({ profile: "", idProof: "", rera: "", passport: "" });
       
       // 🔥 SUCCESS REDIRECT
       navigate("/dashboard/admin/agent-list");
@@ -211,7 +209,7 @@ const AddAgent = () => {
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ country: "United Arab Emirates", country_code: "971" }}
+        initialValues={{ country: "United Arab Emirates", country_code: "971", agentMode: "freelance", locationStatus: "inside_uae", residencyStatus: "resident" }}
       >
         <Row gutter={[24, 24]}>
           
@@ -243,21 +241,50 @@ const AddAgent = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="agency" label="Partners " rules={[{ required: true, message: "Please select a partner" }]}>
-                    <Select
-                      showSearch
-                      placeholder="Select Partner"
-                      optionFilterProp="children"
-                      size="large"
-                      style={{ borderRadius: "8px" }}
-                      loading={loadingAgencies}
-                    >
-                      {agencies.map((agency) => (
-                        <Option key={agency._id} value={agency._id}>{agency.companyName || agency.name || 'Unnamed'}</Option>
-                      ))}
+                  <Form.Item name="agentMode" label="Agent Onboarding Type" rules={[{ required: true }]}>
+                    <Select size="large" style={{ borderRadius: "8px" }}>
+                      <Option value="freelance">Freelancer</Option>
+                      <Option value="partner_affiliated">Xoto Partner Affiliated</Option>
                     </Select>
                   </Form.Item>
                 </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="locationStatus" label="Location Status" rules={[{ required: true }]}>
+                    <Select size="large" style={{ borderRadius: "8px" }}>
+                      <Option value="inside_uae">Inside UAE</Option>
+                      <Option value="outside_uae">Outside UAE</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                {watchLocationStatus === "inside_uae" && (
+                  <Col xs={24} md={12}>
+                    <Form.Item name="residencyStatus" label="Residency Status" rules={[{ required: true, message: "Select residency status" }]}>
+                      <Select size="large" style={{ borderRadius: "8px" }}>
+                        <Option value="citizen">UAE Citizen</Option>
+                        <Option value="resident">UAE Resident</Option>
+                        <Option value="non_resident">Non-Resident</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                )}
+                {watchAgentMode === "partner_affiliated" && (
+                  <Col xs={24} md={12}>
+                    <Form.Item name="agency" label="Partners" rules={[{ required: true, message: "Please select a partner" }]}>
+                      <Select
+                        showSearch
+                        placeholder="Select Partner"
+                        optionFilterProp="children"
+                        size="large"
+                        style={{ borderRadius: "8px" }}
+                        loading={loadingAgencies}
+                      >
+                        {agencies.map((agency) => (
+                          <Option key={agency._id} value={agency._id}>{agency.companyName || agency.name || 'Unnamed'}</Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
             </Card>
 
@@ -383,11 +410,26 @@ const AddAgent = () => {
                     <InputNumber min={0} placeholder="e.g. 5" size="large" style={{ width: "100%", borderRadius: "8px" }} />
                   </Form.Item>
                 </Col>
-                <Col xs={24}>
-                  <Form.Item name="rera_number" label="RERA Number">
-                    <Input placeholder="Enter RERA registration number" size="large" style={{ borderRadius: "8px" }} />
-                  </Form.Item>
-                </Col>
+                {watchLocationStatus === "inside_uae" ? (
+                  <>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="rera_number" label="RERA Number" rules={[{ required: watchAgentMode === 'partner_affiliated', message: "RERA number is required" }]}>
+                        <Input placeholder="Enter RERA registration number" size="large" style={{ borderRadius: "8px" }} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="emiratesIdNumber" label="Emirates ID Number" rules={[{ required: true, message: "Emirates ID number is required" }]}>
+                        <Input placeholder="e.g. 784-1990-1234567-8" size="large" style={{ borderRadius: "8px" }} />
+                      </Form.Item>
+                    </Col>
+                  </>
+                ) : (
+                  <Col xs={24}>
+                    <Form.Item name="passportNumber" label="Passport Number" rules={[{ required: true, message: "Passport number is required" }]}>
+                      <Input placeholder="Enter Passport number" size="large" style={{ borderRadius: "8px" }} />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
             </Card>
           </Col>
@@ -421,33 +463,51 @@ const AddAgent = () => {
 
               <Text strong style={{ display: "block", marginBottom: "8px" }}>KYC & Certifications</Text>
               
-              <Form.Item label="ID Proof (Emirates ID/Passport)" style={{ marginBottom: "12px" }}>
-                <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'idProof')}>
-                  <Button
-                    icon={urls.idProof ? <CheckOutlined /> : <UploadOutlined />}
-                    block
-                    style={{ height: 45, borderColor: urls.idProof ? '#52c41a' : '#d9d9d9', color: urls.idProof ? '#52c41a' : 'inherit' }}
-                    loading={uploading.idProof}
-                  >
-                    {urls.idProof ? "Uploaded" : "Upload ID Proof"}
-                  </Button>
-                </Upload>
-                {urls.idProof && <div style={{ marginTop: 5, fontSize: 12, color: '#52c41a' }}>ID saved!</div>}
-              </Form.Item>
+              {watchLocationStatus === "inside_uae" ? (
+                <>
+                  <Form.Item label="ID Proof (Emirates ID)" style={{ marginBottom: "12px" }}>
+                    <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'idProof')}>
+                      <Button
+                        icon={urls.idProof ? <CheckOutlined /> : <UploadOutlined />}
+                        block
+                        style={{ height: 45, borderColor: urls.idProof ? '#52c41a' : '#d9d9d9', color: urls.idProof ? '#52c41a' : 'inherit' }}
+                        loading={uploading.idProof}
+                      >
+                        {urls.idProof ? "Uploaded" : "Upload Emirates ID"}
+                      </Button>
+                    </Upload>
+                    {urls.idProof && <div style={{ marginTop: 5, fontSize: 12, color: '#52c41a' }}>ID saved!</div>}
+                  </Form.Item>
 
-              <Form.Item label="RERA Certificate" style={{ marginBottom: "0" }}>
-                <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'rera')}>
-                  <Button
-                    icon={urls.rera ? <CheckOutlined /> : <UploadOutlined />}
-                    block
-                    style={{ height: 45, borderColor: urls.rera ? '#52c41a' : '#d9d9d9', color: urls.rera ? '#52c41a' : 'inherit' }}
-                    loading={uploading.rera}
-                  >
-                    {urls.rera ? "Uploaded" : "Upload RERA"}
-                  </Button>
-                </Upload>
-                {urls.rera && <div style={{ marginTop: 5, fontSize: 12, color: '#52c41a' }}>Certificate saved!</div>}
-              </Form.Item>
+                  <Form.Item label="RERA Certificate" style={{ marginBottom: "0" }}>
+                    <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'rera')}>
+                      <Button
+                        icon={urls.rera ? <CheckOutlined /> : <UploadOutlined />}
+                        block
+                        style={{ height: 45, borderColor: urls.rera ? '#52c41a' : '#d9d9d9', color: urls.rera ? '#52c41a' : 'inherit' }}
+                        loading={uploading.rera}
+                      >
+                        {urls.rera ? "Uploaded" : "Upload RERA"}
+                      </Button>
+                    </Upload>
+                    {urls.rera && <div style={{ marginTop: 5, fontSize: 12, color: '#52c41a' }}>Certificate saved!</div>}
+                  </Form.Item>
+                </>
+              ) : (
+                <Form.Item label="Passport Copy" style={{ marginBottom: "0" }}>
+                  <Upload showUploadList={false} beforeUpload={(file) => handleInstantUpload(file, 'passport')}>
+                    <Button
+                      icon={urls.passport ? <CheckOutlined /> : <UploadOutlined />}
+                      block
+                      style={{ height: 45, borderColor: urls.passport ? '#52c41a' : '#d9d9d9', color: urls.passport ? '#52c41a' : 'inherit' }}
+                      loading={uploading.passport}
+                    >
+                      {urls.passport ? "Uploaded" : "Upload Passport Copy"}
+                    </Button>
+                  </Upload>
+                  {urls.passport && <div style={{ marginTop: 5, fontSize: 12, color: '#52c41a' }}>Passport saved!</div>}
+                </Form.Item>
+              )}
             </Card>
 
           </Col>

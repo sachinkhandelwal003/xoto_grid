@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { showToast } from "../../manageApi/utils/toast";
+import { useAuth } from "../../auth/AuthContext";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -27,6 +28,9 @@ const UAE_AREAS = {
   Dubai: [
     "Dubai Marina", "Downtown Dubai", "JBR – Jumeirah Beach Residence", "Palm Jumeirah",
     "Business Bay", "DIFC – Dubai International Financial Centre", "JVC – Jumeirah Village Circle",
+    "JVT – Jumeirah Village Triangle", "JLT – Jumeirah Lake Towers",
+    "Al Jadaf", "Abu Hail", "DSO – Dubai Silicon Oasis", "Al Jafiliya",
+    "Al Quoz 1", "Al Quoz 2", "Al Quoz 3", "Al Quoz 4", "Al Quoz Fourth",
     "Al Barsha", "Deira", "Bur Dubai", "Jumeirah", "Al Quoz", "Al Nahda (Dubai)",
     "Mirdif", "Silicon Oasis", "Sports City", "Motor City", "Al Furjan",
     "Discovery Gardens", "International City", "The Greens", "The Views",
@@ -94,7 +98,9 @@ const BEDROOM_OPTIONS = [
   { label: "5 Beds", value: 5 },
   { label: "6 Beds", value: 6 },
   { label: "7 Beds", value: 7 },
-  { label: "8+ Beds", value: 8 },
+  { label: "8 Beds", value: 8 },
+  { label: "9 Beds", value: 9 },
+  { label: "10 Beds", value: 10 },
 ];
 
 const getBedroomType = (bedrooms) => {
@@ -116,11 +122,10 @@ const RENTAL_FREQUENCY_OPTIONS = [
   { label: "Yearly", value: "yearly" },
 ];
 
-const CHEQUES_OPTIONS = [
-  { label: "1 Cheque", value: 1 }, { label: "2 Cheques", value: 2 },
-  { label: "4 Cheques", value: 4 }, { label: "6 Cheques", value: 6 },
-  { label: "12 Cheques", value: 12 },
-];
+const CHEQUES_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  label: `${i + 1} Cheque${i > 0 ? "s" : ""}`,
+  value: i + 1,
+}));
 
 const AMENITIES_OPTIONS = [
   "Pool", "Gym", "Parking", "Sea View", "Balcony",
@@ -201,6 +206,16 @@ const CreateProperty = () => {
   const isEditMode = Boolean(id);
   const [formMode, setFormMode] = useState("rental");
 
+  const { user } = useAuth();
+  const [advisors, setAdvisors] = useState([]);
+  const [advisorsLoading, setAdvisorsLoading] = useState(false);
+  const isAgent = user && (String(user.role?.code || user.role) === "16" || String(user.role?.code || user.role) === "18");
+
+  // Owner files
+  const [ownerEmiratesIdFileList, setOwnerEmiratesIdFileList] = useState([]);
+  const [ownerTitleDeedFileList, setOwnerTitleDeedFileList] = useState([]);
+  const [ownerNocFileList, setOwnerNocFileList] = useState([]);
+
   /* ── Rental ── */
   const [rentalForm]    = Form.useForm();
   const [rentalLoading, setRentalLoading] = useState(false);
@@ -221,6 +236,10 @@ const CreateProperty = () => {
   const [secondaryEmirate, setSecondaryEmirate] = useState("");
   const [secondaryQrFile,  setSecondaryQrFile]  = useState([]);
   const [secondaryPermitOnly, setSecondaryPermitOnly] = useState(false);
+  
+  const [secOwnerEmiratesIdFileList, setSecOwnerEmiratesIdFileList] = useState([]);
+  const [secOwnerTitleDeedFileList, setSecOwnerTitleDeedFileList] = useState([]);
+  const [secOwnerNocFileList, setSecOwnerNocFileList] = useState([]);
   
   const [secMainLogoFileList, setSecMainLogoFileList] = useState([]);
   const [secPhotosArchitecture, setSecPhotosArchitecture] = useState([]);
@@ -255,48 +274,137 @@ const CreateProperty = () => {
 
   /* ── Edit mode load ── */
   useEffect(() => {
-    if (isEditMode && formMode === "rental") fetchRentalById();
-  }, [isEditMode, formMode]);
+    if (isEditMode) fetchPropertyAndPopulate();
+  }, [isEditMode]);
 
-  const fetchRentalById = async () => {
+  useEffect(() => {
+    const fetchAdvisorsList = async () => {
+      setAdvisorsLoading(true);
+      try {
+        const res = await apiService.get("/gridadvisor?limit=100");
+        if (res?.data?.advisors) {
+          setAdvisors(res.data.advisors);
+        }
+      } catch (err) {
+        console.error("Failed to load advisors:", err);
+      } finally {
+        setAdvisorsLoading(false);
+      }
+    };
+    fetchAdvisorsList();
+  }, []);
+
+  const fetchPropertyAndPopulate = async () => {
     try {
       setRentalLoading(true);
+      setSecondaryLoading(true);
       const res  = await apiService.get(`/properties/${id}`);
       const raw  = res?.data ?? res;
       const data = raw?.data ?? raw;
       if (!data) return;
+
+      const subType = data.propertySubType || "rental";
+      setFormMode(subType);
+
       const emirate = Object.keys(EMIRATE_CITY).find(k => EMIRATE_CITY[k] === data.city) || data.city || "";
-      setRentalEmirate(emirate);
-      setRentalPermitOnly(Boolean(data.permitAvailable));
-      rentalForm.setFieldsValue({
-        propertyName: data.propertyName || "", description: data.description || "",
-        emirate, area: data.area || undefined, city: data.city || "",
-        unitType: data.unitType || undefined, bedroomType: data.bedroomType || undefined,
-        bedrooms: data.bedrooms || 0, bathrooms: data.bathrooms || 0,
-        builtUpArea: data.builtUpArea || 0, builtUpAreaUnit: data.builtUpAreaUnit || "sqft",
-        price: data.price || 0, rentalFrequency: data.rentalFrequency || undefined,
-        minimumContract: data.minimumContract || null, cheques: data.cheques || null,
-        isImmediate: data.isImmediate ?? true, isShortTerm: data.isShortTerm || false,
-        furnishing: data.furnishing || "unfurnished", parkingSpaces: data.parkingSpaces || 0,
-        hasView: data.hasView || false, viewType: data.viewType || [],
-        availableFrom: data.availableFrom ? dayjs(data.availableFrom) : null,
-        permitAvailable: data.permitAvailable || false,
-        reraPermitNumber: data.reraPermitNumber || "", dldRegistrationNumber: data.dldRegistrationNumber || "",
-        amenities: data.amenities || [], unitNumber: data.unitNumber || "",
-        floorNumber: data.floorNumber || 0, isFeatured: data.isFeatured || false,
-        showContactOnlyVerified: data.showContactOnlyVerified ?? true,
-      });
-      
-      const photos = data.photos || {};
-      if (data.mainLogo) setRentalMainLogoFileList(formatFiles([data.mainLogo]));
-      setRentalPhotosArchitecture(formatFiles(photos.architecture));
-      setRentalPhotosInterior(formatFiles(photos.interior));
-      setRentalPhotosLobby(formatFiles(photos.lobby));
-      setRentalPhotosOther(formatFiles(photos.other));
-      if (data.brochure) setRentalBrochureFileList(formatFiles([data.brochure]));
+
+      if (subType === "rental") {
+        setRentalEmirate(emirate);
+        setRentalPermitOnly(Boolean(data.permitAvailable));
+        rentalForm.setFieldsValue({
+          propertyName: data.propertyName || "", description: data.description || "",
+          emirate, area: data.area || undefined, city: data.city || "",
+          unitType: data.unitType || undefined, bedroomType: data.bedroomType || undefined,
+          bedrooms: data.bedrooms || 0, bathrooms: data.bathrooms || 0,
+          builtUpArea: data.builtUpArea || 0, builtUpAreaUnit: data.builtUpAreaUnit || "sqft",
+          price: data.price || 0, rentalFrequency: data.rentalFrequency || undefined,
+          minimumContract: data.minimumContract || null, cheques: data.cheques || null,
+          isImmediate: data.isImmediate ?? true, isShortTerm: data.isShortTerm || false,
+          furnishing: data.furnishing || "unfurnished", parkingSpaces: data.parkingSpaces || 0,
+          hasView: data.hasView || false, viewType: data.viewType || [],
+          availableFrom: data.availableFrom ? dayjs(data.availableFrom) : null,
+          permitAvailable: data.permitAvailable || false,
+          reraPermitNumber: data.reraPermitNumber || "", dldRegistrationNumber: data.dldRegistrationNumber || "",
+          amenities: data.amenities || [], unitNumber: data.unitNumber || "",
+          floorNumber: data.floorNumber || 0, isFeatured: data.isFeatured || false,
+          showContactOnlyVerified: data.showContactOnlyVerified ?? true,
+          // Rental workflow new fields
+          advisorId: data.advisorId || undefined,
+          buildingName: data.buildingName || "",
+          mapLink: data.mapLink || "",
+          occupancyStatus: data.occupancyStatus || "vacant",
+          deposit: data.deposit || 0,
+          ownerDetails: data.ownerDetails || {},
+          youtubeVideos: data.youtubeVideos || [],
+        });
+        
+        const photos = data.photos || {};
+        if (data.mainLogo) setRentalMainLogoFileList(formatFiles([data.mainLogo]));
+        setRentalPhotosArchitecture(formatFiles(photos.architecture));
+        setRentalPhotosInterior(formatFiles(photos.interior));
+        setRentalPhotosLobby(formatFiles(photos.lobby));
+        setRentalPhotosOther(formatFiles(photos.other));
+        if (data.brochure) setRentalBrochureFileList(formatFiles([data.brochure]));
+
+        // Set owner files
+        if (data.ownerDetails?.emiratesIdUrl) setOwnerEmiratesIdFileList(formatFiles([data.ownerDetails.emiratesIdUrl]));
+        if (data.ownerDetails?.titleDeedUrl) setOwnerTitleDeedFileList(formatFiles([data.ownerDetails.titleDeedUrl]));
+        if (data.ownerDetails?.nocUrl) setOwnerNocFileList(formatFiles([data.ownerDetails.nocUrl]));
+
+      } else if (subType === "secondary") {
+        setSecondaryEmirate(emirate);
+        setSecondaryPermitOnly(Boolean(data.permitAvailable));
+        secondaryForm.setFieldsValue({
+          propertyName: data.propertyName || "", description: data.description || "",
+          emirate, area: data.area || undefined, city: data.city || "",
+          unitType: data.unitType || undefined, bedroomType: data.bedroomType || undefined,
+          bedrooms: data.bedrooms || 0, bathrooms: data.bathrooms || 0,
+          builtUpArea: data.builtUpArea || 0, builtUpAreaUnit: data.builtUpAreaUnit || "sqft",
+          price: data.price || 0,
+          transactionType: data.transactionType || "sell",
+          ownershipType: data.ownershipType || "freehold",
+          isImmediate: data.isImmediate ?? true, isShortTerm: data.isShortTerm || false,
+          furnishing: data.furnishing || "unfurnished", parkingSpaces: data.parkingSpaces || 0,
+          hasView: data.hasView || false, viewType: data.viewType || [],
+          availableFrom: data.availableFrom ? dayjs(data.availableFrom) : null,
+          permitAvailable: data.permitAvailable || false,
+          reraPermitNumber: data.reraPermitNumber || "", dldRegistrationNumber: data.dldRegistrationNumber || "",
+          amenities: data.amenities || [], unitNumber: data.unitNumber || "",
+          floorNumber: data.floorNumber || 0, isFeatured: data.isFeatured || false,
+          showContactOnlyVerified: data.showContactOnlyVerified ?? true,
+          commission: data.commission || 0,
+          shareCommission: data.shareCommission || false,
+          shareCommissionPercentage: data.shareCommissionPercentage || 0,
+          // Secondary PRD workflow new fields
+          advisorId: data.advisorId || undefined,
+          buildingName: data.buildingName || "",
+          developerName: data.developerName || "",
+          mapLink: data.mapLink || "",
+          occupancyStatus: data.occupancyStatus || "vacant",
+          completionDate: data.completionDate ? dayjs(data.completionDate) : null,
+          ownerDetails: data.ownerDetails || {},
+          youtubeVideos: data.youtubeVideos || [],
+        });
+
+        const photos = data.photos || {};
+        if (data.mainLogo) setSecMainLogoFileList(formatFiles([data.mainLogo]));
+        setSecPhotosArchitecture(formatFiles(photos.architecture));
+        setSecPhotosInterior(formatFiles(photos.interior));
+        setSecPhotosLobby(formatFiles(photos.lobby));
+        setSecPhotosOther(formatFiles(photos.other));
+        if (data.brochure) setSecBrochureFileList(formatFiles([data.brochure]));
+
+        // Set owner files
+        if (data.ownerDetails?.emiratesIdUrl) setSecOwnerEmiratesIdFileList(formatFiles([data.ownerDetails.emiratesIdUrl]));
+        if (data.ownerDetails?.titleDeedUrl) setSecOwnerTitleDeedFileList(formatFiles([data.ownerDetails.titleDeedUrl]));
+        if (data.ownerDetails?.nocUrl) setSecOwnerNocFileList(formatFiles([data.ownerDetails.nocUrl]));
+      }
 
     } catch { message.error("Failed to load property for editing."); }
-    finally { setRentalLoading(false); }
+    finally {
+      setRentalLoading(false);
+      setSecondaryLoading(false);
+    }
   };
 
   const handleImageUpload = async ({ file, onSuccess, onError }) => {
@@ -365,11 +473,11 @@ const CreateProperty = () => {
       .some(l => l.some(f => f.status === "uploading"));
       
   const isAnyRentalUploading = () =>
-    [rentalMainLogoFileList, rentalPhotosArchitecture, rentalPhotosInterior, rentalPhotosLobby, rentalPhotosOther, rentalBrochureFileList]
+    [rentalMainLogoFileList, rentalPhotosArchitecture, rentalPhotosInterior, rentalPhotosLobby, rentalPhotosOther, rentalBrochureFileList, ownerEmiratesIdFileList, ownerTitleDeedFileList, ownerNocFileList]
       .some(l => l.some(f => f.status === "uploading"));
       
   const isAnySecUploading = () =>
-    [secMainLogoFileList, secPhotosArchitecture, secPhotosInterior, secPhotosLobby, secPhotosOther, secBrochureFileList]
+    [secMainLogoFileList, secPhotosArchitecture, secPhotosInterior, secPhotosLobby, secPhotosOther, secBrochureFileList, secOwnerEmiratesIdFileList, secOwnerTitleDeedFileList, secOwnerNocFileList]
       .some(l => l.some(f => f.status === "uploading"));
 
 
@@ -389,6 +497,20 @@ const handleSaveRental = async () => {
   try {
     const brochureUrl = rentalBrochureFileList.length > 0 && rentalBrochureFileList[0].status === "done" 
       ? rentalBrochureFileList[0]?.url || extractPhotoUrl(rentalBrochureFileList[0]) || "" : "";
+
+    const ownerEmiratesIdUrl = ownerEmiratesIdFileList.map(extractUrl).filter(Boolean)[0] || "";
+    const ownerTitleDeedUrl = ownerTitleDeedFileList.map(extractUrl).filter(Boolean)[0] || "";
+    const ownerNocUrl = ownerNocFileList.map(extractUrl).filter(Boolean)[0] || "";
+
+    const ownerDetails = isAgent ? undefined : {
+      name: values.ownerDetails?.name || "",
+      emiratesId: values.ownerDetails?.emiratesId || "",
+      emiratesIdUrl: ownerEmiratesIdUrl,
+      titleDeedUrl: ownerTitleDeedUrl,
+      phone: values.ownerDetails?.phone || "",
+      email: values.ownerDetails?.email || "",
+      nocUrl: ownerNocUrl,
+    };
 
     const payload = {
       propertySubType: "rental", 
@@ -451,7 +573,16 @@ const handleSaveRental = async () => {
       showContactOnlyVerified: values.showContactOnlyVerified ?? true,
       approvalStatus: "approved",
       listingStatus: "active",
-      status: "approved"
+      status: "approved",
+
+      // New rental fields
+      advisorId: values.advisorId || null,
+      buildingName: values.buildingName || "",
+      mapLink: values.mapLink || "",
+      occupancyStatus: values.occupancyStatus || "vacant",
+      deposit: Number(values.deposit || 0),
+      ownerDetails,
+      youtubeVideos: (values.youtubeVideos || []).filter(Boolean),
     };
     
     const response = isEditMode
@@ -485,6 +616,20 @@ const handleSubmitSecondary = async () => {
   try {
     const brochureUrl = secBrochureFileList.length > 0 && secBrochureFileList[0].status === "done" 
       ? secBrochureFileList[0]?.url || extractPhotoUrl(secBrochureFileList[0]) || "" : "";
+
+    const ownerEmiratesIdUrl = secOwnerEmiratesIdFileList.map(extractUrl).filter(Boolean)[0] || "";
+    const ownerTitleDeedUrl = secOwnerTitleDeedFileList.map(extractUrl).filter(Boolean)[0] || "";
+    const ownerNocUrl = secOwnerNocFileList.map(extractUrl).filter(Boolean)[0] || "";
+
+    const ownerDetails = isAgent ? undefined : {
+      name: values.ownerDetails?.name || "",
+      emiratesId: values.ownerDetails?.emiratesId || "",
+      emiratesIdUrl: ownerEmiratesIdUrl,
+      titleDeedUrl: ownerTitleDeedUrl,
+      phone: values.ownerDetails?.phone || "",
+      email: values.ownerDetails?.email || "",
+      nocUrl: ownerNocUrl,
+    };
 
     const payload = {
       propertySubType: "secondary", 
@@ -534,8 +679,8 @@ const handleSubmitSecondary = async () => {
       dldRegistrationNumber: values.dldRegistrationNumber || null,
       permitAvailable: secondaryPermitOnly,
       
-trakheesiPermitId: secondaryPermitOnly ? null : (values.trakheesiPermitId || null),
-qrCode: secondaryPermitOnly ? null : secondaryQrUrl,
+      trakheesiPermitId: secondaryPermitOnly ? null : (values.trakheesiPermitId || null),
+      qrCode: secondaryPermitOnly ? null : secondaryQrUrl,
       inventory: (values.secondaryInventory || []).map(u => ({
         unitNumber:  u.unitNumber  || "",
         floorNumber: Number(u.floor || 0),
@@ -555,22 +700,44 @@ qrCode: secondaryPermitOnly ? null : secondaryQrUrl,
       },
       approvalStatus: "approved",
       listingStatus: "active",
-      status: "approved"
+      status: "approved",
+
+      // Secondary workflow fields
+      advisorId: values.advisorId || null,
+      buildingName: values.buildingName || "",
+      developerName: values.developerName || "",
+      mapLink: values.mapLink || "",
+      occupancyStatus: values.occupancyStatus || "vacant",
+      completionDate: values.completionDate ? values.completionDate.toISOString() : null,
+      ownerDetails,
+      youtubeVideos: (values.youtubeVideos || []).filter(Boolean),
     };
-    await apiService.post("/properties", payload);
-    notification.success({ 
-      message: "Secondary Property Created", 
-      description: `"${values.propertyName}" is now LIVE on the platform!`, 
-      placement: "topRight" 
-    });
-    secondaryForm.resetFields();
     
-    setSecMainLogoFileList([]);
-    setSecPhotosArchitecture([]);
-    setSecPhotosInterior([]);
-    setSecPhotosLobby([]);
-    setSecPhotosOther([]);
-    setSecBrochureFileList([]);
+    const response = isEditMode
+      ? await apiService.put(`/properties/${id}`, payload)
+      : await apiService.post("/properties", payload);
+
+    if (response) {
+      notification.success({ 
+        message: isEditMode ? "Secondary Property Updated" : "Secondary Property Created", 
+        description: `"${values.propertyName}" is now LIVE on the platform!`, 
+        placement: "topRight" 
+      });
+      if (isEditMode) {
+        navigate(-1);
+      } else {
+        secondaryForm.resetFields();
+        setSecMainLogoFileList([]);
+        setSecPhotosArchitecture([]);
+        setSecPhotosInterior([]);
+        setSecPhotosLobby([]);
+        setSecPhotosOther([]);
+        setSecBrochureFileList([]);
+        setSecOwnerEmiratesIdFileList([]);
+        setSecOwnerTitleDeedFileList([]);
+        setSecOwnerNocFileList([]);
+      }
+    }
   } catch (err) {
     message.error(err?.response?.data?.message || err?.message || "Failed to save property.");
   } finally { setSecondaryLoading(false); }
@@ -702,25 +869,50 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Basic Details</Divider>
           <Row gutter={16}>
             <Col xs={24} md={16}>
-              <Form.Item name="propertyName" label="Property Name" rules={[{ required: true }]}>
+              <Form.Item name="propertyName" label="Property Title" rules={[{ required: true, message: "Property Title is required" }]}>
                 <Input size="large" placeholder="E.g. Luxury 3BR Apartment — Marina Walk" />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="unitType" label="Unit Type" rules={[{ required: true }]}>
+              <Form.Item name="unitType" label="Unit Type" rules={[{ required: true, message: "Unit Type is required" }]}>
                 <Select size="large" placeholder="Select type">
                   {UNIT_TYPES.map(t => <Option key={t.value} value={t.value}>{t.label}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
+
+            {!isAgent && (
+              <Col xs={24} md={12}>
+                <Form.Item name="advisorId" label="Source (Advisor) *" rules={[{ required: true, message: "Please select an advisor" }]}>
+                  <Select size="large" placeholder="Select Advisor" loading={advisorsLoading} showSearch optionFilterProp="label">
+                    {advisors.map(a => (
+                      <Option key={a._id} value={a._id} label={`${a.firstName || ""} ${a.lastName || ""}`}>
+                        {a.firstName || ""} {a.lastName || ""} ({a.email || ""})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            )}
+
+            <Col xs={24} md={isAgent ? 24 : 12}>
+              <Form.Item name="buildingName" label="Building Name *" rules={[{ required: true, message: "Building name is required" }]}>
+                <Input size="large" placeholder="Enter building name" />
+              </Form.Item>
+            </Col>
+
             <Col xs={12} md={6}>
               <Form.Item name="bedrooms" label="Bedrooms" rules={[{ required: true }]}>
                 <Select size="large" placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
-              <Form.Item name="bathrooms" label="Bathrooms" rules={[{ required: true }]}>
-                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="0" />
+              <Form.Item name="bathrooms" label="Bathrooms *" rules={[{ required: true, message: "Bathrooms is required" }]}>
+                <Select size="large" placeholder="Select baths">
+                  {[1, 2, 3, 4, 5].map(b => (
+                    <Option key={b} value={b}>{b} Bath{b > 1 ? "s" : ""}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
@@ -728,34 +920,39 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="0" />
               </Form.Item>
             </Col>
-            <Col xs={12} md={8}>
-              <Form.Item name="builtUpArea" label="Built-Up Area" rules={[{ required: true }]}>
-                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="1150" />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={4}>
-              <Form.Item name="builtUpAreaUnit" label="Unit">
-                <Select size="large"><Option value="sqft">Sqft</Option><Option value="sqm">Sqm</Option></Select>
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item name="unitNumber" label="Unit Number"><Input size="large" placeholder="e.g. A-1204" /></Form.Item>
-            </Col>
             <Col xs={12} md={6}>
               <Form.Item name="floorNumber" label="Floor Number">
                 <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="12" />
               </Form.Item>
             </Col>
-            <Col xs={12} md={8}>
+
+            {!isAgent && (
+              <Col xs={12} md={6}>
+                <Form.Item name="unitNumber" label="Unit Number (Optional)"><Input size="large" placeholder="e.g. A-1204" /></Form.Item>
+              </Col>
+            )}
+
+            <Col xs={12} md={isAgent ? 12 : 6}>
+              <Form.Item name="builtUpArea" label="Built-Up Area" rules={[{ required: true }]}>
+                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="1150" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={6}>
+              <Form.Item name="builtUpAreaUnit" label="Unit">
+                <Select size="large"><Option value="sqft">Sqft</Option><Option value="sqm">Sqm</Option></Select>
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={6}>
               <Form.Item name="furnishing" label="Furnishing">
                 <Select size="large">
                   {FURNISHING_OPTIONS.map(f => <Option key={f.value} value={f.value}>{f.label}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} md={4}>
+            <Col xs={12} md={6}>
              <Form.Item name="canVisit" label="Can Visit?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
+
             <Col span={24}>
               <Form.Item name="description" label="Description" rules={[{ required: true }]}>
                 <TextArea rows={3} placeholder="Describe the property..." style={{ borderRadius: 8 }} />
@@ -775,6 +972,34 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                   formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} placeholder="120000" />
               </Form.Item>
             </Col>
+
+            <Col xs={12} md={8}>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.price !== currentValues.price}
+              >
+                {({ getFieldValue, setFieldsValue }) => {
+                  const rent = getFieldValue("price") || 0;
+                  const calculatedDeposit = Math.round(rent * 0.10);
+                  // Update form value silently so it is submitted
+                  setTimeout(() => {
+                    setFieldsValue({ deposit: calculatedDeposit });
+                  }, 0);
+                  return (
+                    <Form.Item name="deposit" label="Security Deposit (10%)">
+                      <InputNumber
+                        size="large"
+                        style={{ width: "100%" }}
+                        value={calculatedDeposit}
+                        readOnly
+                        formatter={v => `AED ${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+            </Col>
+
             <Col xs={12} md={8}>
               <Form.Item name="rentalFrequency" label="Rental Frequency" rules={[{ required: true }]}>
                 <Select size="large" placeholder="Select frequency">
@@ -794,6 +1019,15 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 <InputNumber size="large" style={{ width: "100%" }} min={1} placeholder="12" />
               </Form.Item>
             </Col>
+            <Col xs={12} md={8}>
+              <Form.Item name="occupancyStatus" label="Occupancy Status *" rules={[{ required: true, message: "Occupancy status is required" }]}>
+                <Select size="large" placeholder="Select occupancy">
+                  <Option value="vacant">Vacant</Option>
+                  <Option value="occupied">Occupied</Option>
+                  <Option value="open_for_viewing">Open for viewing</Option>
+                </Select>
+              </Form.Item>
+            </Col>
             <Col xs={12} md={4}>
               <Form.Item name="isImmediate" label="Immediate?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
@@ -811,12 +1045,48 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="purpose" label="Purpose">
+              <Form.Item name="purpose" label="Purpose" initialValue="residential">
                 <Select size="large" placeholder="Select purpose">
                   <Option value="residential">Residential</Option>
                   <Option value="commercial">Commercial</Option>
                   <Option value="mixed_use">Mixed Use</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+
+            <Col span={24} style={{ marginTop: 10 }}>
+              <Form.Item noStyle dependencies={["price", "purpose"]}>
+                {({ getFieldValue }) => {
+                  const rent = getFieldValue("price") || 0;
+                  const purpose = getFieldValue("purpose") || "residential";
+                  const isCommercial = purpose === "commercial";
+                  const totalPct = isCommercial ? 10 : 5;
+                  const totalCommission = Math.round(rent * (totalPct / 100));
+                  
+                  const share25 = Math.round(totalCommission * 0.25);
+                  const share30 = Math.round(totalCommission * 0.30);
+                  
+                  return (
+                    <div style={{ background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
+                      <div style={{ fontWeight: 700, color: THEME.primary, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Commission Details & Agent Split</div>
+                      <Row gutter={16}>
+                        <Col xs={24} md={8} style={{ borderRight: "1px solid #ede9fe" }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Total Commission ({totalPct}%)</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: THEME.primary, marginTop: 4 }}>AED {totalCommission.toLocaleString()}</div>
+                        </Col>
+                        <Col xs={12} md={8} style={{ borderRight: "1px solid #ede9fe", paddingLeft: 24 }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Agent Share (25% Split)</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: THEME.success, marginTop: 6 }}>AED {share25.toLocaleString()}</div>
+                        </Col>
+                        <Col xs={12} md={8} style={{ paddingLeft: 24 }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Agent Share (30% Split)</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: THEME.success, marginTop: 6 }}>AED {share30.toLocaleString()}</div>
+                        </Col>
+                      </Row>
+                      <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 12, fontStyle: "italic" }}>* Commission is calculated based on residential (5%) or commercial (10%) property purpose. Agent tier splits are simulated.</div>
+                    </div>
+                  );
+                }}
               </Form.Item>
             </Col>
           </Row>
@@ -843,12 +1113,12 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
             </Col>
             {rentalPermitOnly && (
                 <Col span={24}>
-                  <Alert
+                  {/* <Alert
                     type="warning"
                     showIcon
                     message="This property will be visible only to the GRID userbase and will not be published on the website."
                     style={{ marginBottom: 16, borderRadius: 8 }}
-                  />
+                  /> */}
                 </Col>
             )}
             {rentalPermitOnly && (
@@ -934,6 +1204,11 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 <Input size="large" placeholder="Dubai" />
               </Form.Item>
             </Col>
+            <Col xs={24} style={{ marginTop: 8 }}>
+              <Form.Item name="mapLink" label="Google Map Link (Optional)">
+                <Input size="large" placeholder="https://maps.google.com/..." />
+              </Form.Item>
+            </Col>
           </Row>
         </>
       );
@@ -1013,6 +1288,93 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
             </Upload>
           </div>
 
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}><VideoCameraOutlined style={{ marginRight: 6 }} /> YouTube Videos</Divider>
+          <Form.List name="youtubeVideos">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name }) => (
+                  <Row key={key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                    <Col flex="auto">
+                      <Form.Item name={name} noStyle rules={[{ type: "url", message: "Enter a valid YouTube URL" }]}>
+                        <Input prefix={<VideoCameraOutlined style={{ color: "#9ca3af" }} />} placeholder="https://www.youtube.com/watch?v=..." size="large" />
+                      </Form.Item>
+                    </Col>
+                    <Col><Button danger type="text" icon={<MinusCircleOutlined />} onClick={() => remove(name)} /></Col>
+                  </Row>
+                ))}
+                <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} style={{ borderRadius: 8, color: THEME.primary, borderColor: "#c4b5fd" }}>Add YouTube Link</Button>
+              </>
+            )}
+          </Form.List>
+
+          {!isAgent && (
+            <>
+              <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}><FileTextOutlined style={{ marginRight: 6 }} /> Owner Information & Documents</Divider>
+              <Card style={{ marginBottom: 20, borderRadius: 12, border: "1px solid #ede9fe" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "name"]} label="Owner Name">
+                      <Input size="large" placeholder="Enter owner name" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "emiratesId"]} label="Emirates ID Number">
+                      <Input size="large" placeholder="784-XXXX-XXXXXXX-X" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "phone"]} label="Phone Number">
+                      <Input size="large" placeholder="e.g. +971 50 123 4567" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "email"]} label="Email Address">
+                      <Input size="large" placeholder="owner@example.com" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: 12 }}>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>Emirates ID (File)</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={ownerEmiratesIdFileList}
+                      onChange={({ fileList }) => setOwnerEmiratesIdFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {ownerEmiratesIdFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload E-ID</div></div>}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>Title Deed / Oqood</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={ownerTitleDeedFileList}
+                      onChange={({ fileList }) => setOwnerTitleDeedFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {ownerTitleDeedFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload Deed</div></div>}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>NOC from Developer</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={ownerNocFileList}
+                      onChange={({ fileList }) => setOwnerNocFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {ownerNocFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload NOC</div></div>}
+                    </Upload>
+                  </Col>
+                </Row>
+              </Card>
+            </>
+          )}
+
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
@@ -1047,25 +1409,56 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Basic Details</Divider>
           <Row gutter={16}>
             <Col xs={24} md={16}>
-              <Form.Item name="propertyName" label="Property Name" rules={[{ required: true }]}>
+              <Form.Item name="propertyName" label="Property Title" rules={[{ required: true, message: "Property Title is required" }]}>
                 <Input size="large" placeholder="E.g. Luxurious 3BR Apartment – Downtown" />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="unitType" label="Unit Type" rules={[{ required: true }]}>
+              <Form.Item name="unitType" label="Unit Type" rules={[{ required: true, message: "Unit Type is required" }]}>
                 <Select size="large" placeholder="Select type">
                   {UNIT_TYPES.map(t => <Option key={t.value} value={t.value}>{t.label}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
+
+            {!isAgent && (
+              <Col xs={24} md={12}>
+                <Form.Item name="advisorId" label="Source (Advisor) *" rules={[{ required: true, message: "Please select an advisor" }]}>
+                  <Select size="large" placeholder="Select Advisor" loading={advisorsLoading} showSearch optionFilterProp="label">
+                    {advisors.map(a => (
+                      <Option key={a._id} value={a._id} label={`${a.firstName || ""} ${a.lastName || ""}`}>
+                        {a.firstName || ""} {a.lastName || ""} ({a.email || ""})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            )}
+
+            <Col xs={24} md={isAgent ? 12 : 12}>
+              <Form.Item name="buildingName" label="Building Name *" rules={[{ required: true, message: "Building name is required" }]}>
+                <Input size="large" placeholder="Enter building name" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={isAgent ? 12 : 12}>
+              <Form.Item name="developerName" label="Developer Name (Optional)">
+                <Input size="large" placeholder="e.g. Emaar" />
+              </Form.Item>
+            </Col>
+
             <Col xs={12} md={6}>
               <Form.Item name="bedrooms" label="Bedrooms" rules={[{ required: true }]}>
                 <Select size="large" placeholder="Select bedrooms" options={BEDROOM_OPTIONS} />
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
-              <Form.Item name="bathrooms" label="Bathrooms" rules={[{ required: true }]}>
-                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="0" />
+              <Form.Item name="bathrooms" label="Bathrooms *" rules={[{ required: true, message: "Bathrooms is required" }]}>
+                <Select size="large" placeholder="Select baths">
+                  {[1, 2, 3, 4, 5].map(b => (
+                    <Option key={b} value={b}>{b} Bath{b > 1 ? "s" : ""}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={12} md={6}>
@@ -1073,32 +1466,36 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="0" />
               </Form.Item>
             </Col>
-            <Col xs={12} md={8}>
-              <Form.Item name="builtUpArea" label="Built-Up Area" rules={[{ required: true }]}>
-                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="1150" />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={4}>
-              <Form.Item name="builtUpAreaUnit" label="Unit">
-                <Select size="large"><Option value="sqft">Sqft</Option><Option value="sqm">Sqm</Option></Select>
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item name="unitNumber" label="Unit Number"><Input size="large" placeholder="e.g. A-1204" /></Form.Item>
-            </Col>
             <Col xs={12} md={6}>
               <Form.Item name="floorNumber" label="Floor Number">
                 <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="12" />
               </Form.Item>
             </Col>
-            <Col xs={12} md={8}>
+
+            {!isAgent && (
+              <Col xs={12} md={6}>
+                <Form.Item name="unitNumber" label="Unit Number (Optional)"><Input size="large" placeholder="e.g. A-1204" /></Form.Item>
+              </Col>
+            )}
+
+            <Col xs={12} md={isAgent ? 12 : 6}>
+              <Form.Item name="builtUpArea" label="Built-Up Area" rules={[{ required: true }]}>
+                <InputNumber size="large" style={{ width: "100%" }} min={0} placeholder="1150" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={6}>
+              <Form.Item name="builtUpAreaUnit" label="Unit">
+                <Select size="large"><Option value="sqft">Sqft</Option><Option value="sqm">Sqm</Option></Select>
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={6}>
               <Form.Item name="furnishing" label="Furnishing">
                 <Select size="large">
                   {FURNISHING_OPTIONS.map(f => <Option key={f.value} value={f.value}>{f.label}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} md={4}>
+            <Col xs={12} md={6}>
               <Form.Item name="canVisit" label="Can Visit?" valuePropName="checked"><Switch /></Form.Item>
             </Col>
             <Col span={24}>
@@ -1120,6 +1517,38 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                   formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} placeholder="1200000" />
               </Form.Item>
             </Col>
+
+            <Col xs={12} md={8}>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.price !== currentValues.price || prevValues.furnishing !== currentValues.furnishing
+                }
+              >
+                {({ getFieldValue, setFieldsValue }) => {
+                  const price = getFieldValue("price") || 0;
+                  const furnishing = getFieldValue("furnishing") || "unfurnished";
+                  const pct = furnishing === "furnished" ? 0.10 : 0.05;
+                  const calculatedDeposit = Math.round(price * pct);
+                  // Update form value silently so it is submitted
+                  setTimeout(() => {
+                    setFieldsValue({ deposit: calculatedDeposit });
+                  }, 0);
+                  return (
+                    <Form.Item name="deposit" label={`Security Deposit (${furnishing === "furnished" ? "10%" : "5%"})`}>
+                      <InputNumber
+                        size="large"
+                        style={{ width: "100%" }}
+                        value={calculatedDeposit}
+                        readOnly
+                        formatter={v => `AED ${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+            </Col>
+
             <Col xs={12} md={8}>
               <Form.Item name="transactionType" label="Transaction Type">
                 <Select size="large"><Option value="sell">Sell</Option><Option value="rent">Rent</Option></Select>
@@ -1149,6 +1578,20 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 </Select>
               </Form.Item>
             </Col>
+            <Col xs={12} md={8}>
+              <Form.Item name="occupancyStatus" label="Occupancy Status *" rules={[{ required: true, message: "Occupancy status is required" }]}>
+                <Select size="large" placeholder="Select occupancy">
+                  <Option value="vacant">Vacant</Option>
+                  <Option value="occupied">Occupied</Option>
+                  <Option value="open_for_viewing">Open for viewing</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={12} md={8}>
+              <Form.Item name="completionDate" label="Completion Date (Optional)">
+                <DatePicker size="large" style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Divider orientation="left" style={{ borderColor: THEME.primary }}>Commission</Divider>
@@ -1164,6 +1607,40 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
             <Col xs={12} md={8}>
               <Form.Item name="shareCommissionPercentage" label="Share %">
                 <InputNumber size="large" style={{ width: "100%" }} min={0} max={100} placeholder="0" />
+              </Form.Item>
+            </Col>
+
+            <Col span={24} style={{ marginTop: 10 }}>
+              <Form.Item noStyle dependencies={["price"]}>
+                {({ getFieldValue }) => {
+                  const price = getFieldValue("price") || 0;
+                  const totalPct = 2;
+                  const totalCommission = Math.round(price * (totalPct / 100));
+                  
+                  const share25 = Math.round(totalCommission * 0.25);
+                  const share30 = Math.round(totalCommission * 0.30);
+                  
+                  return (
+                    <div style={{ background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
+                      <div style={{ fontWeight: 700, color: THEME.primary, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Commission Details & Agent Split</div>
+                      <Row gutter={16}>
+                        <Col xs={24} md={8} style={{ borderRight: "1px solid #ede9fe" }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Total Commission ({totalPct}%)</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: THEME.primary, marginTop: 4 }}>AED {totalCommission.toLocaleString()}</div>
+                        </Col>
+                        <Col xs={12} md={8} style={{ borderRight: "1px solid #ede9fe", paddingLeft: 24 }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Agent Share (25% Split)</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: THEME.success, marginTop: 6 }}>AED {share25.toLocaleString()}</div>
+                        </Col>
+                        <Col xs={12} md={8} style={{ paddingLeft: 24 }}>
+                          <div style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", fontWeight: 600 }}>Agent Share (30% Split)</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: THEME.success, marginTop: 6 }}>AED {share30.toLocaleString()}</div>
+                        </Col>
+                      </Row>
+                      <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 12, fontStyle: "italic" }}>* Commission is calculated based on secondary property sale value (2% total commission). Agent tier splits are simulated.</div>
+                    </div>
+                  );
+                }}
               </Form.Item>
             </Col>
           </Row>
@@ -1263,6 +1740,11 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
                 <Input size="large" placeholder="Dubai" />
               </Form.Item>
             </Col>
+            <Col xs={24} style={{ marginTop: 8 }}>
+              <Form.Item name="mapLink" label="Google Map Link (Optional)">
+                <Input size="large" placeholder="https://maps.google.com/..." />
+              </Form.Item>
+            </Col>
           </Row>
         </>
       );
@@ -1341,6 +1823,93 @@ qrCode: offplanPermitOnly ? null : offplanQrUrl,
               <Button icon={<PlusOutlined />}>Upload Brochure</Button>
             </Upload>
           </div>
+
+          <Divider orientation="left" style={{ borderColor: THEME.primary }}><VideoCameraOutlined style={{ marginRight: 6 }} /> YouTube Videos</Divider>
+          <Form.List name="youtubeVideos">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name }) => (
+                  <Row key={key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                    <Col flex="auto">
+                      <Form.Item name={name} noStyle rules={[{ type: "url", message: "Enter a valid YouTube URL" }]}>
+                        <Input prefix={<VideoCameraOutlined style={{ color: "#9ca3af" }} />} placeholder="https://www.youtube.com/watch?v=..." size="large" />
+                      </Form.Item>
+                    </Col>
+                    <Col><Button danger type="text" icon={<MinusCircleOutlined />} onClick={() => remove(name)} /></Col>
+                  </Row>
+                ))}
+                <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} style={{ borderRadius: 8, color: THEME.primary, borderColor: "#c4b5fd" }}>Add YouTube Link</Button>
+              </>
+            )}
+          </Form.List>
+
+          {!isAgent && (
+            <>
+              <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}><FileTextOutlined style={{ marginRight: 6 }} /> Owner Information & Documents</Divider>
+              <Card style={{ marginBottom: 20, borderRadius: 12, border: "1px solid #ede9fe" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "name"]} label="Owner Name">
+                      <Input size="large" placeholder="Enter owner name" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "emiratesId"]} label="Emirates ID Number">
+                      <Input size="large" placeholder="784-XXXX-XXXXXXX-X" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "phone"]} label="Phone Number">
+                      <Input size="large" placeholder="e.g. +971 50 123 4567" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item name={["ownerDetails", "email"]} label="Email Address">
+                      <Input size="large" placeholder="owner@example.com" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: 12 }}>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>Emirates ID (File)</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={secOwnerEmiratesIdFileList}
+                      onChange={({ fileList }) => setSecOwnerEmiratesIdFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {secOwnerEmiratesIdFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload E-ID</div></div>}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>Title Deed / Oqood</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={secOwnerTitleDeedFileList}
+                      onChange={({ fileList }) => setSecOwnerTitleDeedFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {secOwnerTitleDeedFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload Deed</div></div>}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: "#374151" }}>NOC from Developer</div>
+                    <Upload
+                      listType="picture-card"
+                      fileList={secOwnerNocFileList}
+                      onChange={({ fileList }) => setSecOwnerNocFileList(fileList)}
+                      customRequest={customUploadRequest}
+                      maxCount={1}
+                    >
+                      {secOwnerNocFileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 6, fontSize: 12 }}>Upload NOC</div></div>}
+                    </Upload>
+                  </Col>
+                </Row>
+              </Card>
+            </>
+          )}
 
           <Divider orientation="left" style={{ borderColor: THEME.primary, marginTop: 24 }}>Review</Divider>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
