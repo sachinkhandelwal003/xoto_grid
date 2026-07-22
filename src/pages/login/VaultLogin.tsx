@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Alert, ConfigProvider, Select } from 'antd';
+import { Form, Input, Button, Alert, ConfigProvider, Select, Radio } from 'antd';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeftOutlined, MailOutlined, LockOutlined,
@@ -110,6 +110,7 @@ const VaultLogin: React.FC = () => {
   const [countryIso, setCountryIso] = useState('AE');
   const [form] = Form.useForm();
   const hasRedirected = useRef(false);
+  const [agentLoginMethod, setAgentLoginMethod] = useState<'phone' | 'email'>('phone');
 
   const countryOptions = useMemo(() => {
     return Country.getAllCountries().map((country) => ({
@@ -131,6 +132,7 @@ const VaultLogin: React.FC = () => {
     setView('login');
     setError('');
     form.resetFields();
+    setAgentLoginMethod('phone');
   };
 
   const handleBack = () => {
@@ -149,7 +151,19 @@ const VaultLogin: React.FC = () => {
           email: values.email!.trim(),
           password: values.password,
         });
-      } else if (selectedRole.id === 'agent' || selectedRole.id === 'gridreferralpartner') {
+      } else if (selectedRole.id === 'agent') {
+        if (agentLoginMethod === 'phone') {
+          const selectedCountryData = Country.getCountryByCode(countryIso);
+          const countryCode = selectedCountryData ? selectedCountryData.phonecode : '971';
+          const fullPhone = `+${countryCode}${values.agent_phone}`;
+          await login(selectedRole.apiEndpoint, { phone: fullPhone, password: values.password });
+        } else {
+          await login(selectedRole.apiEndpoint, {
+            email: values.email!.trim().toLowerCase(),
+            password: values.password,
+          });
+        }
+      } else if (selectedRole.id === 'gridreferralpartner') {
         const selectedCountryData = Country.getCountryByCode(countryIso);
         const countryCode = selectedCountryData ? selectedCountryData.phonecode : '971';
         const fullPhone = `+${countryCode}${values.agent_phone}`;
@@ -464,7 +478,25 @@ const VaultLogin: React.FC = () => {
                   {/* Form */}
                   <Form form={form} layout="vertical" onFinish={onFinish} className="vl-input">
 
-                    {selectedRole.id === 'agent' || selectedRole.id === 'gridreferralpartner' ? (
+                    {selectedRole.id === 'agent' && (
+                      <div style={{ marginBottom: 18 }}>
+                        <Radio.Group
+                          value={agentLoginMethod}
+                          onChange={(e) => {
+                            setAgentLoginMethod(e.target.value);
+                            setError('');
+                            form.resetFields(['agent_phone', 'email']);
+                          }}
+                          buttonStyle="solid"
+                          style={{ width: '100%', display: 'flex' }}
+                        >
+                          <Radio.Button value="phone" style={{ flex: 1, textAlign: 'center' }}>Phone Login</Radio.Button>
+                          <Radio.Button value="email" style={{ flex: 1, textAlign: 'center' }}>Email Login</Radio.Button>
+                        </Radio.Group>
+                      </div>
+                    )}
+
+                    {((selectedRole.id === 'agent' && agentLoginMethod === 'phone') || selectedRole.id === 'gridreferralpartner') ? (
                       <Form.Item
                         name="agent_phone"
                         label={<span style={{ fontWeight:600,fontSize:13,color:'#4a3060' }}>Mobile Number</span>}

@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Col,
   DatePicker,
   Descriptions,
@@ -75,6 +76,7 @@ const AgentProfile = () => {
   const [agreementProgress, setAgreementProgress] = useState(0);
   const [form] = Form.useForm();
   const [agreementForm] = Form.useForm();
+  const watchIsOutsideUae = Form.useWatch("bankDetails_isOutsideUae", form);
 
   const fetchProfile = useCallback(async () => {
     const response = await apiService.get("profile/get-profile-data");
@@ -166,10 +168,16 @@ const AgentProfile = () => {
       country: profile?.country,
       specialization: profile?.specialization,
       reraCardNumber: profile?.reraCardNumber,
+      emiratesIdNumber: profile?.emiratesIdNumber,
+      passportNumber: profile?.passportNumber,
+      bankDetails_isOutsideUae: profile?.bankDetails?.isOutsideUae || false,
       accountHolderName: profile?.bankDetails?.accountHolderName,
       bankName: profile?.bankDetails?.bankName,
       iban: profile?.bankDetails?.iban,
       accountNumber: profile?.bankDetails?.accountNumber,
+      swiftCode: profile?.bankDetails?.swiftCode,
+      bankAddress: profile?.bankDetails?.bankAddress,
+      routingCode: profile?.bankDetails?.routingCode,
     });
     setEditing(true);
   };
@@ -177,6 +185,9 @@ const AgentProfile = () => {
   const submitProfile = async (values) => {
     setSavingProfile(true);
     try {
+      const isOutsideUaeVal = !!values.bankDetails_isOutsideUae;
+      const isOutsideAgent = profile?.locationStatus === "outside_uae";
+
       await apiService.put("profile/update-profile", {
         first_name: values.first_name,
         last_name: values.last_name,
@@ -185,12 +196,18 @@ const AgentProfile = () => {
         operating_city: values.operating_city,
         country: values.country,
         specialization: values.specialization,
-        reraCardNumber: values.reraCardNumber,
+        reraCardNumber: isOutsideAgent ? "" : (values.reraCardNumber || ""),
+        emiratesIdNumber: isOutsideAgent ? "" : (values.emiratesIdNumber || ""),
+        passportNumber: isOutsideAgent ? (values.passportNumber || "") : "",
         bankDetails: {
           accountHolderName: values.accountHolderName || "",
           bankName: values.bankName || "",
           iban: values.iban || "",
           accountNumber: values.accountNumber || "",
+          isOutsideUae: isOutsideUaeVal,
+          swiftCode: isOutsideUaeVal ? (values.swiftCode || "") : "",
+          bankAddress: isOutsideUaeVal ? (values.bankAddress || "") : "",
+          routingCode: isOutsideUaeVal ? (values.routingCode || "") : "",
         },
       });
       message.success("Profile updated");
@@ -259,7 +276,14 @@ const AgentProfile = () => {
 
   const fullName = profile?.fullName || `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim() || "Agent";
   const verified = isApproved(profile);
-  const docComplete = Boolean(profile?.emiratesIdUrl && profile?.reraCardUrl);
+  const isInsideUae = profile?.locationStatus !== "outside_uae";
+  const requiredDocs = isInsideUae
+    ? [profile?.emiratesIdUrl, profile?.reraCardUrl]
+    : [profile?.passportUrl];
+  const totalCount = 8 + requiredDocs.length;
+  const docComplete = isInsideUae
+    ? Boolean(profile?.emiratesIdUrl && profile?.reraCardUrl)
+    : Boolean(profile?.passportUrl);
   const agreementActive = agreements.some((item) => item.status === "active");
   const profileProgress = Math.round(
     ([
@@ -270,11 +294,10 @@ const AgentProfile = () => {
       profile?.operating_city,
       profile?.specialization,
       profile?.profile_photo,
-      profile?.emiratesIdUrl,
-      profile?.reraCardUrl,
+      ...requiredDocs,
       agreementActive,
     ].filter(Boolean).length /
-      10) *
+      totalCount) *
       100
   );
 
@@ -372,11 +395,33 @@ const AgentProfile = () => {
             <Descriptions.Item label="Operating City">{profile?.operating_city || "N/A"}</Descriptions.Item>
             <Descriptions.Item label="Country">{profile?.country || "UAE"}</Descriptions.Item>
             <Descriptions.Item label="Specialization">{profile?.specialization || "General"}</Descriptions.Item>
-            <Descriptions.Item label="RERA Card Number">{profile?.reraCardNumber || "N/A"}</Descriptions.Item>
-            <Descriptions.Item label={<><BankOutlined /> Bank</>} span={2}>
-              <Paragraph className="mb-0">
-                {profile?.bankDetails?.bankName || "No bank added"} {profile?.bankDetails?.iban ? `- IBAN ${profile.bankDetails.iban}` : ""}
-              </Paragraph>
+            <Descriptions.Item label="Location Status">{profile?.locationStatus === 'outside_uae' ? "Outside UAE" : "Inside UAE"}</Descriptions.Item>
+            {profile?.locationStatus === 'outside_uae' ? (
+              <Descriptions.Item label="Passport Number">{profile?.passportNumber || "N/A"}</Descriptions.Item>
+            ) : (
+              <>
+                <Descriptions.Item label="Emirates ID Number">{profile?.emiratesIdNumber || "N/A"}</Descriptions.Item>
+                <Descriptions.Item label="RERA Card Number">{profile?.reraCardNumber || "N/A"}</Descriptions.Item>
+              </>
+            )}
+            <Descriptions.Item label={<><BankOutlined /> Bank Details</>} span={2}>
+              {profile?.bankDetails?.bankName ? (
+                <div>
+                  <Paragraph className="mb-1"><strong>Holder:</strong> {profile.bankDetails.accountHolderName}</Paragraph>
+                  <Paragraph className="mb-1"><strong>Bank:</strong> {profile.bankDetails.bankName}</Paragraph>
+                  <Paragraph className="mb-1"><strong>IBAN:</strong> {profile.bankDetails.iban || "N/A"}</Paragraph>
+                  <Paragraph className="mb-1"><strong>Account Number:</strong> {profile.bankDetails.accountNumber || "N/A"}</Paragraph>
+                  {profile.bankDetails.isOutsideUae && (
+                    <>
+                      <Paragraph className="mb-1"><strong>SWIFT/BIC:</strong> {profile.bankDetails.swiftCode || "N/A"}</Paragraph>
+                      <Paragraph className="mb-1"><strong>Bank Address:</strong> {profile.bankDetails.bankAddress || "N/A"}</Paragraph>
+                      <Paragraph className="mb-1"><strong>Routing Code/Sort Code:</strong> {profile.bankDetails.routingCode || "N/A"}</Paragraph>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <Text type="secondary">No bank details added</Text>
+              )}
             </Descriptions.Item>
           </Descriptions>
         </div>
@@ -396,25 +441,39 @@ const AgentProfile = () => {
             <div className="text-center">
               {docComplete ? <CheckCircleFilled style={{ fontSize: 40, color: "#52c41a" }} /> : <WarningOutlined style={{ fontSize: 40, color: "#faad14" }} />}
               <Title level={4} className="mt-4">{docComplete ? "Documents Uploaded" : "Action Required"}</Title>
-              <Text type="secondary">Upload Emirates ID and RERA card to keep your agent profile complete.</Text>
+              <Text type="secondary">
+                {isInsideUae ? "Upload Emirates ID and RERA card to keep your agent profile complete." : "Upload Passport Copy to keep your agent profile complete."}
+              </Text>
             </div>
           </Card>
 
           <Row gutter={[16, 16]} className="mt-5">
-            {renderDocumentCard({
-              title: "Emirates ID",
-              description: "Upload Emirates ID copy, PDF or image.",
-              field: "emiratesIdUrl",
-              url: profile?.emiratesIdUrl,
-              icon: <IdcardOutlined />,
-            })}
-            {renderDocumentCard({
-              title: "RERA Card",
-              description: "Upload your RERA card or certificate.",
-              field: "reraCardUrl",
-              url: profile?.reraCardUrl,
-              icon: <FilePdfOutlined />,
-            })}
+            {isInsideUae ? (
+              <>
+                {renderDocumentCard({
+                  title: "Emirates ID",
+                  description: "Upload Emirates ID copy, PDF or image.",
+                  field: "emiratesIdUrl",
+                  url: profile?.emiratesIdUrl,
+                  icon: <IdcardOutlined />,
+                })}
+                {renderDocumentCard({
+                  title: "RERA Card",
+                  description: "Upload your RERA card or certificate.",
+                  field: "reraCardUrl",
+                  url: profile?.reraCardUrl,
+                  icon: <FilePdfOutlined />,
+                })}
+              </>
+            ) : (
+              renderDocumentCard({
+                title: "Passport Copy",
+                description: "Upload your passport copy, PDF or image.",
+                field: "passportUrl",
+                url: profile?.passportUrl,
+                icon: <IdcardOutlined />,
+              })
+            )}
           </Row>
         </div>
       ),
@@ -496,15 +555,35 @@ const AgentProfile = () => {
             <Col xs={24} md={12}><Form.Item name="operating_city" label="Operating City"><Input size="large" /></Form.Item></Col>
             <Col xs={24} md={12}><Form.Item name="country" label="Country"><Input size="large" /></Form.Item></Col>
             <Col xs={24}><Form.Item name="specialization" label="Specialization"><Input size="large" /></Form.Item></Col>
-            <Col xs={24}><Form.Item name="reraCardNumber" label="RERA Card Number"><Input size="large" /></Form.Item></Col>
+            {profile?.locationStatus === 'outside_uae' ? (
+              <Col xs={24}><Form.Item name="passportNumber" label="Passport Number" rules={[{ required: true, message: "Passport number is required" }]}><Input size="large" /></Form.Item></Col>
+            ) : (
+              <>
+                <Col xs={24} md={12}><Form.Item name="emiratesIdNumber" label="Emirates ID Number" rules={[{ required: true, message: "Emirates ID number is required" }]}><Input size="large" /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item name="reraCardNumber" label="RERA Card Number" rules={[{ required: profile?.agentMode === 'partner_affiliated', message: "RERA number is required" }]}><Input size="large" /></Form.Item></Col>
+              </>
+            )}
           </Row>
 
           <Divider orientation="left">Bank Details</Divider>
           <Row gutter={16}>
-            <Col xs={24} md={12}><Form.Item name="accountHolderName" label="Account Holder"><Input size="large" /></Form.Item></Col>
-            <Col xs={24} md={12}><Form.Item name="bankName" label="Bank Name"><Input size="large" /></Form.Item></Col>
+            <Col xs={24}>
+              <Form.Item name="bankDetails_isOutsideUae" valuePropName="checked">
+                <Checkbox>Bank account is located outside of UAE</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}><Form.Item name="accountHolderName" label="Account Holder" rules={[{ required: true }]}><Input size="large" /></Form.Item></Col>
+            <Col xs={24} md={12}><Form.Item name="bankName" label="Bank Name" rules={[{ required: true }]}><Input size="large" /></Form.Item></Col>
             <Col xs={24} md={12}><Form.Item name="iban" label="IBAN"><Input size="large" /></Form.Item></Col>
             <Col xs={24} md={12}><Form.Item name="accountNumber" label="Account Number"><Input size="large" /></Form.Item></Col>
+
+            {watchIsOutsideUae && (
+              <>
+                <Col xs={24} md={12}><Form.Item name="swiftCode" label="SWIFT/BIC Code" rules={[{ required: true, message: "SWIFT code is required for international transfers" }]}><Input size="large" /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item name="routingCode" label="Routing Code / Sort Code"><Input size="large" /></Form.Item></Col>
+                <Col xs={24}><Form.Item name="bankAddress" label="Bank Address"><Input.TextArea rows={2} /></Form.Item></Col>
+              </>
+            )}
           </Row>
 
           <div className="flex justify-end gap-3 border-t pt-5">

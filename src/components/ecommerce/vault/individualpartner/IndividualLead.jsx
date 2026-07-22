@@ -32,6 +32,9 @@ const UAE_AREAS = {
     'DIFC', 'Jumeirah', 'Al Barsha', 'Deira', 'Bur Dubai', 'Discovery Gardens',
     'Dubai Hills Estate', 'Arabian Ranches', 'Emirates Hills', 'Mirdif',
     'International City', 'Silicon Oasis', 'JVC', 'JLT', 'Sports City',
+    'JVT – Jumeirah Village Triangle', 'JLT – Jumeirah Lake Towers',
+    'Al Jadaf', 'Abu Hail', 'DSO – Dubai Silicon Oasis', 'Al Jafiliya',
+    'Al Quoz 1', 'Al Quoz 2', 'Al Quoz 3', 'Al Quoz 4', 'Al Quoz Fourth',
   ],
   'Abu Dhabi': [
     'Al Reem Island', 'Saadiyat Island', 'Yas Island', 'Al Khalidiyah',
