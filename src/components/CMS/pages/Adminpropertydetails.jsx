@@ -35,6 +35,8 @@ import {
   UploadOutlined,
   ExclamationCircleOutlined,
   FolderOpenOutlined,
+  UserOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -847,6 +849,66 @@ export default function AdminPropertyDetail() {
               )}
             </Descriptions>
           </Card>
+
+          {/* Owner Details (Visible only to Admin) */}
+          {(property.ownerDetails?.name || property.ownerDetails?.phone || property.ownerDetails?.email) && (
+            <Card
+              title={<><UserOutlined style={{ marginRight: 8 }} />Owner Details</>}
+              style={{ borderRadius: 12, marginBottom: 16 }}
+            >
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Owner Name">
+                  {property.ownerDetails.name || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Phone">
+                  {property.ownerDetails.phone || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {property.ownerDetails.email || "—"}
+                </Descriptions.Item>
+                {property.ownerDetails.emiratesId && (
+                  <Descriptions.Item label="Emirates ID">
+                    {property.ownerDetails.emiratesId}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+              {(property.ownerDetails.emiratesIdUrl || property.ownerDetails.titleDeedUrl || property.ownerDetails.nocUrl) && (
+                <>
+                  <Divider style={{ margin: "12px 0 8px" }} />
+                  <Text strong style={{ fontSize: 11, color: "#6b7280", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Documents</Text>
+                  <Space direction="vertical" style={{ width: "100%" }}>
+                    {property.ownerDetails.emiratesIdUrl && (
+                      <Button
+                        type="text" size="small" icon={<FilePdfOutlined style={{ color: "#dc2626" }} />}
+                        onClick={() => window.open(property.ownerDetails.emiratesIdUrl, "_blank")}
+                        style={{ padding: 0, height: "auto" }}
+                      >
+                        Emirates ID Copy
+                      </Button>
+                    )}
+                    {property.ownerDetails.titleDeedUrl && (
+                      <Button
+                        type="text" size="small" icon={<FilePdfOutlined style={{ color: "#dc2626" }} />}
+                        onClick={() => window.open(property.ownerDetails.titleDeedUrl, "_blank")}
+                        style={{ padding: 0, height: "auto" }}
+                      >
+                        Title Deed
+                      </Button>
+                    )}
+                    {property.ownerDetails.nocUrl && (
+                      <Button
+                        type="text" size="small" icon={<FilePdfOutlined style={{ color: "#dc2626" }} />}
+                        onClick={() => window.open(property.ownerDetails.nocUrl, "_blank")}
+                        style={{ padding: 0, height: "auto" }}
+                      >
+                        NOC Document
+                      </Button>
+                    )}
+                  </Space>
+                </>
+              )}
+            </Card>
+          )}
 
           {/* Developer Details */}
           {(devDetails.companyName || devDetails.contactName || property.developerName) && (

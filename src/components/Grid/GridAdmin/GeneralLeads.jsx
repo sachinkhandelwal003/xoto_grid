@@ -496,7 +496,7 @@ const CreateLeadModal = ({ visible, onClose, onCreated }) => {
                 {['+971','+91','+1','+44','+966','+974'].map(c => <Select.Option key={c} value={c}>{c}</Select.Option>)}
               </Select>
             </Form.Item>
-            <Form.Item name="phone" label="Phone Number" rules={[{ required: true, message: 'Required' }]} style={{ margin: 0 }}>
+            <Form.Item name="phone" label="Phone Number" rules={[{ pattern: /^[0-9]{7,15}$/, message: 'Enter 7–15 digit phone number' }]} style={{ margin: 0 }}>
               <Input placeholder="501234567" style={inp} />
             </Form.Item>
           </div>

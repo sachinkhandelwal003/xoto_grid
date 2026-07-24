@@ -901,7 +901,7 @@ const ReactionModal = ({ suggestion, leadId, onClose, onSuccess }) => {
 
 // ─── STATUS MODAL ─────────────────────────────────────────────────────────────
 // ─── STATUS MODAL (Step-by-step, English only, one status at a time) ─────────
-const REQUIRES_INVENTORY = ['reserved'];
+const REQUIRES_INVENTORY = [];
 
 const StatusModal = ({ lead, targetProperty, onClose, onSuccess }) => {
   const current = lead?.status || 'new';

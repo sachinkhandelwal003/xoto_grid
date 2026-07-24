@@ -314,7 +314,6 @@ const preventAlphabets = (e) => {
                 <Form.Item
                   name="phone_number" label="Phone Number"
                   rules={[
-                    { required: true, message: 'Phone number is required' },
                     { pattern: /^[0-9]{7,15}$/, message: 'Enter 7–15 digit phone number' },
                   ]}
                   style={{ marginBottom: 0 }}
