@@ -40,11 +40,18 @@ const BRAND_PURPLE = "#5C039B";const AddAgent = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  // --- AGENCY STATES ---
+  // --- PARTNER STATES ---
   const [agencies, setAgencies] = useState([]);
   const [loadingAgencies, setLoadingAgencies] = useState(false);
 
+  const watchAgentMode = Form.useWatch("agentMode", form);
+
   useEffect(() => {
+    if (watchAgentMode !== "partner_affiliated") {
+      form.setFieldsValue({ agency: undefined });
+      return;
+    }
+
     const fetchAgencies = async () => {
       setLoadingAgencies(true);
       try {
@@ -57,12 +64,11 @@ const BRAND_PURPLE = "#5C039B";const AddAgent = () => {
       }
     };
     fetchAgencies();
-  }, []);
+  }, [form, watchAgentMode]);
 
   // --- LOCATION STATES ---
   const [citiesList, setCitiesList] = useState([]);
   const selectedCountry = Form.useWatch("country", form);
-  const watchAgentMode = Form.useWatch("agentMode", form);
   const watchLocationStatus = Form.useWatch("locationStatus", form);
 
   // 🔥 INSTANT UPLOAD STATES
@@ -161,8 +167,6 @@ const BRAND_PURPLE = "#5C039B";const AddAgent = () => {
         profile_photo: urls.profile,
         id_proof: values.locationStatus === 'inside_uae' ? urls.idProof : "",
         rera_certificate: values.locationStatus === 'inside_uae' ? (urls.rera || "") : "",
-        agency: values.agentMode === 'freelance' ? null : values.agency,
-        
         // Onboarding tracking fields
         agentMode: values.agentMode,
         locationStatus: values.locationStatus,
@@ -170,6 +174,7 @@ const BRAND_PURPLE = "#5C039B";const AddAgent = () => {
         emiratesIdNumber: values.locationStatus === 'inside_uae' ? (values.emiratesIdNumber || '') : '',
         passportNumber: values.locationStatus === 'outside_uae' ? (values.passportNumber || '') : '',
         passportUrl: values.locationStatus === 'outside_uae' ? urls.passport : '',
+        ...(values.agentMode === 'partner_affiliated' ? { agency: values.agency } : {}),
       };
 
       const response = await apiService.post("/agent/agent-signup", payload);

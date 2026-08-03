@@ -205,9 +205,11 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
     setSaving(true);
     try {
       // ✅ FIX 1: success check hatao — catch block handle karega errors
-      await apiService.put(`/gridlead/${lead._id}/assign`, { 
-        advisorId: selected, 
-        notes 
+      await apiService.put(`/gridlead/${lead._id}/assign`, {
+        advisorId: selected,
+        notes,
+        notifyAdvisor: true,
+        notification: { eventType: 'LEAD_ASSIGNED', recipientId: selected, recipientRole: 'advisor' },
       });
       message.success(
         (lead.assigned_to?._id || lead.assigned_to) 

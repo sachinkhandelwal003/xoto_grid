@@ -59,7 +59,7 @@ const STATUS_COLOR = {
   changes_requested: "gold",
   draft:             "default",
 };
-
+ 
 const SUBTYPE_LABEL = {
   off_plan:   "Off-Plan",
   secondary:  "Secondary",
@@ -175,21 +175,8 @@ export default function AdminPropertyDetail() {
   useEffect(() => { fetchProperty(); }, [id]);
 
   const handleApprove = async () => {
-    if (!qrCodeUrl) {
-      message.error("Upload the QR code before approving.");
-      return;
-    }
-    if (!trakheesiId.trim()) {
-      message.error("Enter the Trakheesi Permit ID before approving.");
-      return;
-    }
     try {
       setActionLoading(true);
-      // persist compliance if not already saved
-      await apiService.patch(`/properties/${id}`, {
-        trakheesiPermitId: trakheesiId.trim(),
-        qrCode: qrCodeUrl,
-      });
       await apiService.patch(`/properties/${id}/approve`);
       showToast("success", "Property approved and published.");
       fetchProperty();
@@ -302,22 +289,15 @@ export default function AdminPropertyDetail() {
           <Space>
             {(isPending || isChangesReq) && (
               <>
-                <Tooltip
-                  title={!qrCodeUrl || !trakheesiId.trim()
-                    ? "Save QR code and Trakheesi Permit ID first"
-                    : ""}
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  loading={actionLoading}
+                  style={{ background: "#16a34a", borderColor: "#16a34a", borderRadius: 8 }}
+                  onClick={handleApprove}
                 >
-                  <Button
-                    type="primary"
-                    icon={<CheckCircleOutlined />}
-                    loading={actionLoading}
-                    disabled={!qrCodeUrl || !trakheesiId.trim()}
-                    style={{ background: "#16a34a", borderColor: "#16a34a", borderRadius: 8 }}
-                    onClick={handleApprove}
-                  >
-                    Approve
-                  </Button>
-                </Tooltip>
+                  Approve
+                </Button>
                 <Button
                   danger
                   icon={<CloseCircleOutlined />}
@@ -339,22 +319,15 @@ export default function AdminPropertyDetail() {
               </Button>
             )}
             {isRejected && (
-              <Tooltip
-                title={!qrCodeUrl || !trakheesiId.trim()
-                  ? "Save QR code and Trakheesi Permit ID first"
-                  : ""}
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                loading={actionLoading}
+                style={{ background: THEME.primary, borderColor: THEME.primary, borderRadius: 8 }}
+                onClick={handleApprove}
               >
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  loading={actionLoading}
-                  disabled={!qrCodeUrl || !trakheesiId.trim()}
-                  style={{ background: THEME.primary, borderColor: THEME.primary, borderRadius: 8 }}
-                  onClick={handleApprove}
-                >
-                  Approve Anyway
-                </Button>
-              </Tooltip>
+                Approve Anyway
+              </Button>
             )}
           <Button
             icon={<FolderOpenOutlined />}
@@ -1091,22 +1064,15 @@ export default function AdminPropertyDetail() {
           {(isPending || isChangesReq) && (
             <Card title="Quick Actions" style={{ borderRadius: 12, marginBottom: 16 }}>
               <Space direction="vertical" style={{ width: "100%" }}>
-                <Tooltip
-                  title={!qrCodeUrl || !trakheesiId.trim()
-                    ? "Save QR code and Trakheesi Permit ID first"
-                    : ""}
-                >
                 <Button
                   block type="primary"
                   icon={<CheckCircleOutlined />}
                   loading={actionLoading}
-                  disabled={!qrCodeUrl || !trakheesiId.trim()}
                   style={{ background: "#16a34a", borderColor: "#16a34a", borderRadius: 8 }}
                   onClick={handleApprove}
                 >
                   Approve & Publish
                 </Button>
-                </Tooltip>
                 <Button
                   block danger
                   icon={<CloseCircleOutlined />}

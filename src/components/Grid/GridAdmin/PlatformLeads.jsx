@@ -258,7 +258,12 @@ const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
     if (!selectedId) return message.warning('Please select an advisor');
     setAssigning(true);
     try {
-      await apiService.put(`/gridlead/${lead._id}/assign`, { advisorId: selectedId, notes });
+      await apiService.put(`/gridlead/${lead._id}/assign`, {
+        advisorId: selectedId,
+        notes,
+        notifyAdvisor: true,
+        notification: { eventType: 'LEAD_ASSIGNED', recipientId: selectedId, recipientRole: 'advisor' },
+      });
       message.success('Advisor assigned successfully');
       onAssigned();
       onClose();

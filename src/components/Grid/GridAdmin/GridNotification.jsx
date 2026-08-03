@@ -1,445 +1,104 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { apiService } from "../../../manageApi/utils/custom.apiservice";
-import {
-  Card, List, Avatar, Typography, Tag, Button, Space, Spin, Empty,
-  Divider, Badge, Pagination, Modal, Descriptions, Tooltip
-} from 'antd';
-import {
-  BellOutlined, ClockCircleOutlined, MailOutlined, HistoryOutlined,
-  CheckCircleOutlined, ReloadOutlined, EyeOutlined, UserOutlined,
-  TagOutlined, FileTextOutlined
-} from '@ant-design/icons';
-import { showErrorAlert, showSuccessAlert } from '../../../manageApi/utils/sweetAlert';
+import { Modal } from 'antd';
+import { FiBell, FiCheck, FiCheckCircle, FiClock, FiFilter, FiRefreshCw, FiX } from 'react-icons/fi';
+import { apiService } from '../../../manageApi/utils/custom.apiservice';
 
-const { Title, Text, Paragraph } = Typography;
+const PAGE_SIZE = 20;
+const EVENT_META = {
+  LEAD_ASSIGNED: { label: 'Lead Assigned', color: '#b45309', bg: '#fffbeb' },
+  LEAD_CREATED: { label: 'New Lead', color: '#6d28d9', bg: '#f5f3ff' },
+  LEAD_STATUS_UPDATED: { label: 'Lead Updated', color: '#047857', bg: '#ecfdf5' },
+  PROPOSAL_CREATED: { label: 'Proposal', color: '#2563eb', bg: '#eff6ff' },
+};
 
-const PURPLE_THEME = {
-  primary: '#722ed1',
-  bg: '#f9f0ff',
-  lightBg: '#faf5ff',
+const getMeta = eventType => EVENT_META[eventType] || {
+  label: eventType ? eventType.replace(/_/g, ' ') : 'Notification', color: '#6b7280', bg: '#f3f4f6',
+};
+const timeAgo = date => {
+  if (!date) return 'Just now';
+  const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
+};
+const formatDate = date => date ? new Date(date).toLocaleString('en-AE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+const NotificationRow = ({ notification, onOpen, onRead }) => {
+  const meta = getMeta(notification.eventType);
+  return (
+    <div className={`flex gap-4 border-b border-gray-100 px-5 py-4 transition-colors hover:bg-violet-50 cursor-pointer ${notification.isRead ? 'bg-white' : 'bg-violet-50/40'}`} onClick={() => onOpen(notification)}>
+      <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: meta.bg }}>
+        <FiBell size={18} style={{ color: meta.color }} />
+        {!notification.isRead && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white" style={{ background: meta.color }} />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-wide" style={{ color: meta.color }}>{meta.label}</span>{!notification.isRead && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: meta.bg, color: meta.color }}>NEW</span>}</div>
+            <p className="mt-1 truncate text-sm font-semibold text-gray-900">{notification.title || 'Notification'}</p>
+            <p className="mt-1 text-sm leading-relaxed text-gray-500">{notification.message || 'You have a new update.'}</p>
+            {notification.createdByName && <p className="mt-2 text-xs text-gray-400">By {notification.createdByName}</p>}
+          </div>
+          <div className="flex flex-shrink-0 flex-col items-end gap-2"><span className="text-xs text-gray-400">{timeAgo(notification.createdAt)}</span>{!notification.isRead ? <button type="button" className="flex items-center gap-1 text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={event => { event.stopPropagation(); onRead(notification._id); }}><FiCheck size={13} /> Mark read</button> : <FiCheckCircle size={15} className="text-emerald-500" />}</div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const GridNotifications = () => {
-  const { user } = useSelector((s) => s.auth);
-
+  const { user } = useSelector(state => state.auth);
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [filter, setFilter] = useState('all'); 
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const LIMIT = 10;
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [selected, setSelected] = useState(null);
+  const [connected, setConnected] = useState(false);
 
-  // Modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState(null);
-
-  // Helper to get user role slug for display
-  const getUserRoleSlug = () => {
-    if (!user?.role) return 'user';
-    if (typeof user.role === 'object') return user.role.slug || user.role.code || 'user';
-    return String(user.role).toLowerCase();
-  };
-
-  const roleCode = user?.role?.code || user?.role;
-const isAdmin = [0, 1, '0', '1'].includes(roleCode);
-const isDeveloper = [17, '17'].includes(roleCode);
-const isAgent = [16, '16'].includes(roleCode);
-const isReferralPartner = [25, '25'].includes(roleCode);
-const isPartner = [21,'21'].includes(roleCode); 
-
-
-const getRoleLabel = () => {
-  if (isAdmin) return { label: 'Admin View', color: 'red' };
-  if (isDeveloper) return { label: 'Developer View', color: 'green' };
-  if (isAgent) return { label: 'Agent View', color: 'blue' };
-  if (isReferralPartner) return { label: 'Referral Partner View', color: 'purple' };
-  if (isPartner) return { label: 'Partner View', color: 'orange' };
-  return { label: 'User View', color: 'default' };
-};
-
-  // Fetch notifications – always scoped to logged-in user
- const fetchNotifications = async (pageNum = page, activeFilter = filter) => {
-  if (!user?.id) return;
-  setLoading(true);
-  try {
-    // ✅ Remove userId from URL – backend will use token
-    let url = `/grid/notifications?page=${pageNum}&limit=${LIMIT}`;
-    if (activeFilter === 'read') url += '&isRead=true';
-    if (activeFilter === 'unread') url += '&isRead=false';
-
-    const res = await apiService.get(url);
-    if (res.success) {
-      setNotifications(res.data || []);
-      setTotal(res.total || 0);
-    } else {
-      showErrorAlert('Error', res.message || 'Failed to fetch notifications');
-    }
-  } catch (error) {
-    console.error('Fetch error:', error);
-    if (error.response?.status === 403 || error.response?.status === 401) {
-      showErrorAlert('Access Denied', 'You do not have permission to view notifications. Please contact admin.');
-    } else {
-      showErrorAlert('Error', 'Failed to fetch notifications');
-    }
-  } finally {
-    setLoading(false);
-  }
-};
-
-  useEffect(() => {
-    fetchNotifications();
-    // Optional: refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchNotifications(page, filter);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user?.id]); // re-run if user changes
-
-  const handleFilterChange = (val) => {
-    setFilter(val);
-    setPage(1);
-    fetchNotifications(1, val);
-  };
-
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
-    fetchNotifications(newPage, filter);
-  };
-
-  const markSingleAsRead = async (id, e) => {
-    if (e) e.stopPropagation();
-    setActionLoading(id);
-    try {
-      const res = await apiService.put(`/grid/notifications/${id}/read`);
-      if (res.success) {
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-        );
-        // Update selected notification if open
-        if (selectedNotification && selectedNotification._id === id) {
-          setSelectedNotification({ ...selectedNotification, isRead: true });
-        }
-        showSuccessAlert('Updated', 'Notification marked as read');
-      }
-    } catch (error) {
-      showErrorAlert('Error', 'Failed to update notification');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    if (notifications.every((n) => n.isRead)) {
-      return showSuccessAlert('Info', 'All notifications are already read');
-    }
+  const fetchNotifications = useCallback(async (nextPage = 1, activeFilter = filter) => {
+    if (!user?.id && !user?._id) return;
     setLoading(true);
     try {
-      const res = await apiService.put('/grid/notifications/read-all');
-      if (res.success) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-        showSuccessAlert('Success', 'All notifications marked as read');
+      const query = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_SIZE) });
+      if (activeFilter === 'read') query.set('isRead', 'true');
+      if (activeFilter === 'unread') query.set('isRead', 'false');
+      let response = await apiService.get(`/grid/notifications?${query.toString()}`).catch(() => null);
+      let data = Array.isArray(response?.data) ? response.data : [];
+      if (!data.length && nextPage === 1) {
+        const fallback = await apiService.get(`/vault/notifications?limit=${PAGE_SIZE}`).catch(() => null);
+        if (Array.isArray(fallback?.data)) { response = fallback; data = fallback.data; }
       }
-    } catch (error) {
-      showErrorAlert('Error', 'Failed to update all notifications');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setNotifications(data); setTotal(response?.total || data.length); setConnected(Boolean(response)); setPage(nextPage);
+    } finally { setLoading(false); }
+  }, [filter, user?.id, user?._id]);
 
-  const openNotificationModal = (notification) => {
-    setSelectedNotification(notification);
-    setModalVisible(true);
-  };
+  useEffect(() => {
+    fetchNotifications(1, filter);
+    const interval = window.setInterval(() => fetchNotifications(page, filter), 30000);
+    return () => window.clearInterval(interval);
+  }, [fetchNotifications]);
 
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedNotification(null);
+  const markRead = async id => {
+    setNotifications(previous => previous.map(item => item._id === id ? { ...item, isRead: true } : item));
+    await apiService.put(`/grid/notifications/${id}/read`).catch(() => {});
   };
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const markAllRead = async () => {
+    setNotifications(previous => previous.map(item => ({ ...item, isRead: true })));
+    await apiService.put('/grid/notifications/read-all').catch(() => {});
   };
+  const unreadCount = notifications.filter(item => !item.isRead).length;
+  const readCount = Math.max(total - unreadCount, 0);
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-      <Card
-        className="shadow-xl rounded-2xl border-0 overflow-hidden"
-        bodyStyle={{ padding: 0 }}
-        title={
-          <div className="flex items-center gap-3 px-6 pt-6">
-            <div className="p-2 rounded-full" style={{ backgroundColor: PURPLE_THEME.bg }}>
-              <HistoryOutlined style={{ fontSize: '20px', color: PURPLE_THEME.primary }} />
-            </div>
-            <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
-              Notification History
-            </Title>
-            {unreadCount > 0 && (
-              <Tag color="purple" style={{ borderRadius: 99, fontWeight: 500 }}>
-                {unreadCount} unread
-              </Tag>
-            )}
-            {/* Role badge to confirm whose view */}
-           <Tag color={getRoleLabel().color} className="ml-2">
-  {getRoleLabel().label}
-</Tag>
-          </div>
-        }
-        extra={
-          <Space className="pr-6 pt-6" wrap>
-            <Button.Group size="middle">
-              <Button
-                type={filter === 'all' ? 'primary' : 'default'}
-                onClick={() => handleFilterChange('all')}
-                style={filter === 'all' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
-              >
-                All
-              </Button>
-              <Button
-                type={filter === 'unread' ? 'primary' : 'default'}
-                onClick={() => handleFilterChange('unread')}
-                style={filter === 'unread' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
-              >
-                Unread
-              </Button>
-              <Button
-                type={filter === 'read' ? 'primary' : 'default'}
-                onClick={() => handleFilterChange('read')}
-                style={filter === 'read' ? { background: PURPLE_THEME.primary, borderColor: PURPLE_THEME.primary } : {}}
-              >
-                Read
-              </Button>
-            </Button.Group>
-
-            <Tooltip title="Refresh">
-              <Button icon={<ReloadOutlined />} onClick={() => fetchNotifications(page, filter)} loading={loading} />
-            </Tooltip>
-
-            <Tooltip title="Mark all as read">
-              <Button
-                icon={<MailOutlined />}
-                onClick={markAllAsRead}
-                disabled={notifications.every((n) => n.isRead)}
-              >
-                Mark all read
-              </Button>
-            </Tooltip>
-          </Space>
-        }
-      >
-        {loading ? (
-          <div className="py-20 text-center">
-            <Spin size="large" tip="Loading notifications..." />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="py-16">
-            <Empty description="No notifications found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          </div>
-        ) : (
-          <>
-            <List
-              itemLayout="horizontal"
-              dataSource={notifications}
-              renderItem={(item) => (
-                <List.Item
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-md px-6 py-4 border-b border-gray-100 ${
-                    !item.isRead ? 'hover:bg-purple-50' : 'hover:bg-gray-50'
-                  }`}
-                  style={{ backgroundColor: !item.isRead ? PURPLE_THEME.lightBg : 'white' }}
-                  onClick={() => openNotificationModal(item)}
-                  actions={[
-                    !item.isRead ? (
-                      <Button
-                        key="mark-read"
-                        type="link"
-                        size="small"
-                        icon={<CheckCircleOutlined />}
-                        loading={actionLoading === item._id}
-                        onClick={(e) => markSingleAsRead(item._id, e)}
-                        style={{ color: PURPLE_THEME.primary }}
-                      >
-                        Mark Read
-                      </Button>
-                    ) : (
-                      <Tooltip title="Already read">
-                        <CheckCircleOutlined key="done" style={{ color: '#52c41a', fontSize: 16 }} />
-                      </Tooltip>
-                    ),
-                    <Tooltip title="View details">
-                      <EyeOutlined key="view" style={{ color: PURPLE_THEME.primary, fontSize: 16 }} />
-                    </Tooltip>
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Badge
-                        dot={!item.isRead}
-                        color={PURPLE_THEME.primary}
-                        offset={[-4, 32]}
-                      >
-                        <Avatar
-                          size={48}
-                          icon={<BellOutlined />}
-                          style={{
-                            backgroundColor: PURPLE_THEME.bg,
-                            color: PURPLE_THEME.primary,
-                            boxShadow: '0 2px 6px rgba(114,46,209,0.15)'
-                          }}
-                        />
-                      </Badge>
-                    }
-                    title={
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Text strong={!item.isRead} className="text-base">
-                          {item.title}
-                        </Text>
-                        {item.eventType && (
-                          <Tag color="purple" bordered={false} className="rounded-full px-3">
-                            {item.eventType}
-                          </Tag>
-                        )}
-                        {item.recipientRole && (
-                          <Tag color="cyan" bordered={false} className="rounded-full px-3">
-                            {item.recipientRole}
-                          </Tag>
-                        )}
-                      </div>
-                    }
-                    description={
-                      <div className="flex flex-col gap-1">
-                        <Text
-                          className={`${item.isRead ? 'text-gray-500' : 'text-gray-700'}`}
-                          ellipsis={{ rows: 2, expandable: false }}
-                        >
-                          {item.message}
-                        </Text>
-                        <Space className="text-xs text-gray-400 mt-2" split={<Divider type="vertical" />}>
-                          <span><ClockCircleOutlined className="mr-1" /> {formatDate(item.createdAt)}</span>
-                          <span><UserOutlined className="mr-1" /> By: {item.createdByName || 'System'}</span>
-                          {item.recipientRole && (
-                            <span>Role: {item.recipientRole.toUpperCase()}</span>
-                          )}
-                        </Space>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-
-            {total > LIMIT && (
-              <div className="flex justify-end pt-4 px-6 pb-6 bg-white">
-                <Pagination
-                  current={page}
-                  total={total}
-                  pageSize={LIMIT}
-                  onChange={handlePageChange}
-                  showSizeChanger={false}
-                  showTotal={(t) => <span className="text-gray-500">Total {t} notifications</span>}
-                />
-              </div>
-            )}
-          </>
-        )}
-      </Card>
-
-      {/* Detailed Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <BellOutlined style={{ color: PURPLE_THEME.primary, fontSize: 20 }} />
-            <span>Notification Details</span>
-            {selectedNotification && !selectedNotification.isRead && (
-              <Tag color="purple" className="ml-2">Unread</Tag>
-            )}
-          </div>
-        }
-        open={modalVisible}
-        onCancel={closeModal}
-        footer={[
-          <Button key="close" onClick={closeModal}>
-            Close
-          </Button>,
-          selectedNotification && !selectedNotification.isRead && (
-            <Button
-              key="mark-read-modal"
-              type="primary"
-              style={{ background: PURPLE_THEME.primary }}
-              onClick={async (e) => {
-                await markSingleAsRead(selectedNotification._id, e);
-              }}
-            >
-              Mark as Read
-            </Button>
-          )
-        ]}
-        width={700}
-        className="notification-modal"
-      >
-        {selectedNotification && (
-          <Descriptions bordered column={1} size="middle" labelStyle={{ fontWeight: 600, width: '30%' }}>
-            <Descriptions.Item label="Title">{selectedNotification.title}</Descriptions.Item>
-            <Descriptions.Item label="Message">
-              <Paragraph copyable>{selectedNotification.message}</Paragraph>
-            </Descriptions.Item>
-            <Descriptions.Item label="Event Type">
-              <Tag color="purple">{selectedNotification.eventType || '—'}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              {selectedNotification.isRead ? (
-                <Tag color="green">Read</Tag>
-              ) : (
-                <Tag color="orange">Unread</Tag>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Entity">
-              {selectedNotification.entityModel && (
-                <Tag icon={<FileTextOutlined />} color="geekblue">
-                  {selectedNotification.entityModel}
-                </Tag>
-              )}
-              {selectedNotification.entityId && (
-                <Text code className="ml-2">{selectedNotification.entityId}</Text>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Recipient">
-              <div>
-                <div>Role: <Tag color="cyan">{selectedNotification.recipientRole || '—'}</Tag></div>
-                {selectedNotification.recipientId && (
-                  <div>ID: <Text code>{selectedNotification.recipientId}</Text></div>
-                )}
-              </div>
-            </Descriptions.Item>
-            <Descriptions.Item label="Created By">
-              <div>
-                <div>Name: {selectedNotification.createdByName || 'System'}</div>
-                <div>Role: <Tag color="default">{selectedNotification.createdByRole || '—'}</Tag></div>
-              </div>
-            </Descriptions.Item>
-            <Descriptions.Item label="Timestamps">
-              <div>Created: {formatDate(selectedNotification.createdAt)}</div>
-              {selectedNotification.updatedAt && selectedNotification.updatedAt !== selectedNotification.createdAt && (
-                <div>Updated: {formatDate(selectedNotification.updatedAt)}</div>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Notification ID">
-              <Text copyable>{selectedNotification._id}</Text>
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
-    </div>
+    <div className="min-h-screen bg-[#f8f7fb] px-4 py-6 sm:px-6 lg:px-8"><div className="mx-auto max-w-5xl">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: 'linear-gradient(135deg, #5C039B, #03A4F4)', boxShadow: '0 6px 18px rgba(92,3,155,.2)' }}><FiBell size={20} className="text-white" /></div><div><h1 className="text-xl font-bold text-gray-900">Notifications</h1><p className="mt-0.5 text-xs text-gray-400">Your latest lead and platform updates · <span className={connected ? 'text-emerald-500' : 'text-gray-400'}>● {connected ? 'live' : 'offline'}</span></p></div></div><div className="flex items-center gap-2">{unreadCount > 0 && <button onClick={markAllRead} className="flex items-center gap-1.5 rounded-lg border border-violet-300 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-50"><FiCheckCircle size={14} /> Mark all read</button>}<button onClick={() => fetchNotifications(1, filter)} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50" disabled={loading}><FiRefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button></div></header>
+      <div className="mb-5 grid grid-cols-3 gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">{[['Total', total, '#5C039B'], ['Unread', unreadCount, '#ef4444'], ['Read', readCount, '#16a34a']].map(([label, value, color]) => <div key={label} className="text-center"><div className="text-2xl font-extrabold" style={{ color }}>{value}</div><div className="mt-1 text-xs font-medium text-gray-400">{label}</div></div>)}</div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm"><div className="flex items-center gap-2 text-xs font-semibold text-gray-400"><FiFilter size={14} /> Filter notifications</div><div className="flex overflow-hidden rounded-lg border border-gray-200">{['all', 'unread', 'read'].map(option => <button key={option} onClick={() => { setFilter(option); fetchNotifications(1, option); }} className="px-4 py-2 text-xs font-semibold capitalize" style={{ background: filter === option ? '#5C039B' : '#fff', color: filter === option ? '#fff' : '#6b7280' }}>{option}</button>)}</div></div>
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">{loading ? <div className="py-20 text-center text-sm text-gray-400"><FiRefreshCw size={22} className="mx-auto mb-3 animate-spin text-violet-600" />Loading notifications...</div> : notifications.length === 0 ? <div className="py-20 text-center"><FiBell size={30} className="mx-auto mb-3 text-gray-300" /><p className="text-sm font-semibold text-gray-500">No notifications yet</p><p className="mt-1 text-xs text-gray-400">New lead assignments will appear here.</p></div> : notifications.map(notification => <NotificationRow key={notification._id} notification={notification} onOpen={setSelected} onRead={markRead} />)}{total > PAGE_SIZE && <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4"><span className="text-xs text-gray-400">Page {page}</span><button onClick={() => fetchNotifications(page + 1, filter)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">Load more</button></div>}</section>
+    </div><Modal open={Boolean(selected)} onCancel={() => setSelected(null)} footer={null} centered width={560} closeIcon={<FiX />}>{selected && <div className="p-1"><div className="mb-4 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><FiBell /></div><div><p className="text-xs font-bold uppercase tracking-wider text-violet-700">{getMeta(selected.eventType).label}</p><h2 className="text-lg font-bold text-gray-900">{selected.title}</h2></div></div><div className="rounded-xl bg-gray-50 p-4 text-sm leading-6 text-gray-600">{selected.message}</div><div className="mt-4 flex items-center gap-2 text-xs text-gray-400"><FiClock /> {formatDate(selected.createdAt)}</div></div>}</Modal></div>
   );
 };
 

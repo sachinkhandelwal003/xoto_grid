@@ -329,6 +329,7 @@ const App: React.FC = () => (
         <Route path="property/view/:id" element={<PropertyDetailPage />} />
         <Route path="favourite-properties" element={<FavouriteProperty />} />
         <Route path="presentations" element={<PresentationsList />} />
+        <Route path="gridnotification" element={<GridNotification />} />
         <Route path="mortgages/calculator" element={<PerfectMortgageCalculator initialTab="affordability" />} />
         <Route path="mortgages/calculator/eligibility" element={<MortgageEligibilityCalculatorPage />} />
         <Route path="mortgages/calculator/affordability" element={<MortgageAffordabilityCalculatorPage />} />

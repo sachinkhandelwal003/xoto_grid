@@ -54,7 +54,7 @@ export const useVaultSocket = () => {
   const fetchHistory = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const token = localStorage.getItem('vault_token');
+      const token = localStorage.getItem('grid_token') || localStorage.getItem('token') || localStorage.getItem('vault_token');
       const res = await axios.get(`${API_BASE}/vault/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         params:  { limit: MAX_NOTIFICATIONS },
@@ -73,7 +73,7 @@ export const useVaultSocket = () => {
   const markRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => (n._id === id ? { ...n, isRead: true } : n)));
     try {
-      const token = localStorage.getItem('vault_token');
+      const token = localStorage.getItem('grid_token') || localStorage.getItem('token') || localStorage.getItem('vault_token');
       await axios.patch(`${API_BASE}/vault/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -84,7 +84,7 @@ export const useVaultSocket = () => {
   const markAllRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     try {
-      const token = localStorage.getItem('vault_token');
+      const token = localStorage.getItem('grid_token') || localStorage.getItem('token') || localStorage.getItem('vault_token');
       await axios.patch(`${API_BASE}/vault/notifications/read-all`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -111,6 +111,7 @@ export const useVaultSocket = () => {
       '18': 'admin',
       '21': 'partner',
       '23': 'ops',
+      '24': 'advisor',
       '26': 'advisor',
     };
     return mapping[code] || null;

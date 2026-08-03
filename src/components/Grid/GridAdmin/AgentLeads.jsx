@@ -155,6 +155,8 @@ export const AssignModal = ({ lead, visible, onClose, onAssigned }) => {
       await apiService.put(`/gridlead/${lead._id}/assign`, {
         advisorId: selectedId,
         notes,
+        notifyAdvisor: true,
+        notification: { eventType: 'LEAD_ASSIGNED', recipientId: selectedId, recipientRole: 'advisor' },
       });
       message.success(lead.assigned_to ? 'Advisor reassigned successfully' : 'Advisor assigned successfully');
       onAssigned();

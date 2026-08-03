@@ -161,6 +161,7 @@ const GRID_NAV: Record<string, MenuItem[]> = {
     },
     { title: 'My Viewings', icon: 'fas fa-eye', to: '/dashboard/GridAdvisor/my-viewings' },
     { title: 'Leaderboard', icon: 'fas fa-trophy', to: '/dashboard/GridAdvisor/leaderboard' },
+    { title: 'Notifications', icon: 'fas fa-bell', to: '/dashboard/GridAdvisor/gridnotification' },
 
   ],
 

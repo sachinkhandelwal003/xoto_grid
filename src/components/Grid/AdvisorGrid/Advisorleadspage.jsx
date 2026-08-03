@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from "../../../manageApi/utils/custom.apiservice";
 import {
-  Modal, Button, Tag, Tooltip, Avatar,
+  Modal, Button, Tag, Tooltip, Avatar, Form,
   Select, Input, message
 } from 'antd';
 import {
   ReloadOutlined, EnvironmentOutlined,
   ClockCircleOutlined, EditOutlined, CheckCircleOutlined,
   PhoneOutlined, UserOutlined, FireOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined, PlusOutlined
 } from '@ant-design/icons';
 import CustomTable from '../../CMS/pages/custom/CustomTable';
 
@@ -30,6 +30,18 @@ const TYPE_COLORS = {
   developer:      { bg: '#f0fdf4', color: '#14532d', label: 'Developer' },
   ai_enquiry:     { bg: '#fdf4ff', color: '#701a75', label: 'AI Enquiry' },
 };
+
+const CREATE_TYPE_OPTIONS = [
+  { value: 'buy', label: 'Buy' },
+  { value: 'rent', label: 'Rent' },
+  { value: 'sell', label: 'Sell' },
+  { value: 'hot_property', label: 'Hot Property' },
+  { value: 'schedule_visit', label: 'Site Visit' },
+  { value: 'consultation', label: 'Consultation' },
+  { value: 'general_enquiry', label: 'General Enquiry' },
+  { value: 'mortgage', label: 'Mortgage' },
+  { value: 'investor', label: 'Investor' },
+];
 
 const STATUS_CONFIG = {
   new: {
@@ -139,6 +151,132 @@ const getLocation = lead =>
   lead?.preferred_city ||
   lead?.area ||
   '—';
+
+// ─── Add Lead Modal ──────────────────────────────────────────────────────────
+const AddAdvisorLeadModal = ({ visible, onClose, onCreated }) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
+      const payload = {
+        first_name: values.first_name.trim(),
+        last_name: values.last_name?.trim() || '',
+        phone_number: values.phone?.trim() || '',
+        country_code: values.country_code || '+971',
+        email: values.email?.trim() || undefined,
+        enquiry_type: values.enquiry_type || 'general_enquiry',
+        transaction_type: values.transaction_type || undefined,
+        property_type: values.property_type || undefined,
+        location_preferences: values.location ? [values.location.trim()] : [],
+        budget_min: values.budget_min ? Number(values.budget_min) : undefined,
+        budget_max: values.budget_max ? Number(values.budget_max) : undefined,
+        bedrooms: values.bedrooms !== undefined && values.bedrooms !== '' ? Number(values.bedrooms) : undefined,
+        additional_notes: values.notes?.trim() || '',
+      };
+
+      const res = await apiService.post('/gridlead/advisor/create-lead', payload);
+      const result = res?.data?.success !== undefined ? res.data : res;
+      if (result?.success === false) throw new Error(result.message || 'Failed to create lead');
+
+      message.success(result?.message || 'Lead added successfully');
+      form.resetFields();
+      onCreated();
+      onClose();
+    } catch (err) {
+      if (err?.errorFields) return;
+      message.error(err?.response?.data?.message || err?.message || 'Failed to create lead');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={620}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PlusOutlined style={{ color: PRIMARY }} />
+          </div>
+          <span style={{ fontWeight: 700 }}>Add Lead</span>
+        </div>
+      }
+    >
+      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Form.Item name="first_name" label="First Name" rules={[{ required: true, message: 'First name is required' }]}>
+            <Input placeholder="John" />
+          </Form.Item>
+          <Form.Item name="last_name" label="Last Name">
+            <Input placeholder="Doe" />
+          </Form.Item>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 12 }}>
+          <Form.Item name="country_code" label="Code" initialValue="+971">
+            <Select>{['+971', '+91', '+1', '+44', '+966', '+974'].map(code => <Option key={code} value={code}>{code}</Option>)}</Select>
+          </Form.Item>
+          <Form.Item name="phone" label="Phone">
+            <Input placeholder="501234567" />
+          </Form.Item>
+        </div>
+
+        <Form.Item name="email" label="Email">
+          <Input type="email" placeholder="client@example.com" />
+        </Form.Item>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Form.Item name="enquiry_type" label="Lead Type" initialValue="general_enquiry">
+            <Select>
+              {CREATE_TYPE_OPTIONS.map(({ value, label }) => <Option key={value} value={value}>{label}</Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="transaction_type" label="Transaction">
+            <Select allowClear placeholder="Select transaction">
+              {['buy', 'rent', 'sell'].map(type => <Option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="property_type" label="Property Type">
+            <Select allowClear placeholder="Any">
+              {['apartment', 'villa', 'townhouse', 'penthouse', 'office', 'retail', 'land'].map(type => <Option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="location" label="Preferred Location">
+            <Input placeholder="Dubai Marina" />
+          </Form.Item>
+          <Form.Item name="budget_min" label="Budget Min (AED)">
+            <Input type="number" placeholder="500000" />
+          </Form.Item>
+          <Form.Item name="budget_max" label="Budget Max (AED)">
+            <Input type="number" placeholder="2000000" />
+          </Form.Item>
+          <Form.Item name="bedrooms" label="Bedrooms">
+            <Select allowClear placeholder="Any">
+              {[0, 1, 2, 3, 4, 5, 6].map(value => <Option key={value} value={value}>{value === 0 ? 'Studio' : `${value} BR`}</Option>)}
+            </Select>
+          </Form.Item>
+        </div>
+
+        <Form.Item name="notes" label="Additional Notes">
+          <Input.TextArea rows={3} placeholder="Client requirements or follow-up notes" />
+        </Form.Item>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="primary" loading={loading} onClick={handleSubmit} style={{ background: PRIMARY, borderColor: PRIMARY }}>
+            Add Lead
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+};
 
 // ─── Quick Status Update Modal ────────────────────────────────────────────────
 // Kept inline on the list page so advisor can do quick updates without
@@ -266,6 +404,7 @@ const AdvisorLeadsPage = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [filters,    setFilters]    = useState({});
   const [updateLead, setUpdateLead] = useState(null);
+  const [addLeadOpen, setAddLeadOpen] = useState(false);
   const [stats,      setStats]      = useState({
     total: 0, new: 0, inProgress: 0, completed: 0, notProceeding: 0,
   });
@@ -462,13 +601,23 @@ const AdvisorLeadsPage = () => {
             Leads assigned to you — click <strong>View</strong> for full details &amp; property suggestions
           </p>
         </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchLeads(pagination.page, pagination.limit, filters)}
-          style={{ borderColor: PRIMARY, color: PRIMARY }}
-        >
-          Refresh
-        </Button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setAddLeadOpen(true)}
+            style={{ background: PRIMARY, borderColor: PRIMARY }}
+          >
+            Add Lead
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchLeads(pagination.page, pagination.limit, filters)}
+            style={{ borderColor: PRIMARY, color: PRIMARY }}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
@@ -518,6 +667,12 @@ const AdvisorLeadsPage = () => {
         visible={!!updateLead}
         onClose={() => setUpdateLead(null)}
         onUpdated={() => fetchLeads(pagination.page, pagination.limit, filters)}
+      />
+
+      <AddAdvisorLeadModal
+        visible={addLeadOpen}
+        onClose={() => setAddLeadOpen(false)}
+        onCreated={() => fetchLeads(1, pagination.limit, filters)}
       />
     </div>
   );

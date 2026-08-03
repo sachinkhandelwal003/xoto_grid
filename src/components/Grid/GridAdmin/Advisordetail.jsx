@@ -44,6 +44,12 @@ const IconCheck = () => (
     <path d="M4 10l4.5 4.5L16 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+const IconEdit = () => (
+  <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+    <path d="M13.5 3.5a2.1 2.1 0 013 3L7 16l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M11.5 5.5l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+);
 const IconMail = () => (
   <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
     <rect x="2" y="4" width="16" height="13" rx="2" stroke={C.textMuted} strokeWidth="1.4"/>
@@ -239,6 +245,20 @@ const ChipList = ({ items }) =>
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-AE", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const formatDateTime = (d) => d ? new Date(d).toLocaleString("en-AE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Never";
+const listValue = (value) => Array.isArray(value) ? value.join(", ") : value || "";
+const editFormFromAdvisor = (advisor) => ({
+  firstName: advisor.firstName || "",
+  lastName: advisor.lastName || "",
+  email: advisor.email || "",
+  countryCode: advisor.countryCode || "",
+  phone: advisor.phone || "",
+  nationality: advisor.nationality || "",
+  location: advisor.location || "",
+  department: advisor.department || "",
+  propertyTypes: listValue(advisor.specialisation?.propertyTypes),
+  listingTypes: listValue(advisor.specialisation?.listingTypes),
+  locations: listValue(advisor.specialisation?.locations),
+});
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 const Skeleton = () => (
@@ -272,6 +292,9 @@ const AdvisorDetail = () => {
   const [loading, setLoading]   = useState(true);
   const [suspendModal, setSuspendModal] = useState({ open: false, action: "suspend", reason: "" });
   const [suspending, setSuspending] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false });
+  const [editForm, setEditForm] = useState({});
+  const [updating, setUpdating] = useState(false);
 
   const [api, contextHolder] = notification.useNotification();
   const notify = (type, msg, desc) => api[type]({ message: msg, description: desc, placement: "topRight", duration: 4 });
@@ -330,6 +353,52 @@ useEffect(() => {
       notify("error", "Action Failed", err?.response?.data?.message || "Something went wrong");
     } finally {
       setSuspending(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditForm(editFormFromAdvisor(advisor));
+    setEditModal({ open: true });
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdate = async () => {
+    if (!editForm.firstName?.trim() || !editForm.lastName?.trim() || !editForm.email?.trim() || !editForm.phone?.trim()) {
+      notify("error", "Missing information", "First name, last name, email and phone are required.");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const toList = value => value.split(",").map(item => item.trim()).filter(Boolean);
+      const payload = {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        email: editForm.email.trim().toLowerCase(),
+        countryCode: editForm.countryCode.trim(),
+        phone: editForm.phone.trim(),
+        nationality: editForm.nationality.trim(),
+        location: editForm.location.trim(),
+        department: editForm.department.trim(),
+        specialisation: {
+          propertyTypes: toList(editForm.propertyTypes || ""),
+          listingTypes: toList(editForm.listingTypes || ""),
+          locations: toList(editForm.locations || ""),
+        },
+      };
+      const res = await apiService.patch(`/GridAdvisor/${id}`, payload);
+      const updatedAdvisor = res?.data?.advisor || res?.data || res?.advisor;
+      setAdvisor(prev => ({ ...prev, ...payload, ...(updatedAdvisor || {}) }));
+      setEditModal({ open: false });
+      notify("success", "Advisor updated", "The advisor information was saved successfully.");
+    } catch (err) {
+      notify("error", "Update failed", err?.response?.data?.message || "Something went wrong");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -400,6 +469,12 @@ if (!advisor) return (
 
             {/* Action buttons */}
             <div style={S.heroActions}>
+              <button
+                style={{ ...S.actionBtn, borderColor: C.primaryLight, color: C.primary }}
+                onClick={openEditModal}
+              >
+                <IconEdit /> Edit information
+              </button>
               {advisor.status === "suspended" ? (
                 <button
                   style={{ ...S.actionBtn, borderColor: "#BBF7D0", color: C.success }}
@@ -558,6 +633,43 @@ if (!advisor) return (
 
         </div>
       </div>
+
+      {/* ── Edit advisor modal ── */}
+      <Modal
+        open={editModal.open}
+        onCancel={() => setEditModal({ open: false })}
+        onOk={handleUpdate}
+        confirmLoading={updating}
+        title={<span style={{ color: C.text, fontWeight: 700 }}>Edit advisor information</span>}
+        okText="Save changes"
+        width={720}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, paddingTop: 8 }}>
+          {[
+            ["firstName", "First name"], ["lastName", "Last name"],
+            ["email", "Email"], ["countryCode", "Country code"],
+            ["phone", "Phone"], ["nationality", "Nationality"],
+            ["location", "Location"], ["department", "Department"],
+          ].map(([name, label]) => (
+            <label key={name} style={S.modalLabel}>
+              {label}
+              <Input name={name} value={editForm[name] || ""} onChange={handleEditChange} style={{ marginTop: 6, borderRadius: 9 }} />
+            </label>
+          ))}
+          <label style={S.modalLabel}>
+            Property types <span style={{ color: C.textMuted, fontWeight: 400 }}>(comma separated)</span>
+            <Input name="propertyTypes" value={editForm.propertyTypes || ""} onChange={handleEditChange} style={{ marginTop: 6, borderRadius: 9 }} />
+          </label>
+          <label style={S.modalLabel}>
+            Listing types <span style={{ color: C.textMuted, fontWeight: 400 }}>(comma separated)</span>
+            <Input name="listingTypes" value={editForm.listingTypes || ""} onChange={handleEditChange} style={{ marginTop: 6, borderRadius: 9 }} />
+          </label>
+          <label style={{ ...S.modalLabel, gridColumn: "1 / -1" }}>
+            Preferred locations <span style={{ color: C.textMuted, fontWeight: 400 }}>(comma separated)</span>
+            <Input name="locations" value={editForm.locations || ""} onChange={handleEditChange} style={{ marginTop: 6, borderRadius: 9 }} />
+          </label>
+        </div>
+      </Modal>
 
       {/* ── Suspend / Reinstate Modal ── */}
       <Modal
